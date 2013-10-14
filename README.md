@@ -91,7 +91,7 @@ You can choose to complete all of the TODO: tags in the kernel.cu file either be
 
 For the graphics, you'll see something that looks like this:
 
-![boring](resources/000.png)
+![Alt test](Part1/resources/000.png "")
 
 Pretty underwhelming if I do say so. Lets add some height and coloring in the height field so we can see what the potential field looks like.
 
@@ -133,7 +133,7 @@ void main(void)
 
 Now your height field should look closer to this:
 
-![less boring](resources/001.png)
+![Alt test](Part1/resources/001.png)
 
 Okay, that's a lot better, but now our planets need some attention. For this step we'll be using the geometry shader to create screen facing quads from the points that are currently being rendered. Essentially, what we want is to create a geometry shader that takes in points and emits triangle strips, so replace the version of planetGS.glsl with this:
 
@@ -197,7 +197,7 @@ Now that we have the correct up and right vectors, we can emit our vertices and 
 }
 ```
 
-![cool](resources/002.png)
+![Alt test](Part1/resources/002.png)
 
 __NOTE:__ You'll notice here that the quads are not aligned to the screen, they merely face it. This is okay for our purposes because we are using them to render spheres.
 
@@ -247,7 +247,7 @@ This last segment takes care of calculating the fake intersection point and its 
 } 
 ```
 
-![almost there](resources/003.png)
+![Alt test](Part1/resources/003.png)
 
 The last thing we add is a little bit of procedural coloring to give a nice grid effect. Replace the boring color code in heightFS.glsl with this:
 
@@ -257,7 +257,7 @@ float alpha = float(mod(v_Texcoords.x+0.025, 0.05) > 0.046 ||
 vec4 color = mix(vec4(0.05,0.15,0.3,1.0), vec4(0.05, 0.3, 0.4, 1.0), alpha);
 ```
 
-![awesome](resources/004.png)
+![Alt test](Part1/resources/004.png)
 
 Now we have a beautiful looking (if simple) gravity sim!
 
