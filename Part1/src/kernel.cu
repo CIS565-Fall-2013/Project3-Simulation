@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <cstdio>
 #include <cuda.h>
 #include <cmath>
 #include "glm/glm.hpp"
@@ -117,15 +118,30 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+	glm::vec3 us_pos(us.x,us.y,us.z);
+	glm::vec3 them_pos(them.x,them.y,them.z);
+	glm::vec3 dir = them_pos - us_pos;
+	float rsquare = glm::length(dir);
+	if(rsquare < E) return glm::vec3(0);
+	rsquare *= rsquare;
+	float aMag  = G * them.w /rsquare;
+	glm::vec3 a = aMag * glm::normalize(dir);
+    //printf("%f,%f,%f  ",a.x,a.y,a.z);
+	return a;
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	//return glm::vec3(0);
+	glm::vec3 acc(0,0,0);
+	acc = calculateAcceleration(my_pos,glm::vec4(0,0,0,starMass));
+	glm::vec4 themPos;
+	for(int i = 0;i<N;++i)
+	{
+		acc += calculateAcceleration(my_pos, their_pos[i]);
+	}
     return acc;
 }
 
