@@ -117,8 +117,20 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+
+	// Load the data
+	glm::vec3 us_pos(us.x, us.y, us.z);
+	glm::vec3 them_pos(them.x, them.y, them.z);
+	float m_them = us.w;
+
+	// Calculate the distance and direction between the two objects
+	glm::vec3 r         = us_pos - them_pos;
+	float distance      = glm::length(r); 
+	glm::vec3 direction = glm::normalize(r);
+
+	// Calculate the acceleration between two bodies using Newton's Law of Universal Gravitation, referring to http://en.wikipedia.org/wiki/Newton%27s_law_of_universal_gravitation
+	float a = G * m_them / pow(distance, 2);
+    return a * direction;
 }
 
 //TODO: Core force calc kernel global memory
