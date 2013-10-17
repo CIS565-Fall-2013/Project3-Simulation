@@ -143,12 +143,42 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 }
 
 
-//TODO: Core force calc kernel shared memory
+//TODO: Done. NEED TO FIX CRASH WHEN VISUALIZING.
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+	extern __shared__ glm::vec4 shared_pos [];
+	
+	glm::vec3 acc = glm::vec3 (0);
+
+	// Loop over each block.
+	// This ensures that the whole global memory is loaded into the shared memory, one block at a time.
+	for (int j = 0; j < gridDim.x; j ++)
+	{
+		int blockIndex = blockIdx.x + j;
+		
+		// If trying to load a block beyond the grid boundary, wrap around.
+		if (blockIndex >= gridDim.x)
+			blockIndex -= gridDim.x;
+
+		// Calculate global memory index that should be accessed by the thread.
+		int index = blockDim.x * blockIndex + threadIdx.x;
+		// Load the value from global to shared. 
+		if (index < N)
+			shared_pos [threadIdx.x] = their_pos [index];
+		__syncthreads ();
+
+		// Loop over each object, and calculate acceleration.
+		for (int i = 0; i < blockDim.x; i ++)
+		{	
+			if (shared_pos [i] == my_pos)
+				continue;
+			acc += calculateAcceleration(my_pos, shared_pos [i]);
+		}
+	}
+
+	acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
+	return acc;
 }
 
 
@@ -235,14 +265,14 @@ void initCuda(int N)
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    update<<<fullBlocksPerGrid, blockSize, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    sendToVBO<<<fullBlocksPerGrid, blockSize, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
