@@ -17,7 +17,7 @@ dim3 threadsPerBlock(blockSize);
 int numObjects;
 const float planetMass = 3e8;
 const __device__ float starMass = 5e10;
-
+const __device__ float GravConst = 6.67384e-11;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
 glm::vec4 * dev_pos;
@@ -106,7 +106,7 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
     }
 }
 
-//TODO: Determine force between two bodies
+//TODO: Done!
 __device__
 glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 {
@@ -117,16 +117,29 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
+	glm::vec3 forceDir = glm::vec3 (them.x - us.x, them.y - us.y, them.z - us.z);
+	float dist = sqrt (glm::dot (forceDir, forceDir));
+	forceDir /= dist;	// Force direction is now normalized and we have distance between the two objects (r)!
+
+	float accVal = (GravConst * them.w) / (dist*dist);
     
-    return glm::vec3(0.0f);
+    return forceDir * accVal;
 }
 
-//TODO: Core force calc kernel global memory
+//TODO: Done!
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+	// NOTE: their_pos is a pointer to global memory.
+	glm::vec3 acc = glm::vec3 (0);
+	for (int i = 0; i < N; i ++)
+	{	
+		if (their_pos [i] == my_pos)
+			continue;
+		acc += calculateAcceleration(my_pos, their_pos [i]);
+	}
+	acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
+	return acc;
 }
 
 
