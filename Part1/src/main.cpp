@@ -7,6 +7,8 @@
 #define N_FOR_VIS 25
 #define DT 0.2
 #define VISUALIZE 1
+int init_time;   // Global starting time
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -82,16 +84,18 @@ void display()
     static float fps = 0;
     frame++;
     int time=glutGet(GLUT_ELAPSED_TIME);
+	float timeStamp = (time - init_time) / 1000.0f;
 
     if (time - timebase > 1000) {
         fps = frame*1000.0f/(time-timebase);
         timebase = time;
         frame = 0;
     }
+
     runCuda();
 
     char title[100];
-    sprintf( title, "565 NBody sim [%0.2f fps] [%0.2f ms]", fps, time);
+    sprintf( title, "565 NBody sim of Qiong Wang [%0.2f fps] [%0.4f s]", fps, timeStamp);
     glutSetWindowTitle(title);
 
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
@@ -163,11 +167,12 @@ void keyboard(unsigned char key, int x, int y)
 
 void init(int argc, char* argv[])
 {
+	init_time = glutGet(GLUT_ELAPSED_TIME);
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(width, height);
     glutCreateWindow("565 NBody sim");
-
+ 
     // Init GLEW
     glewInit();
     GLenum err = glewInit();

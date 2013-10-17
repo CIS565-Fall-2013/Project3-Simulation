@@ -11,6 +11,12 @@
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
 
+#if RK == 1
+    #define integration(x,y,z) rungekuttaInt(x,y,z)
+#else
+    #define integration(x,y,z) eulerInt(x,y,z)
+#endif
+
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
 
@@ -149,17 +155,55 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
     return acc;
 }
 
-
 //TODO: Core force calc kernel shared memory
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	
+	// Initialize the shared memory for shared position for each tile
+	__shared__ glm::vec4 shared_pos[blockSize];
+
+	// Define one 1D grid of size N/p tiles, loop each tile to compute with the shared memory
+	unsigned int i, tileIdx;
+	for ( i = 0, tileIdx = 0; i < N; i += blockSize, ++ tileIdx) {
+      unsigned int shared_idx = tileIdx * blockSize + threadIdx.x;
+	  shared_pos[threadIdx.x]  = their_pos[shared_idx];
+	  __syncthreads();
+	  for (unsigned int j; j < blockSize; ++ j) {
+        acc += calculateAcceleration(my_pos, shared_pos[j]);
+	  }
+	  __syncthreads();
+	}
     return acc;
 }
 
+// Simple Euler integration
+__device__
+void eulerInt(float dt, glm::vec4& pos, glm::vec3& vel) {
+    pos.x += vel.x * dt;
+	pos.y += vel.y * dt;
+	pos.z += vel.z * dt;
+}
 
-//Simple Euler integration scheme
+__device__
+void rungekuttaInt(float dt, glm::vec4& pos, glm::vec3& vel) {
+    // Define the four increments for velocity according to Runge Kutta method, referring to http://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
+	glm::vec3 k1 = vel;                 // based on the slope at the beginning of the interval
+	glm::vec3 k2 = k1 + 0.5f * dt * k1;  // based on the slope at the midpoint of the interval
+	glm::vec3 k3 = k1 + 0.5f * dt * k2;  // based on the slope at the midpoint again
+	glm::vec3 k4 = k1 + dt * k3;        // based on  the slope at the end of the interval
+	
+	// Final increment on the position
+	glm::vec3 pos_inc = 1.0f / 6 * ( k1 + 2.0f * k2 + 2.0f * k3 + k4);
+
+	// New position after RK4 integration
+	pos.x += pos_inc.x * dt;
+	pos.y += pos_inc.y * dt;
+	pos.z += pos_inc.z * dt;
+}
+
+//Update by integration scheme
 __global__
 void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
 {
@@ -168,10 +212,8 @@ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
     {
         glm::vec4 my_pos = pos[index];
         glm::vec3 acc = ACC(N, my_pos, pos);
-        vel[index] += acc * dt;
-        pos[index].x += vel[index].x * dt;
-        pos[index].y += vel[index].y * dt;
-        pos[index].z += vel[index].z * dt;
+		vel[index] += acc * dt;
+		integration(dt, pos[index], vel[index]);
     }
 }
 
