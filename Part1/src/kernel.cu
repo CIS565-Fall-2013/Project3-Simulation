@@ -18,7 +18,7 @@ int numObjects;
 const float planetMass = 3e8;
 const __device__ float starMass = 5e10;
 
-const float scene_scale = 2e2; //size of the height map in simulation space
+const float scene_scale = 2e1; //size of the height map in simulation space
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
@@ -117,15 +117,28 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+
+    float m_them = them.w; 
+   
+    glm::vec3 d = glm::vec3(us.x, us.y, us.z) - glm::vec3(them.x, them.y, them.z); 
+    float r2 = glm::dot( d, d );
+    // Check for too small distance cause things 'splode
+    if ( r2 < 1e-6  ) 
+      return glm::vec3(0.0f);
+    // EPSILON softening-factor
+    float a = -G*m_them/(r2 + 1e-2);
+    return a*glm::normalize( d );
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
+    // Calculate acceleration from star
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+    // Calculate accelerations from other planets
+    for ( int i=0; i < N; ++i )
+      acc += calculateAcceleration(my_pos, their_pos[i]);
     return acc;
 }
 
@@ -134,8 +147,29 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
+    __shared__ glm::vec4 shared_their_pos[blockSize];
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+    // Copy a segment of positions from global to shared memory
+    int num_iter = 0;
+    for ( int i = 0; i < N; i += blockDim.x ) { 
+      // Compute global memory index to pull in
+      int gbl_index = threadIdx.x + (num_iter * blockDim.x);
+      num_iter++;
+       
+      shared_their_pos[threadIdx.x] = their_pos[gbl_index];
+      // Don't forget to sync after the copy 
+      __syncthreads();
+      
+
+      // Calculate accelerations from other planets using from shared mem
+      for ( int j=0; j < blockDim.x; j++ ) 
+	  acc += calculateAcceleration(my_pos, shared_their_pos[j]);
+      // Sync before next copy
+      __syncthreads();
+    }
     return acc;
+    //return calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 }
 
 
@@ -207,6 +241,10 @@ void initCuda(int N)
 {
     numObjects = N;
     dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
+
+    printf("Num Objects: %d \n", numObjects );
+    printf("Num blocks: %d, BlockSize, %d \n", fullBlocksPerGrid.x, blockSize );
+    printf("Shared: %d \n", SHARED );
 
     cudaMalloc((void**)&dev_pos, N*sizeof(glm::vec4));
     checkCUDAErrorWithLine("Kernel failed!");

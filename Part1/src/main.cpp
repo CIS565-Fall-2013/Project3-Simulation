@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
+#define N_FOR_VIS 64
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
-
+  
     glutMainLoop();
 
     return 0;
@@ -88,6 +88,7 @@ void display()
         timebase = time;
         frame = 0;
     }
+
     runCuda();
 
     char title[100];
@@ -353,5 +354,7 @@ void deleteTexture(GLuint* tex)
 
 void shut_down(int return_code)
 {
-    exit(return_code);
+    printf( "Calling cudaDeviceReset \n" );
+    cudaDeviceReset();
+    //exit(return_code);
 }
