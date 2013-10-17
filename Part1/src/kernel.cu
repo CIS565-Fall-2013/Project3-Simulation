@@ -117,8 +117,13 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+	glm::vec4 diff = them-us;
+    float r2 = diff.x*diff.x+diff.y*diff.y+diff.z*diff.z;
+	if(abs(r2) < EPSILON)
+		return glm::vec3(0,0,0);
+
+	float a = them.w*G/r2;
+    return a*glm::normalize(glm::vec3(diff.x+EPSILON,diff.y+EPSILON,diff.z+EPSILON));//use diff as direction;;
 }
 
 //TODO: Core force calc kernel global memory
@@ -126,6 +131,12 @@ __device__
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	
+
+	for(int i = 0; i < N; ++i)
+	{
+		acc = acc + calculateAcceleration(my_pos, their_pos[i]);
+	}
     return acc;
 }
 
@@ -223,19 +234,19 @@ void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
-    checkCUDAErrorWithLine("Kernel failed!");
+    checkCUDAErrorWithLine("Kernel Update failed!");
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
-    checkCUDAErrorWithLine("Kernel failed!");
+    checkCUDAErrorWithLine("Kernel VBO failed!");
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
     sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
-    checkCUDAErrorWithLine("Kernel failed!");
+    checkCUDAErrorWithLine("Kernel PBO failed!");
 }
