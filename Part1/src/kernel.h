@@ -15,7 +15,7 @@
 #define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 1
-#define N_FOR_VIS 3
+#define N_FOR_VIS 32
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);

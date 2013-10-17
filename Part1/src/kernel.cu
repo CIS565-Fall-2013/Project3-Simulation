@@ -144,6 +144,7 @@ __device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos
 	for(int i = 0; i < positionsFullBlocks; ++i)
 	{
 		int index = threadIdx.x + i * blockDim.x;
+/*
 		if(index < N)
 		{
 			sharedPositions[threadIdx.x] = their_pos[index];		
@@ -153,7 +154,19 @@ __device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos
 		{
 			acc += calculateAcceleration(my_pos, sharedPositions[j]);
 		}
-		__syncthreads();
+		__syncthreads();*/
+		if(index < N)
+		{
+			sharedPositions[threadIdx.x] = their_pos[index];		
+			__syncthreads();
+			for(int j = 0; j < blockSize; ++j) 
+			{
+				acc += calculateAcceleration(my_pos, sharedPositions[j]);
+			}
+			__syncthreads();
+		}
+		else
+			__syncthreads();
 	}
 //	printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);
     return acc;
