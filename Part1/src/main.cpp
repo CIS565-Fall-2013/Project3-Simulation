@@ -4,8 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
-#define DT 0.2
+#define DT 0.5
 #define VISUALIZE 1
 //-------------------------------
 //-------------MAIN--------------
@@ -88,10 +87,14 @@ void display()
         timebase = time;
         frame = 0;
     }
+	float executionTime = glutGet(GLUT_ELAPSED_TIME) - timeSinceLastFrame;
+	timeSinceLastFrame = glutGet(GLUT_ELAPSED_TIME);
     runCuda();
 
-    char title[100];
-    sprintf( title, "565 NBody sim [%0.2f fps]", fps );
+    /*char title[100];
+    sprintf( title, "565 NBody sim [%0.2f fps]", fps );*/
+	char title[100];
+	sprintf( title, "565 NBody sim [%0.2f fps] [%0.2fms] ", fps, executionTime);
     glutSetWindowTitle(title);
 
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
@@ -168,6 +171,7 @@ void init(int argc, char* argv[])
     glutInitWindowSize(width, height);
     glutCreateWindow("565 NBody sim");
 
+	timeSinceLastFrame = glutGet(GLUT_ELAPSED_TIME);
     // Init GLEW
     glewInit();
     GLenum err = glewInit();

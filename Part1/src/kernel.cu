@@ -33,12 +33,12 @@ void checkCUDAError(const char *msg, int line = -1)
             fprintf(stderr, "Line %d: ", line);
         }
         fprintf(stderr, "Cuda error: %s: %s.\n", msg, cudaGetErrorString( err) ); 
+		getchar();
         exit(EXIT_FAILURE); 
     }
 } 
 
-__host__ __device__
-unsigned int hash(unsigned int a){
+__host__ __device__ unsigned int hash(unsigned int a){
     a = (a+0x7ed55d16) + (a<<12);
     a = (a^0xc761c23c) ^ (a>>19);
     a = (a+0x165667b1) + (a<<5);
@@ -49,8 +49,7 @@ unsigned int hash(unsigned int a){
 }
 
 //Function that generates static.
-__host__ __device__ 
-glm::vec3 generateRandomNumberFromThread(float time, int index)
+__host__ __device__ glm::vec3 generateRandomNumberFromThread(float time, int index)
 {
     thrust::default_random_engine rng(hash(index*time));
     thrust::uniform_real_distribution<float> u01(0,1);
@@ -60,8 +59,7 @@ glm::vec3 generateRandomNumberFromThread(float time, int index)
 
 //Generate randomized starting positions for the planets in the XY plane
 //Also initialized the masses
-__global__
-void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float mass)
+__global__ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float mass)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
@@ -76,8 +74,7 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
 
 //Determine velocity from the distance from the center star. Not super physically accurate because 
 //the mass ratio is too close, but it makes for an interesting looking scene
-__global__
-void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
+__global__ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
@@ -93,8 +90,7 @@ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
 }
 
 //Generate randomized starting velocities in the XY plane
-__global__
-void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
+__global__ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
@@ -107,8 +103,7 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
 }
 
 //TODO: Determine force between two bodies
-__device__
-glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
+__device__ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 {
     //    G*m_us*m_them
     //F = -------------
@@ -117,48 +112,89 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+	glm::vec3 usPosition(us.x, us.y, us.z);
+	glm::vec3 themPosition(them.x, them.y, them.z);
+	glm::vec3 gravityDir = themPosition - usPosition;
+	float _1overR = abs(glm::length(gravityDir)) < EPSILON ? 0 : 1.0f / glm::length(gravityDir);
+
+    return gravityDir * (float)G * them.w * _1overR*_1overR*_1overR;
 }
 
 //TODO: Core force calc kernel global memory
-__device__ 
-glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
+__device__  glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	for(int i = 0; i < N; ++i) // read global memory N times
+	{
+		acc += calculateAcceleration(my_pos, their_pos[i]);
+	}
+//	printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);
     return acc;
 }
 
 
 //TODO: Core force calc kernel shared memory
-__device__ 
-glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
+__device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+	__shared__ glm::vec4 sharedPositions[blockSize];
+//	if((threadIdx.x + (blockIdx.x * blockDim.x)) == 0) printf("%d\n",(int)ceil((float)N / blockSize));
+	int positionsFullBlocks = (int)ceil((float)N / blockSize);
+	for(int i = 0; i < positionsFullBlocks; ++i)
+	{
+		int index = threadIdx.x + i * blockDim.x;
+		if(index < N)
+		{
+			sharedPositions[threadIdx.x] = their_pos[index];		
+		}
+		__syncthreads();
+		for(int j = 0; j < blockSize; ++j) 
+		{
+			acc += calculateAcceleration(my_pos, sharedPositions[j]);
+		}
+		__syncthreads();
+	}
+//	printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);
     return acc;
 }
 
 
-//Simple Euler integration scheme
-__global__
-void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
+//Integration 
+__global__ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
         glm::vec4 my_pos = pos[index];
         glm::vec3 acc = ACC(N, my_pos, pos);
+/*
+		if(index == 0)
+			printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);*/
         vel[index] += acc * dt;
-        pos[index].x += vel[index].x * dt;
+
+		// RK4 method
+		glm::vec3 k1 = vel[index];
+		glm::vec3 k2 = k1 + 0.5f * dt * k1;
+		glm::vec3 k3 = k1 + 0.5f * dt * k2;
+		glm::vec3 k4 = k1 + dt * k3;
+
+		glm::vec3 increment = 1.0f/6.0f * (k1 + 2.0f*k2 + 2.0f*k3 + k4);
+
+		pos[index].x += increment.x * dt;
+        pos[index].y += increment.y * dt;
+        pos[index].z += increment.z * dt;
+
+		 //Euler method
+        /*pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
-        pos[index].z += vel[index].z * dt;
+        pos[index].z += vel[index].z * dt;*/
     }
 }
 
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
-__global__
-void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
+__global__ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -176,8 +212,7 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 
 //Update the texture pixel buffer object
 //(This texture is where openGL pulls the data for the height map)
-__global__
-void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, float s_scale)
+__global__ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     int x = index % width;
@@ -206,16 +241,17 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
 void initCuda(int N)
 {
     numObjects = N;
-    dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
+    dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize))); // one dimensional grid
 
     cudaMalloc((void**)&dev_pos, N*sizeof(glm::vec4));
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
 
-    generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
+    generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass); // one dimensional block
     checkCUDAErrorWithLine("Kernel failed!");
-    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+//    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, scene_scale/100.0);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
@@ -226,6 +262,13 @@ void cudaNBodyUpdateWrapper(float dt)
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
+void cudaUpdatePBO(float4 * pbodptr, int width, int height)
+{
+    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
+    sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    checkCUDAErrorWithLine("Kernel failed!");
+}
+
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
@@ -233,9 +276,4 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
-void cudaUpdatePBO(float4 * pbodptr, int width, int height)
-{
-    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
-    checkCUDAErrorWithLine("Kernel failed!");
-}
+
