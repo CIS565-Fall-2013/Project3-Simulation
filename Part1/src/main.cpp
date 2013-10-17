@@ -91,7 +91,7 @@ void display()
     runCuda();
 
     char title[100];
-    sprintf( title, "565 NBody sim [%0.2f fps]", fps );
+    sprintf( title, "565 NBody sim [%0.2f fps] [%0.2f ms]", fps, time);
     glutSetWindowTitle(title);
 
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);

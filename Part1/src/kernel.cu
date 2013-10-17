@@ -69,7 +69,7 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = rand.z; // 0.0f
+        arr[index].z = 0.0f; // rand.z; // 
         arr[index].w = mass;
     }
 }
@@ -102,7 +102,7 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = rand.z; //0.0f
+        arr[index].z = 0.0f; // rand.z;
     }
 }
 
@@ -121,33 +121,31 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     // Load the data
     glm::vec3 us_pos(us.x, us.y, us.z);
     glm::vec3 them_pos(them.x, them.y, them.z);
-    float m_them = us.w;
+    float m_them = them.w;
 	
-	// Calculate the distance and direction between the two objects
-    glm::vec3 r = us_pos - them_pos;
+	// Calculate the distance and direction between the two objects (Note: the direction is them - us).
+    glm::vec3 r = them_pos - us_pos;
     float distance = glm::length(r);
     glm::vec3 direction = glm::normalize(r);
 	
 	// Return no acceleration when the two bodies are very close to each other
-	if (distance < 1e-5)
+	if (abs(distance) < EPSILON)
 		return glm::vec3(0.0f);
 
 	// Calculate the acceleration between two bodies using Newton's Law of Universal Gravitation, referring to http://en.wikipedia.org/wiki/Newton%27s_law_of_universal_gravitation
-    glm::vec3 acc = (float)(G * m_them / pow(distance, 2)) * direction;
+    glm::vec3 acc = direction * (float)G * m_them / pow(distance,2);
 	return acc;
-
-    // return glm::vec3(0.0f);
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
+	// Naively calculate the acceleration one by one
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-	////int index = threadIdx.x + (blockIdx.x * blockDim.x);
- //   for( int i = 0; i < N; ++ i ) {
- //      acc += calculateAcceleration(my_pos, their_pos[i]);
-	//}
+    for( unsigned int i = 0; i < N; ++ i ) {
+       acc += calculateAcceleration(my_pos, their_pos[i]);
+	}
     return acc;
 }
 
@@ -212,7 +210,7 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
 
     if(x<width && y<height)
     {
-        //glm::vec3 color(0.05, 0.15, 0.3);
+        glm::vec3 color(0.05, 0.15, 0.3);
         glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
         float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)
