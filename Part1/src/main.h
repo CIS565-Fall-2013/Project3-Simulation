@@ -2,7 +2,7 @@
 #define MAIN_H
 
 #include <GL/glew.h>
-#include <GL/glut.h>
+#include <GL/freeglut.h>
 
 #include <stdlib.h>
 #include <cuda_runtime.h>
@@ -48,8 +48,8 @@ GLuint program[2];
 const unsigned int HEIGHT_FIELD = 0;
 const unsigned int PASS_THROUGH = 1;
 
-const int field_width  = 800;
-const int field_height = 800;
+const int field_width  = 296;
+const int field_height = 296;
 
 float fovy = 60.0f;
 float zNear = 0.10;
@@ -62,7 +62,7 @@ glm::vec3 cameraPosition(1.75,1.75,1.35);
 //----------CUDA STUFF-----------
 //-------------------------------
 
-int width=1000; int height=1000;
+int width=500; int height=500;
 
 //-------------------------------
 //-------------MAIN--------------
