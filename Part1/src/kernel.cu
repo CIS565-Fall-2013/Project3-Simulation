@@ -11,14 +11,14 @@
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
 
-#define FLOCKING 1
+#define FLOCKING 0
 
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e7;
-const __device__ float starMass = 5e8;
+const float planetMass = 3e8;
+const __device__ float starMass = 5e9;
 
 const float scene_scale = 2e1; //size of the height map in simulation space
 
@@ -72,6 +72,7 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
         arr[index].x = rand.x;
         arr[index].y = rand.y;
         arr[index].z = 0.0f;//rand.z;
+        //arr[index].z = rand.z;
         arr[index].w = mass;
     }
 }
@@ -104,7 +105,8 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0;//rand.z;
+	arr[index].z = 0.0;
+        //arr[index].z = rand.z;
     }
 }
 
@@ -179,38 +181,69 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
     //return calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 }
 
-// TODO
+//DONE
 __device__
-glm::vec3 Alignment( int N, glm::vec3* vel )
+glm::vec3 Alignment( int N, glm::vec4 my_pos, glm::vec4* pos, glm::vec3* vel )
 {
   glm::vec3 ave_vel;
+  float r2;
+  glm::vec3 d;
+  int index = threadIdx.x + (blockIdx.x * blockDim.x);
   // Compute average velocity
   // Compute average position
-  for ( int i=0; i < N; ++i )
-    ave_vel += glm::vec3( vel[i].x, vel[i].y, vel[i].z );
-  ave_vel= ave_vel/float(N);
+  int cnt;
+  for ( int i=0; i < N; ++i ) {
+    if ( i == index ) 
+      continue;
+    d = glm::vec3( pos[i].x-my_pos.x, pos[i].y-my_pos.y, pos[i].z-my_pos.z); 
+    r2 = glm::dot( d, d );
+    if ( r2 < 5.0 ) {
+      ave_vel += glm::vec3( vel[i].x, vel[i].y, vel[i].z );
+      cnt ++;
+    }
+  }
+  ave_vel= ave_vel/float(cnt);
 
   return ave_vel;
   //return glm::vec3(0.0, 0.0, 0.0);
 } 
 
-// TODO
+//DONE 
 __device__
 glm::vec3 Cohesion( int N, glm::vec4 my_pos, glm::vec4* pos)
 {
   glm::vec3 ave_pos;
-  // Compute average position
-  for ( int i=0; i < N; ++i )
-    ave_pos += glm::vec3( pos[i].x, pos[i].y, pos[i].z );
-  ave_pos = ave_pos/float(N);
+  float r2;
+  glm::vec3 d;
+  int index = threadIdx.x + (blockIdx.x * blockDim.x);
+  int cnt = 0;
+  // Compute average position weighted by distance
+  for ( int i=0; i < N; ++i ) {
+    if ( i == index ) 
+      continue;
+    d = glm::vec3( pos[i].x-my_pos.x, pos[i].y-my_pos.y, pos[i].z-my_pos.z); 
+    r2 = glm::dot( d, d );
+    if ( r2 < 5.0 ) {
+      cnt++;
+      ave_pos += glm::vec3( pos[i].x, pos[i].y, pos[i].z );
+    }
+  }
+  ave_pos = ave_pos/float(cnt);
 
-  glm::vec3 d = glm::vec3(ave_pos.x-my_pos.x, ave_pos.y-my_pos.y, ave_pos.z-my_pos.z); 
+  d = glm::vec3(ave_pos.x-my_pos.x, ave_pos.y-my_pos.y, ave_pos.z-my_pos.z); 
+
+  //float r = glm::length(d) + EPSILON;
+  //float s = sqrt(1.0f/r);
+  //glm::vec3 D = glm::normalize(glm::cross(d/r,glm::vec3(0,0,1)));
+
+  //return s*D;
+
   return glm::normalize(d);
 } 
 
-// TODO
+//DONE
 __device__
-glm::vec3 Seperation( int N, glm::vec4 my_pos, glm::vec4* pos, float dt )
+glm::vec3 Seperation( int N, glm::vec4 my_pos, glm::vec4* pos  )
 {
 
   int index = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -224,7 +257,8 @@ glm::vec3 Seperation( int N, glm::vec4 my_pos, glm::vec4* pos, float dt )
       continue;
     d = glm::vec3( pos[i].x-my_pos.x, pos[i].y-my_pos.y, pos[i].z-my_pos.z); 
     r2 = glm::dot( d, d );
-    acc += -glm::normalize(d)*float(1.0/(r2 + 1e-2));
+    if ( r2 < 1.0 ) 
+      acc += -glm::normalize(d);
   }
   return acc;
 }
@@ -232,7 +266,7 @@ glm::vec3 Seperation( int N, glm::vec4 my_pos, glm::vec4* pos, float dt )
 
 //Simple Euler integration scheme
 __global__
-void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
+void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 star_position )
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
@@ -244,28 +278,29 @@ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
         vel[index] += acc * dt;
 	#else 
 	// Align velocity with flock average
-	glm::vec3 align_vel = Alignment( N, vel );
+	glm::vec3 align_vel = Alignment( N, my_pos, pos, vel );
 	// Attract towards flock average
 	glm::vec3 cohesion_vel = Cohesion( N, my_pos, pos );
 	// Repel from nearby objects
-	glm::vec3 seperation_vel = Seperation( N, my_pos, pos, dt );
+	glm::vec3 seperation_vel = Seperation( N, my_pos, pos );
 
-	glm::vec3 weights = glm::vec3( 1.0, 1.0, 0.2 );	
+	glm::vec3 weights = glm::vec3( 0.8, 0.2, 0.5 );	
 	// Need some weights
 	vel[index] = weights.x*align_vel + weights.y*cohesion_vel + weights.z*seperation_vel;
 
 	// Add in circular velocity around star
-        glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
+	//glm::vec3 star_position( 1.0, 0.0, 0.0 );
+        glm::vec3 R = glm::vec3(pos[index].x-star_position.x, pos[index].y-star_position.y, pos[index].z-star_position.z);
         float r = glm::length(R) + EPSILON;
         float s = sqrt(G*starMass/r);
         glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
-	vel[index] += 10.0f*s*D;
+	vel[index] += 1.0f*D;
 
 	// Add in attractive velocity toward star
-	vel[index] += -0.25f*R;
+	vel[index] += -0.01f*R;
 
 	// Add in damping
-	vel[index] = 0.8f*vel[index];
+	//vel[index] *= 0.7f;
 
 	#endif 
 
@@ -311,8 +346,8 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     if(x<width && y<height)
     {
         glm::vec3 color(0.05, 0.15, 0.3);
-	//glm::vec3 acc = glm::vec3( 0.0, 0.0, 0.5 );
-        glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+	glm::vec3 acc = glm::vec3( 0.0, 0.0, 0.5 );
+        //glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
         float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)
         pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
@@ -344,10 +379,10 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
-void cudaNBodyUpdateWrapper(float dt)
+void cudaNBodyUpdateWrapper(float dt, glm::vec3 goal_position )
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, goal_position);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 

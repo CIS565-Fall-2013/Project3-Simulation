@@ -58,6 +58,9 @@ float zFar = 5.0;
 glm::mat4 projection;
 glm::mat4 view;
 glm::vec3 cameraPosition(1.75,1.75,1.35);
+
+glm::vec3 goal_position( 0.0, 0.0, 0.0 );
+
 //-------------------------------
 //----------CUDA STUFF-----------
 //-------------------------------
@@ -74,7 +77,7 @@ int main(int argc, char** argv);
 //---------RUNTIME STUFF---------
 //-------------------------------
 
-void runCuda();
+void runCuda( glm::vec3 goal_position );
 
 void display();
 void keyboard(unsigned char key, int x, int y);

@@ -4,12 +4,13 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 64
+#define N_FOR_VIS 4096
 #define DT 0.05
 #define VISUALIZE 1
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
+
 
 int main(int argc, char** argv)
 {
@@ -64,7 +65,7 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+    cudaNBodyUpdateWrapper(DT, goal_position);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
@@ -153,6 +154,19 @@ void keyboard(unsigned char key, int x, int y)
         case(27):
             exit(1);
             break;
+
+	case('w'):
+	    goal_position.y += 0.1;
+	    break;
+	case('s'):
+	    goal_position.y -= 0.1;
+	    break;
+	case('a'):
+	    goal_position.x -= 0.1;
+	    break;
+	case('d'):
+	    goal_position.x += 0.1;
+	    break;
     }
 }
 
