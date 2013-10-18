@@ -123,7 +123,7 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 	//glm::vec3 accDir = glm::normalize(rvec);
 	float r = glm::length(rvec);
 
-	if (r == 0)
+	if (r < 1)
 	{
 		return glm::vec3(0,0,0);
 	}
