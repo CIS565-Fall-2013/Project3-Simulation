@@ -123,7 +123,7 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 	//glm::vec3 accDir = glm::normalize(rvec);
 	float r = glm::length(rvec);
 
-	if (r < 1)
+	if (r < 0.001) //TODO: Fix this so that it doesnt cause a pole towards the sphere
 	{
 		return glm::vec3(0,0,0);
 	}
