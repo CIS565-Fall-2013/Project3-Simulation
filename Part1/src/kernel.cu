@@ -118,15 +118,34 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //a = ------------- = --------
     //      m_us*r^2        r^2
     
-    return glm::vec3(0.0f);
+   	glm::vec4 rvec4 = them-us;
+	glm::vec3 rvec = glm::vec3(rvec4.x, rvec4.y, rvec4.z);
+	//glm::vec3 accDir = glm::normalize(rvec);
+	float r = glm::length(rvec);
+
+	if (r == 0)
+	{
+		return glm::vec3(0,0,0);
+	}
+	else 
+	{
+		glm::vec3 a = ((float)G * them.w * rvec) / (r * r * r);
+		return a;
+	}
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
-{
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+{    
+	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+	for (int i = 0 ; i < N ; ++i)
+	{
+		acc += calculateAcceleration(my_pos, their_pos[i]);
+	}
+
+	return acc;
 }
 
 
