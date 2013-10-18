@@ -124,7 +124,7 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     float r2 = glm::dot( d, d );
 
     // EPSILON softening-factor
-    float a = -G*m_them/(r2 + 1e-2);
+    float a = -G*m_them/(r2 + 1e-1);
     return a*glm::normalize( d );
 }
 
@@ -167,7 +167,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 
       // Calculate accelerations from other planets using from shared mem
       for ( int j=0; j < blockDim.x; j++ ) {
-	  if ( i != index ) 
+	  if ( i+j != index ) 
 	    acc += calculateAcceleration(my_pos, shared_their_pos[j]);
       }
       // Sync before next copy
@@ -230,6 +230,7 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     if(x<width && y<height)
     {
         glm::vec3 color(0.05, 0.15, 0.3);
+	//glm::vec3 acc = glm::vec3( 0.0, 0.0, 0.5 );
         glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
         float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)

@@ -12,7 +12,7 @@
     #include <cutil_math.h>
 #endif
 
-#define blockSize 256
+#define blockSize 512
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 0
 

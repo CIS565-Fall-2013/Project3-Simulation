@@ -30,6 +30,7 @@ out vec3 Right;
 out vec2 TexCoord;
 
 const float scale = 0.03;
+//const float scale = 0.005;
 
 void main()
 {
