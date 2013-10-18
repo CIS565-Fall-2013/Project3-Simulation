@@ -63,5 +63,14 @@
     <None Include="shaders\planetVS.glsl">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="shaders\heightGS.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\heightTES.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\heightTCS.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -27,7 +27,20 @@
     #define compat_getMaxGflopsDeviceId() cutGetMaxGflopsDeviceId()
 #endif
 
+enum {EULER, VELVERLET, RK4, NUMBEROFINTEGRATIONS};
+
 using namespace std;
+
+class cam
+{
+	public:
+	float rad;
+	float theta, phi;
+	glm::vec3 pos;
+	cam();
+	void reset();
+	void setFrame();
+};
 
 //-------------------------------
 //------------GL STUFF-----------
@@ -48,16 +61,31 @@ GLuint program[2];
 const unsigned int HEIGHT_FIELD = 0;
 const unsigned int PASS_THROUGH = 1;
 
-const int field_width  = 800;
-const int field_height = 800;
+const int field_width_pbo = 100;
+const int field_height_pbo = 100;
+
+const int field_width  = 10;
+const int field_height = 10;
 
 float fovy = 60.0f;
 float zNear = 0.10;
-float zFar = 5.0;
+float zFar = 25.0;
+
+int integration = EULER;
 
 glm::mat4 projection;
 glm::mat4 view;
+glm::mat4 projectionView;
 glm::vec3 cameraPosition(1.75,1.75,1.35);
+
+cam mouseCam;
+float lastx = 0.0f;
+float lasty = 0.0f;
+float motion=0.2;
+bool LMB=false;
+bool MMB=false;
+bool RMB=false;
+
 //-------------------------------
 //----------CUDA STUFF-----------
 //-------------------------------
@@ -78,6 +106,9 @@ void runCuda();
 
 void display();
 void keyboard(unsigned char key, int x, int y);
+void mouseMovement(int x, int y);
+void mouseMovementUpdate(int x, int y);
+void mouseClick(int button, int state, int x, int y);
 
 //-------------------------------
 //----------SETUP STUFF----------

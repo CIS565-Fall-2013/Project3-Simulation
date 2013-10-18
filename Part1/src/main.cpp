@@ -3,13 +3,44 @@
  * main.cpp */
 
 #include "main.h"
+#include "cam.h"
 
 #define N_FOR_VIS 25
 #define DT 0.2
 #define VISUALIZE 1
+
+cam::cam()
+{
+	rad=glm::length(cameraPosition);
+	theta=45.0;
+	phi=45.0;
+	pos = cameraPosition;
+	view = glm::lookAt(pos, glm::vec3(0), glm::vec3(0,0,1));
+	projectionView = projection * view;
+}
+void cam::reset()
+{
+	rad=glm::length(cameraPosition);
+	theta=45.0;
+	phi=45.0;
+	pos = cameraPosition;
+	view = glm::lookAt(pos, glm::vec3(0), glm::vec3(0,0,1));
+	projectionView = projection * view;
+}
+void cam::setFrame()
+{	
+	pos.x=rad*sin(3.14*theta/180)*sin(3.14*phi/180);
+	pos.y=rad*sin(3.14*theta/180)*cos(3.14*phi/180);
+	pos.z=rad*cos(3.14*theta/180);
+
+	view = glm::lookAt(pos, glm::vec3(0), glm::vec3(0,0,1));
+	projectionView = projection * view;
+}
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
+
 
 int main(int argc, char** argv)
 {
@@ -30,7 +61,7 @@ int main(int argc, char** argv)
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
     view = glm::lookAt(cameraPosition, glm::vec3(0), glm::vec3(0,0,1));
 
-    projection = projection * view;
+    projectionView = projection * view;
 
     GLuint passthroughProgram;
     initShaders(program);
@@ -43,7 +74,9 @@ int main(int argc, char** argv)
 
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
-
+	glutMouseFunc(mouseClick); //check for mouse click
+	glutMotionFunc(mouseMovement); //check for mouse movement
+	glutPassiveMotionFunc(mouseMovementUpdate); //check for mouse movement
     glutMainLoop();
 
     return 0;
@@ -64,9 +97,14 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+	if(integration == EULER)
+		    cudaNBodyUpdateWrapper(DT);
+	else if(integration == VELVERLET)
+		cudaNBodyUpdateVelocityVerletWrapper(DT);
+
+
 #if VISUALIZE == 1
-    cudaUpdatePBO(dptr, field_width, field_height);
+    cudaUpdatePBO(dptr, field_width_pbo, field_height_pbo);
     cudaUpdateVBO(dptrvert, field_width, field_height);
 #endif
     // unmap buffer object
@@ -79,6 +117,7 @@ int frame = 0;
 
 void display()
 {
+	mouseCam.setFrame();
     static float fps = 0;
     frame++;
     int time=glutGet(GLUT_ELAPSED_TIME);
@@ -91,12 +130,25 @@ void display()
     runCuda();
 
     char title[100];
-    sprintf( title, "565 NBody sim [%0.2f fps]", fps );
+	char integMethod[30];
+	switch(integration)
+	{
+		case EULER:
+			sprintf(integMethod,"Euler");
+			break;
+		case VELVERLET:
+			sprintf(integMethod,"Velocity Verlet");
+			break;
+		case RK4:
+			sprintf(integMethod,"Runge-Kutta 4");
+			break;
+	}
+    sprintf( title, "565 NBody sim : %s : [%0.2f fps]", integMethod, fps );
     glutSetWindowTitle(title);
 
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
     glBindTexture(GL_TEXTURE_2D, displayImage);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, field_width, field_height, 
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, field_width_pbo, field_height_pbo, 
             GL_RGBA, GL_FLOAT, NULL);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
@@ -106,6 +158,16 @@ void display()
     //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
     glUseProgram(program[HEIGHT_FIELD]);
+
+	GLuint location;
+    if ((location = glGetUniformLocation(program[HEIGHT_FIELD], "u_projMatrix")) != -1)
+    {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &projectionView[0][0]);
+    }
+	if ((location = glGetUniformLocation(program[HEIGHT_FIELD], "u_cameraPos")) != -1)
+    {
+		glUniform3fv(location, 1, &mouseCam.pos[0]);
+    }
 
     glEnableVertexAttribArray(positionLocation);
     glEnableVertexAttribArray(texcoordsLocation);
@@ -117,13 +179,24 @@ void display()
     glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
-
-    glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
+	
+	glPatchParameteri(GL_PATCH_VERTICES, 3);
+    glDrawElements(GL_PATCHES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
     glDisableVertexAttribArray(positionLocation);
     glDisableVertexAttribArray(texcoordsLocation);
 
     glUseProgram(program[PASS_THROUGH]);
+
+	location;
+    if ((location = glGetUniformLocation(program[PASS_THROUGH], "u_projMatrix")) != -1)
+    {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &projectionView[0][0]);
+    }
+	if ((location = glGetUniformLocation(program[PASS_THROUGH], "u_cameraPos")) != -1)
+    {
+		glUniform3fv(location, 1, &mouseCam.pos[0]);
+    }
 
     glEnableVertexAttribArray(positionLocation);
 
@@ -152,8 +225,56 @@ void keyboard(unsigned char key, int x, int y)
         case(27):
             exit(1);
             break;
+		case 'r':
+			mouseCam.reset();
+			break;
+		case 'i':
+			integration = (integration + 1 ) % NUMBEROFINTEGRATIONS;
+			break;
+		case 'I':
+			integration = (integration - 1 ) % NUMBEROFINTEGRATIONS;
+			break;
     }
 }
+
+
+void mouseMovement(int x, int y) {
+	float diffx=motion*(x-lastx); //check the difference between the current x and the last x position
+	float  diffy=motion*(y-lasty); //check the difference between the  current y and the last y position
+	lastx=x; //set lastx to the current x position
+	lasty=y; //set lasty to the current y position
+	if(LMB)
+	{
+		mouseCam.theta -= diffy;
+		if (mouseCam.theta > 180)
+			mouseCam.theta = 179.9999;
+		if (mouseCam.theta < 0)
+			mouseCam.theta=0.0001;
+		mouseCam.phi += diffx;
+	}
+	if(RMB)
+	{
+		mouseCam.rad -= (motion*diffy);
+		if(mouseCam.rad < 1)
+			mouseCam.rad = 1;
+	}
+}
+
+void mouseMovementUpdate(int x, int y) {
+	lastx=x; //set lastx to the current x position
+	lasty=y; //set lasty to the current y position
+}
+
+void mouseClick(int button, int state, int x, int y) {
+
+	if(button == GLUT_LEFT_BUTTON)
+		LMB = (state==GLUT_DOWN);
+	else if(button == GLUT_MIDDLE_BUTTON)
+		MMB = (state==GLUT_DOWN);
+	else if(button = GLUT_RIGHT_BUTTON)
+		RMB = (state==GLUT_DOWN);
+}
+
 
 
 //-------------------------------
@@ -187,7 +308,7 @@ void initPBO(GLuint* pbo)
     if (pbo) 
     {
         // set up vertex data parameter
-        int num_texels = field_width*field_height;
+        int num_texels = field_width_pbo*field_height_pbo;
         int num_values = num_texels * 4;
         int size_tex_data = sizeof(GLfloat) * num_values;
 
@@ -209,7 +330,7 @@ void initTextures()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, field_width, field_height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, field_width_pbo, field_height_pbo, 0, GL_RGBA, GL_FLOAT, NULL);
 }
 
 void initVAO(void)
@@ -298,7 +419,7 @@ void initVAO(void)
 void initShaders(GLuint * program)
 {
     GLint location;
-    program[0] = glslUtility::createProgram("shaders/heightVS.glsl", "shaders/heightFS.glsl", attributeLocations, 2);
+    program[0] = glslUtility::createProgram("shaders/heightVS.glsl", "shaders/heightTCS.glsl", "shaders/heightTES.glsl", "shaders/heightGS.glsl", "shaders/heightFS.glsl", attributeLocations, 2);
     glUseProgram(program[0]);
     
     if ((location = glGetUniformLocation(program[0], "u_image")) != -1)
@@ -307,11 +428,15 @@ void initShaders(GLuint * program)
     }
     if ((location = glGetUniformLocation(program[0], "u_projMatrix")) != -1)
     {
-        glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
+        glUniformMatrix4fv(location, 1, GL_FALSE, &projectionView[0][0]);
     }
     if ((location = glGetUniformLocation(program[0], "u_height")) != -1)
     {
         glUniform1i(location, 0);
+    }
+	if ((location = glGetUniformLocation(program[0], "windowDim")) != -1)
+    {
+        glUniform2f(location, width, height);
     }
     
     program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", attributeLocations, 1);
@@ -319,7 +444,7 @@ void initShaders(GLuint * program)
     
     if ((location = glGetUniformLocation(program[1], "u_projMatrix")) != -1)
     {
-        glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
+        glUniformMatrix4fv(location, 1, GL_FALSE, &projectionView[0][0]);
     }
     if ((location = glGetUniformLocation(program[1], "u_cameraPos")) != -1)
     {

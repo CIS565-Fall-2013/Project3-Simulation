@@ -16,6 +16,8 @@ namespace glslUtility {
 		GLuint vertex;
 		GLuint fragment;
 		GLuint geometry;
+		GLuint tessellation_control;
+		GLuint tessellation_evaluation;
 	} shaders_t;
 
 	char* loadFile(const char *fname, GLint &fSize)
@@ -77,28 +79,40 @@ namespace glslUtility {
 		}
 	}
 
-	shaders_t loadShaders(const char * vert_path, const char * geom_path, const char * frag_path) {
+	shaders_t loadShaders(const char * vert_path, const char * tcs_path, const char * tes_path, const char * geom_path, const char * frag_path) {
 		GLuint f, g=-1, v;
+		GLuint tc=-1, te=-1;
 
 		char *vs, *gs, *fs;
+		char *tcs, *tes;
 
 		v = glCreateShader(GL_VERTEX_SHADER);
+		if(tcs_path) tc = glCreateShader(GL_TESS_CONTROL_SHADER);
+		if(tes_path) te = glCreateShader(GL_TESS_EVALUATION_SHADER);
 		if(geom_path) g = glCreateShader(GL_GEOMETRY_SHADER);
 		f = glCreateShader(GL_FRAGMENT_SHADER);	
 
 		// load shaders & get length of each
 		GLint vlen;
+		GLint tclen;
+		GLint telen;
 		GLint glen;
 		GLint flen;
 		vs = loadFile(vert_path,vlen);
+		if(tcs_path) tcs = loadFile(tcs_path,tclen);
+		if(tes_path) tes = loadFile(tes_path,telen);
 		if(geom_path) gs = loadFile(geom_path,glen);
 		fs = loadFile(frag_path,flen);
 
 		const char * vv = vs;
+		const char * tctc = tcs_path ? tcs : NULL;
+		const char * tete = tes_path ? tes : NULL;
 		const char * gg = geom_path ? gs : NULL;
 		const char * ff = fs;
 
 		glShaderSource(v, 1, &vv,&vlen);
+		if(tcs_path) glShaderSource(tc, 1, &tctc,&tclen);
+		if(tes_path) glShaderSource(te, 1, &tete,&telen);
 		if(geom_path) glShaderSource(g, 1, &gg,&glen);
 		glShaderSource(f, 1, &ff,&flen);
 
@@ -111,7 +125,26 @@ namespace glslUtility {
 			std::cout << "Vertex shader not compiled." << std::endl;
 		} 
 		printShaderInfoLog(v);
-        
+        if(tcs_path)
+		{
+            glCompileShader(tc);
+            glGetShaderiv(tc, GL_COMPILE_STATUS, &compiled);
+            if (!compiled)
+            {
+                std::cout << "Tessellation Control shader not compiled." << std::endl;
+            } 
+            printShaderInfoLog(tc);
+		}
+        if(tes_path)
+		{
+            glCompileShader(te);
+            glGetShaderiv(te, GL_COMPILE_STATUS, &compiled);
+            if (!compiled)
+            {
+                std::cout << "Tessellation Evaluation shader not compiled." << std::endl;
+            } 
+            printShaderInfoLog(te);
+		}
         if(geom_path)
         {
             glCompileShader(g);
@@ -131,9 +164,13 @@ namespace glslUtility {
 		} 
 		printShaderInfoLog(f);
 
-		shaders_t out; out.vertex = v; out.geometry = g; out.fragment = f;
+		shaders_t out; out.vertex = v; out.geometry = g; out.fragment = f; 
+		out.tessellation_control = tc;
+		out.tessellation_evaluation = te;
 
 		delete [] vs; // dont forget to free allocated memory, or else really bad things start happening
+		if(tcs_path) delete[] tcs;
+		if(tes_path) delete[] tes;
         if(geom_path) delete[] gs;
 		delete [] fs; // we allocated this in the loadFile function...
 
@@ -142,6 +179,8 @@ namespace glslUtility {
 
 	void attachAndLinkProgram( GLuint program, shaders_t shaders) {
 		glAttachShader(program, shaders.vertex);
+		if(shaders.tessellation_control >= 0) glAttachShader(program, shaders.tessellation_control);
+		if(shaders.tessellation_evaluation >= 0) glAttachShader(program, shaders.tessellation_evaluation);
         if(shaders.geometry >= 0) glAttachShader(program, shaders.geometry);
 		glAttachShader(program, shaders.fragment);
 
@@ -157,7 +196,7 @@ namespace glslUtility {
 
     GLuint createProgram(const char *vertexShaderPath, const char *fragmentShaderPath, const char *attributeLocations[], GLuint numberOfLocations)
     {
-	    glslUtility::shaders_t shaders = glslUtility::loadShaders(vertexShaderPath, NULL, fragmentShaderPath);
+	    glslUtility::shaders_t shaders = glslUtility::loadShaders(vertexShaderPath, NULL, NULL, NULL, fragmentShaderPath);
 	
 	    GLuint program = glCreateProgram();
 
@@ -173,7 +212,28 @@ namespace glslUtility {
 
     GLuint createProgram(const char *vertexShaderPath, const char *geometryShaderPath, const char *fragmentShaderPath, const char *attributeLocations[], GLuint numberOfLocations)
     {
-	    glslUtility::shaders_t shaders = glslUtility::loadShaders(vertexShaderPath, geometryShaderPath, fragmentShaderPath);
+	    glslUtility::shaders_t shaders = glslUtility::loadShaders(vertexShaderPath, NULL, NULL, geometryShaderPath, fragmentShaderPath);
+	
+	    GLuint program = glCreateProgram();
+
+		for (GLuint i = 0; i < numberOfLocations; ++i)
+		{
+            glBindAttribLocation(program, i, attributeLocations[i]);
+		}
+
+	    glslUtility::attachAndLinkProgram(program, shaders);
+
+        return program;
+    }
+
+    GLuint createProgram(const char *vertexShaderPath, 
+						 const char *tessCtrlShaderPath,
+						 const char *tessEvalShaderPath,
+						 const char *geometryShaderPath,
+						 const char *fragmentShaderPath,
+						 const char *attributeLocations[], GLuint numberOfLocations)
+    {
+	    glslUtility::shaders_t shaders = glslUtility::loadShaders(vertexShaderPath, tessCtrlShaderPath, tessEvalShaderPath, geometryShaderPath, fragmentShaderPath);
 	
 	    GLuint program = glCreateProgram();
 

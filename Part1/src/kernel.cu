@@ -22,6 +22,7 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
+glm::vec3 * dev_acc;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -117,24 +118,62 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+	
+	glm::vec3 myPos = glm::vec3(  us.x,  us.y,  us.z);
+	glm::vec3 urPos = glm::vec3(them.x,them.y,them.z);
+	glm::vec3 direction = urPos - myPos;
+    float distance = glm::length(direction);
+	
+	if(distance > 0.000001f)
+	{
+		float GConst = G;
+		return GConst * them.w * (1.0f/glm::dot(direction,direction)) * glm::normalize(direction);
+	}
+
+	else
+		return glm::vec3(0.0f);
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	
+	for(int i=0; i< N ; i++)
+	{
+		acc += calculateAcceleration(my_pos, their_pos[i]);
+	}
     return acc;
 }
 
 
 //TODO: Core force calc kernel shared memory
-__device__ 
-glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
+__device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
+	__shared__ glm::vec4 sharedBodyData[blockSize];
+	int tid = threadIdx.x;
+	int bid = blockIdx.x;
+
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	int numberOfLoops = ceil((1.0f*N) / blockSize);
+
+	for(int i=0; i<numberOfLoops; i++)
+	{
+		int deltaIndex = ((i + bid)%numberOfLoops );
+		int index = deltaIndex * blockSize + tid;
+		if( index < N)
+		{
+			sharedBodyData[tid] = their_pos[index];
+		}
+		__syncthreads();
+		for(int j=0; j< blockSize; j++)
+		{
+			if((deltaIndex * blockSize + j < N) )
+				acc += calculateAcceleration(my_pos,sharedBodyData[j]);
+		}
+	}
+
     return acc;
 }
 
@@ -154,6 +193,33 @@ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
         pos[index].z += vel[index].z * dt;
     }
 }
+
+__global__ void updateVelVerletPart1(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    if( index < N )
+    {
+		glm::vec4 my_pos = pos[index];
+		glm::vec3 accel = ACC(N,my_pos,pos);
+		glm::vec3 deltaPos = dt * (vel[index] + dt * 0.5f * accel);
+		pos[index].x += deltaPos.x;
+		pos[index].y += deltaPos.y;
+		pos[index].z += deltaPos.z;
+		acc[index] = accel;
+	}
+}
+
+__global__ void updateVelVerletPart2(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    if( index < N )
+    {
+		glm::vec4 my_pos = pos[index];
+		glm::vec3 accel = ACC(N,my_pos,pos);
+		vel[index] += dt * 0.5f * (accel + acc[index]);
+	}
+}
+
 
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
@@ -213,6 +279,10 @@ void initCuda(int N)
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
 
+	// For velocityVerlet
+	cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
+	checkCUDAErrorWithLine("Kernel failed!");
+
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
     generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
@@ -223,6 +293,16 @@ void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    checkCUDAErrorWithLine("Kernel failed!");
+}
+
+void cudaNBodyUpdateVelocityVerletWrapper(float dt)
+{
+	dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+    updateVelVerletPart1<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel,dev_acc);
+    checkCUDAErrorWithLine("Kernel failed!");
+
+    updateVelVerletPart2<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel,dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
