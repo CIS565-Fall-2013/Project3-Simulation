@@ -1,10 +1,10 @@
 #ifndef MAIN_H
 #define MAIN_H
-
+#include <stdlib.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
 
-#include <stdlib.h>
+
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <string>

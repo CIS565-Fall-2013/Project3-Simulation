@@ -4,6 +4,7 @@
 #include "glm/glm.hpp"
 #include "utilities.h"
 #include "kernel.h"
+#include "timer.h"
 
 #if SHARED == 1
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
@@ -108,7 +109,7 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
 
 //TODO: Determine force between two bodies
 __device__
-glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
+glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4* them)
 {
     //    G*m_us*m_them
     //F = -------------
@@ -117,25 +118,57 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+    glm::vec3 d_v = glm::vec3( *them - us );
+    float accel = glm::dot(d_v,d_v) + 0.000001f;
+    accel = accel * accel * accel;
+    accel = 1.0f / sqrtf( accel );
+
+    accel = them->w  * accel;
+    return d_v * accel;
+   
 }
 
 //TODO: Core force calc kernel global memory
-__device__ 
+__device__
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+    
+    glm::vec3 acc = calculateAcceleration(my_pos, &glm::vec4(0,0,0,starMass));
+
+    for( int i = 0; i < N; ++i )
+    {
+        
+        acc += calculateAcceleration(my_pos, &their_pos[i] );
+        
+    }
+
+    return acc * (float)G;
 }
 
 
 //TODO: Core force calc kernel shared memory
+extern __shared__ glm::vec4 sh_pos[];
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+    int i,n, tile, idx;
+    glm::vec3 acc = calculateAcceleration(my_pos, &glm::vec4(0,0,0,starMass));
+    tile = 0;
+    for( i = 0; i < N; i += blockDim.x )
+    {
+        idx = tile * blockDim.x + threadIdx.x;
+        if( idx < N )
+            sh_pos[threadIdx.x] = their_pos[idx];
+        __syncthreads();
+
+        for( n = 0; n < blockDim.x && n < N; ++n )
+            acc += calculateAcceleration(my_pos, &sh_pos[n] );
+        __syncthreads();
+
+        ++tile; //move on to the next tile of planets
+    }
+   
+    return acc* (float)G;
 }
 
 
@@ -144,10 +177,13 @@ __global__
 void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if( index < N )
+    if( index >= N )
+        return;
+
     {
         glm::vec4 my_pos = pos[index];
         glm::vec3 acc = ACC(N, my_pos, pos);
+
         vel[index] += acc * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
@@ -221,21 +257,27 @@ void initCuda(int N)
 
 void cudaNBodyUpdateWrapper(float dt)
 {
+    GpuTimer timer;
+    
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    timer.Start();
+    update<<<fullBlocksPerGrid, blockSize, sizeof( glm::vec4 ) * numObjects >>>(numObjects, dt, dev_pos, dev_vel);
+    timer.Stop();
+    printf( "UPDATE time: %f\n", timer.Elapsed() );
+
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    sendToVBO<<<fullBlocksPerGrid, blockSize >>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    sendToPBO<<<fullBlocksPerGrid, blockSize,sizeof(glm::vec4)*numObjects>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 }
