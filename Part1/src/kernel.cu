@@ -117,15 +117,23 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+	
+	float r = sqrt((them.x-us.x)*(them.x-us.x) + (them.y-us.y)*(them.y -us.y )+ (them.z-us.z)*(them.z-us.z));
+	glm::vec4 a = ((G * them.w * (them-us))/(pow(r,3)));//planetMass
+    return glm::vec3(a.x,a.y,a.z);
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	glm::vec3 acc(0.0f,0.0f,0.0f) ;
+	for(int i=0; i<N ; i++)
+	{
+		if(my_pos != their_pos[i])
+			acc += calculateAcceleration(my_pos, their_pos[i]);
+	}
+	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
     return acc;
 }
 
@@ -134,7 +142,16 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	__shared__ glm::vec4 sh_their_pos[25] ; //extern 
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	sh_their_pos[threadIdx.x] = their_pos[index];
+    glm::vec3 acc(0.0f,0.0f,0.0f) ;
+	for(int i=0; i<N ; i++)
+	{
+		if(my_pos != their_pos[i])
+			acc += calculateAcceleration(my_pos, sh_their_pos[i]);
+	}
+	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
     return acc;
 }
 
@@ -147,7 +164,7 @@ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
     if( index < N )
     {
         glm::vec4 my_pos = pos[index];
-        glm::vec3 acc = ACC(N, my_pos, pos);
+        glm::vec3 acc = sharedMemAcc(N, my_pos, pos);// naiveAcc(N, my_pos, pos);//  ACC(N, my_pos, pos);//  glm::vec3(0,0,1);//
         vel[index] += acc * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
@@ -213,16 +230,16 @@ void initCuda(int N)
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
 
-    generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
+    generateRandomPosArray<<<fullBlocksPerGrid, blockSize,N>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
-    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+    generateCircularVelArray<<<fullBlocksPerGrid, blockSize,N>>>(2, numObjects, dev_vel, dev_pos);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
-void cudaNBodyUpdateWrapper(float dt)
+void cudaNBodyUpdateWrapper(float dt, int N)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    update<<<fullBlocksPerGrid, blockSize,25>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
