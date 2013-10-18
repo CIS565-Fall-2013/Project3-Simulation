@@ -29,8 +29,8 @@ out vec3 Up;
 out vec3 Right;
 out vec2 TexCoord;
 
-const float scale = 0.03;
-//const float scale = 0.01;
+//const float scale = 0.03;
+const float scale = 0.01;
 
 void main()
 {

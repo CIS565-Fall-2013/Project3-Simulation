@@ -11,7 +11,7 @@
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
 
-#define FLOCKING 0
+#define FLOCKING 1
 
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
@@ -72,8 +72,8 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
         arr[index].x = rand.x;
         arr[index].y = rand.y;
         arr[index].z = 0.0f;//rand.z;
-        //arr[index].z = rand.z;
-        arr[index].w = mass;
+        arr[index].z = rand.z;
+        //arr[index].w = mass;
     }
 }
 
