@@ -142,7 +142,8 @@ namespace glslUtility {
 
 	void attachAndLinkProgram( GLuint program, shaders_t shaders) {
 		glAttachShader(program, shaders.vertex);
-        if(shaders.geometry >= 0) glAttachShader(program, shaders.geometry);
+        if(shaders.geometry >= 0) 
+			glAttachShader(program, shaders.geometry);
 		glAttachShader(program, shaders.fragment);
 
 		glLinkProgram(program);

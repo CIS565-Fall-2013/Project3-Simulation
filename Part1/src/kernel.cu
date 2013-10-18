@@ -17,7 +17,7 @@ dim3 threadsPerBlock(blockSize);
 
 int numObjects;
 const float planetMass = 3e8;
-const __device__ float starMass = 5e10;
+const __device__ float starMass = 6e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 
@@ -37,7 +37,16 @@ void checkCUDAError(const char *msg, int line = -1)
         exit(EXIT_FAILURE); 
     }
 } 
-
+__host__ __device__
+float length(glm::vec3 vec)
+{
+	return sqrt(vec.x*vec.x+vec.y*vec.y+vec.z*vec.z);
+}
+__host__ __device__
+glm::vec3 normalize(glm::vec3 vec)
+{
+	return vec/length(vec);
+}
 __host__ __device__
 unsigned int hash(unsigned int a){
     a = (a+0x7ed55d16) + (a<<12);
@@ -84,9 +93,9 @@ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
     if(index < N)
     {
         glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
-        float r = glm::length(R) + EPSILON;
+        float r = length(R) + EPSILON;
         float s = sqrt(G*starMass/r);
-        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
+        glm::vec3 D = normalize(glm::cross(R/r,glm::vec3(0,0,1)));
         arr[index].x = s*D.x;
         arr[index].y = s*D.y;
         arr[index].z = s*D.z;
@@ -107,6 +116,7 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
     }
 }
 
+
 //TODO: Determine force between two bodies
 __device__
 glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
@@ -121,23 +131,18 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 	glm::vec3 us_pos(us.x,us.y,us.z);
 	glm::vec3 them_pos(them.x,them.y,them.z);
 	glm::vec3 dir = them_pos - us_pos;
-	float rsquare = glm::length(dir);
+	float rsquare = length(dir);
 	if(rsquare < E) return glm::vec3(0);
 	rsquare *= rsquare;
 	float aMag  = G * them.w /rsquare;
-	glm::vec3 a = aMag * glm::normalize(dir);
-    //printf("%f,%f,%f  ",a.x,a.y,a.z);
+	glm::vec3 a = aMag * normalize(dir);
 	return a;
 }
-
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
-{
-	//return glm::vec3(0);
-	glm::vec3 acc(0,0,0);
-	acc = calculateAcceleration(my_pos,glm::vec4(0,0,0,starMass));
-	glm::vec4 themPos;
+{	
+	glm::vec3 acc = calculateAcceleration(my_pos,glm::vec4(0,0,0,starMass));
 	for(int i = 0;i<N;++i)
 	{
 		acc += calculateAcceleration(my_pos, their_pos[i]);
@@ -150,7 +155,24 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
+	__shared__ glm::vec4 sharedPos[blockSize]; // tileSize = blockSize;
+	for(int tile = 0, index = 0;index<N;index+= blockSize,tile++)
+	{
+		int i = 0;
+		for(i = 0; i<blockDim.x; i++)
+		{
+			int index = tile*blockDim.x +i;
+			if(index >= N) break;
+			sharedPos[i] = their_pos[tile*blockDim.x + i];
+		}
+		for(int idx = 0;idx<blockDim.x && idx <= i;++idx)
+		{
+			acc+= calculateAcceleration(my_pos,sharedPos[idx]);
+		}
+		__syncthreads();
+	}
+
     return acc;
 }
 
@@ -223,7 +245,7 @@ void initCuda(int N)
 {
     numObjects = N;
     dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
-
+	
     cudaMalloc((void**)&dev_pos, N*sizeof(glm::vec4));
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));

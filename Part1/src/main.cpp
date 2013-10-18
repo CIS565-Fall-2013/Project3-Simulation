@@ -44,6 +44,7 @@ int main(int argc, char** argv)
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
 
+	glClearColor(0.8f, 0.8f, 0.8f, 0.0f);
     glutMainLoop();
 
     return 0;
@@ -79,6 +80,7 @@ int frame = 0;
 
 void display()
 {
+	
     static float fps = 0;
     frame++;
     int time=glutGet(GLUT_ELAPSED_TIME);
