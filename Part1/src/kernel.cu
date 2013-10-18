@@ -210,10 +210,14 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     if(x<width && y<height)
     {
         glm::vec3 color(0.05, 0.15, 0.3);
+
+		// figure out the acceleration of the texel with respect to the rest of the N-body
+		// these texels have a "weight" of 1 for the purpose of the calculations
         glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
-        float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
-        // Each thread writes one pixel location in the texture (textel)
-        pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
+        float mag = 1*sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z)); // multiplying this by 2 makes the black area around spikes larger
+        
+		// Each thread writes one pixel location in the texture (textel)
+        pbo[index].w = (mag < 1.0f) ? mag : 1.0f; // setting this to 0 makes the plane solid color with no heights
     }
 }
 

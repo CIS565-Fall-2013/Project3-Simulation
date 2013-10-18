@@ -19,6 +19,10 @@ int main(int argc, char** argv)
 
     cudaGLSetGLDevice( compat_getMaxGflopsDeviceId() );
     initPBO(&pbo);
+
+	// Note the below function is deprecated as of CUDA 3.0
+	// Thus, TODO: use cudaGraphicsGLRegisterBuffer instead!
+	// Goal for this part is to let CUDA kernels be able to write information into the pbo and interact with OpenGL
     cudaGLRegisterBufferObject( planetVBO );
     
 #if VISUALIZE == 1 
@@ -36,7 +40,7 @@ int main(int argc, char** argv)
     initShaders(program);
 
     glUseProgram(program[HEIGHT_FIELD]);
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0 + 0); // this uses displayImage as the active texture, so that the sampler in the VS will be able to sample this
 
     glEnable(GL_DEPTH_TEST);
 
@@ -88,12 +92,18 @@ void display()
         timebase = time;
         frame = 0;
     }
+
+	// call functions defined in kernel.cu
     runCuda();
 
     char title[100];
     sprintf( title, "565 NBody sim [%0.2f fps]", fps );
     glutSetWindowTitle(title);
 
+	// If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target (see glBindBuffer) while a texture image is specified, 
+	// data (last parameter of glTextSubImage2D) is treated as a byte offset into the buffer object's data store.
+	// In other words, pbo currently contains the new set of height values computed by the runCuda call above. displayImage is told to access
+	// pbo for values with no offset. Therefore, the calls below to heightVS will allow heightVS to sample the updated texture (displayImage)
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
     glBindTexture(GL_TEXTURE_2D, displayImage);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, field_width, field_height, 
@@ -101,11 +111,11 @@ void display()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
 #if VISUALIZE == 1
-    // VAO, shader program, and texture already bound
+    //VAO, shader program, and texture already bound
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
-    glUseProgram(program[HEIGHT_FIELD]);
+    glUseProgram(program[HEIGHT_FIELD]); // "shaders/heightVS.glsl", "shaders/heightFS.glsl"
 
     glEnableVertexAttribArray(positionLocation);
     glEnableVertexAttribArray(texcoordsLocation);
@@ -123,7 +133,7 @@ void display()
     glDisableVertexAttribArray(positionLocation);
     glDisableVertexAttribArray(texcoordsLocation);
 
-    glUseProgram(program[PASS_THROUGH]);
+    glUseProgram(program[PASS_THROUGH]); // "shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl"
 
     glEnableVertexAttribArray(positionLocation);
 
@@ -197,7 +207,11 @@ void initPBO(GLuint* pbo)
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, *pbo);
         // Allocate data for the buffer. 4-channel 8-bit image
         glBufferData(GL_PIXEL_UNPACK_BUFFER, size_tex_data, NULL, GL_DYNAMIC_COPY);
-        cudaGLRegisterBufferObject( *pbo );
+        
+		// Note the below function is deprecated as of CUDA 3.0
+		// Thus, TODO: use cudaGraphicsGLRegisterBuffer instead!
+		// Goal for this part is to let CUDA kernels be able to write information into the pbo and interact with OpenGL
+		cudaGLRegisterBufferObject( *pbo );
     }
 }
 
@@ -335,8 +349,10 @@ void initShaders(GLuint * program)
     {
         glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
     }
+	// binding textures to samplers
     if ((location = glGetUniformLocation(program[0], "u_height")) != -1)
     {
+		// // Texture unit 0 is for location
         glUniform1i(location, 0);
     }
     
