@@ -60,7 +60,7 @@ void main()
     TexCoord = vec2(1.0, 1.0);
     EmitVertex();*/
 
-	vec3 Pos = Position;
+	/*vec3 Pos = Position;
     gl_Position = u_projMatrix * vec4(Pos, 1.0);
     TexCoord = vec2(0.0, 0.0);
     EmitVertex();
@@ -78,7 +78,29 @@ void main()
     Pos = Position + scale*Up;
     gl_Position = u_projMatrix * vec4(Pos, 1.0);
     TexCoord = vec2(1.0, 1.0);
+    EmitVertex();*/
+
+	vec3 Pos = Position;// + scale * Up;
+    gl_Position = u_projMatrix * vec4(Pos, 1.0);
+    TexCoord = vec2(0.0, 0.0);
     EmitVertex();
+
+    Pos = Position  - scale * ToCam - 0.6*scale * Right;//+ scale*Right - scale*Up;
+    gl_Position = u_projMatrix * vec4(Pos, 1.0);
+    TexCoord = vec2(0.0, 1.0);
+    EmitVertex();
+
+	 Pos = Position - scale * ToCam -  1.5*scale * Up;
+    gl_Position = u_projMatrix * vec4(Pos, 1.0);
+    TexCoord = vec2(1.0, 1.0);
+    EmitVertex();
+
+    Pos = Position -  scale * ToCam + 0.6*scale * Right;
+    gl_Position = u_projMatrix * vec4(Pos, 1.0);
+    TexCoord = vec2(1.0, 0.0);
+    EmitVertex();
+
+  
 
     EndPrimitive();
 

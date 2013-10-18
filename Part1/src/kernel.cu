@@ -16,13 +16,17 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
+const __device__ float planetMass = 3e8;
 const __device__ float starMass = 6e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 
+__device__ float vel_mag = 5.0f; // the magnitude of velocity
+const __device__ float neighbor[3] = {80,80,70};
+
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
+glm::vec4 * poscopy;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -45,7 +49,21 @@ float length(glm::vec3 vec)
 __host__ __device__
 glm::vec3 normalize(glm::vec3 vec)
 {
+	if(length(vec)<EPSILON) return glm::vec3(0,0,0);
 	return vec/length(vec);
+}
+__host__ __device__
+glm::vec4 normalize(glm::vec4 vec)
+{
+	glm::vec3 v(vec.x,vec.y,vec.z);
+	if(length(v) < EPSILON) return glm::vec4(0,0,0,0);
+	return glm::vec4(v/length(v),vec.w);
+}
+
+__host__ __device__
+float dot(glm::vec3 v1,glm::vec3 v2)
+{
+	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
 }
 __host__ __device__
 unsigned int hash(unsigned int a){
@@ -56,6 +74,16 @@ unsigned int hash(unsigned int a){
     a = (a+0xfd7046c5) + (a<<3);
     a = (a^0xb55a4f09) ^ (a>>16);
     return a;
+}
+__host__ __device__
+void printvec(glm::vec3 a)
+{
+	printf("%f,%f,%f   ",a.x,a.y,a.z);
+}
+__host__ __device__
+void printfloat(float a)
+{
+	printf("float: %f   |",a);
 }
 
 //Function that generates static.
@@ -79,7 +107,7 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0f;//rand.z;
+        arr[index].z = rand.z;//.0f;//rand.z;
         arr[index].w = mass;
     }
 }
@@ -104,15 +132,17 @@ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
 
 //Generate randomized starting velocities in the XY plane
 __global__
-void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
+void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale, float velMag)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
-        arr[index].x = rand.x;
-        arr[index].y = rand.y;
-        arr[index].z = 0.0;//rand.z;
+		rand = normalize(rand);		
+        arr[index].x = rand.x * velMag;
+        arr[index].y = rand.y * velMag;
+        arr[index].z = rand.z * velMag;//0.0;//
+
     }
 }
 
@@ -128,16 +158,94 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
+
 	glm::vec3 us_pos(us.x,us.y,us.z);
 	glm::vec3 them_pos(them.x,them.y,them.z);
 	glm::vec3 dir = them_pos - us_pos;
 	float rsquare = length(dir);
-	if(rsquare < E) return glm::vec3(0);
+	if(rsquare < EPSILON) return glm::vec3(0);
 	rsquare *= rsquare;
 	float aMag  = G * them.w /rsquare;
 	glm::vec3 a = aMag * normalize(dir);
 	return a;
 }
+__host__ __device__
+bool isInRange(glm::vec4 us,glm::vec4 them,glm::vec3 my_vel,int type)
+//type is for different forces
+//0: flocking, 1:cohesion, 2:seperation
+{
+	//tell if distance is within the neighbor range
+	glm::vec3 myPos(us.x,us.y,us.z);
+	glm::vec3 theirPos(them.x,them.y,them.z);
+	glm::vec3 dir = theirPos - myPos;
+	float dist = length(dir);
+	if(dist < EPSILON) return false;
+	if(dist > neighbor[type])
+		return false;
+	//tell if direction is within the eye range
+	dir = normalize(dir);
+	my_vel = normalize(my_vel);
+	float angle = acosf(dot(dir,my_vel));
+	if(abs(angle) > VIEWANGLE)
+		return false;
+	return true;
+}
+__host__ __device__
+glm::vec3 flockAcc(int N,glm::vec4 my_pos,glm::vec4 * their_pos,glm::vec3* their_vel,glm::vec3 my_vel)
+{
+	glm::vec3 totalDir;
+	glm::vec4 totalPos; // cohesion
+	glm::vec4 totalPos2; //separation
+	int numInrangeFlock = 0; int numInrangeCo = 0; int numInrangeSep = 0;
+	for(int i = 0;i<N;++i)
+	{
+		if(isInRange(my_pos,their_pos[i],my_vel,0) == true)
+		{
+			numInrangeFlock ++;
+			totalDir += their_vel[i];			
+		}
+		if(isInRange(my_pos,their_pos[i],my_vel,1) == true)
+		{
+			numInrangeCo ++;
+			totalPos += their_pos[i];
+		}
+		if(isInRange(my_pos,their_pos[i],my_vel,2) == true)
+		{
+			numInrangeSep ++;
+			totalPos2 += their_pos[i];
+		}
+		
+	}
+
+	if(numInrangeFlock == 0 && numInrangeCo == 0 && numInrangeSep == 0)
+		return glm::vec3(0,0,0);
+
+	glm::vec3 flockAcc = glm::vec3(0);
+	glm::vec4 cohesionAcc,separateAcc;
+	cohesionAcc = separateAcc = glm::vec4(0);
+	
+	if(numInrangeFlock>0)
+	{		
+		glm::vec3 meanDir = totalDir / (float)numInrangeFlock;
+		flockAcc = (float)FLOCKFORCE * normalize(meanDir) /planetMass;
+	}
+	if(numInrangeCo >0)
+	{
+		glm::vec4 meanPos = totalPos / (float)numInrangeCo;
+		cohesionAcc = (float)COHESIONFORCE * normalize(meanPos - my_pos) / planetMass;
+		//cohesionAcc = normalize(cohesionAcc) * length(glm::vec3(meanPos.x - my_pos.z, meanPos.y-my_pos.y, meanPos.z-my_pos.z));
+	}
+	if(numInrangeSep>0)
+	{
+		glm::vec4 meanPos = totalPos2 / (float)numInrangeSep;
+		separateAcc = (float)SEPARATIONFORCE * normalize(my_pos-meanPos) / planetMass;
+	}
+		
+	glm::vec3 a = flockAcc + glm::vec3(cohesionAcc.x,cohesionAcc.y,cohesionAcc.z) + glm::vec3(separateAcc.x,separateAcc.y,separateAcc.z);
+	return normalize(a);
+	
+}
+
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
@@ -172,7 +280,6 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 		}
 		__syncthreads();
 	}
-
     return acc;
 }
 
@@ -185,11 +292,18 @@ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
     if( index < N )
     {
         glm::vec4 my_pos = pos[index];
+		glm::vec3 my_vel = vel[index];
+#if PART2 == 0
         glm::vec3 acc = ACC(N, my_pos, pos);
-        vel[index] += acc * dt;
+		 vel[index] += acc * dt;
+#else 
+		glm::vec3 acc = flockAcc(N,my_pos,pos,vel,my_vel);
+		vel[index] = acc * vel_mag;
+#endif
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;
+		//printf("abc");
     }
 }
 
@@ -251,16 +365,50 @@ void initCuda(int N)
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
 
+	
+
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
+#if PART2 == 0
     generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+#else
+	generateRandomVelArray<<<fullBlocksPerGrid,blockSize>>>(2,numObjects,dev_vel,scene_scale,vel_mag);
+#endif
     checkCUDAErrorWithLine("Kernel failed!");
 }
-
+__global__
+void copyData(int N,glm::vec4* copypos,glm::vec4* pos)
+{
+	int index = threadIdx.x + blockIdx.x * blockDim.x;
+	if(index < N)
+	{
+		copypos[index] = pos[index];
+	}
+}
 void cudaNBodyUpdateWrapper(float dt)
 {
-    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+	dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+	thrust::device_ptr<glm::vec4> posEnd; 
+	cudaMalloc((void**)&poscopy, numObjects*sizeof(glm::vec4));
+    checkCUDAErrorWithLine("Kernel failed!");
+	copyData<<<fullBlocksPerGrid,blockSize>>>(numObjects,poscopy,dev_pos);
+
+   
     update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+	{
+    cudaError_t cudaerr = cudaDeviceSynchronize();
+    if (cudaerr != CUDA_SUCCESS)
+        printf("kernel launch failed with error \"%s\".\n",
+               cudaGetErrorString(cudaerr));
+	}
+	
+	thrust::device_ptr<glm::vec4> posStart = thrust::device_pointer_cast(poscopy);
+	posEnd = thrust::remove_if(posStart,posStart + numObjects,isOutofRange());
+	if((int)(posEnd-posStart) == 0)
+	{
+		//printf("all out of range");
+		//need to do sth to make birds back
+	}
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
@@ -268,6 +416,7 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+	
     checkCUDAErrorWithLine("Kernel failed!");
 }
 

@@ -5,15 +5,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Project3", "Project3\Projec
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug(v5.5)|Win32 = Debug(v5.5)|Win32
 		Debug|Win32 = Debug|Win32
-		Debug5.5|Win32 = Debug5.5|Win32
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D7BEFF7A-4902-4B7E-922B-B0417A66864C}.Debug(v5.5)|Win32.ActiveCfg = Debug(v5.5)|Win32
+		{D7BEFF7A-4902-4B7E-922B-B0417A66864C}.Debug(v5.5)|Win32.Build.0 = Debug(v5.5)|Win32
 		{D7BEFF7A-4902-4B7E-922B-B0417A66864C}.Debug|Win32.ActiveCfg = Debug|Win32
 		{D7BEFF7A-4902-4B7E-922B-B0417A66864C}.Debug|Win32.Build.0 = Debug|Win32
-		{D7BEFF7A-4902-4B7E-922B-B0417A66864C}.Debug5.5|Win32.ActiveCfg = Debug|Win32
-		{D7BEFF7A-4902-4B7E-922B-B0417A66864C}.Debug5.5|Win32.Build.0 = Debug|Win32
 		{D7BEFF7A-4902-4B7E-922B-B0417A66864C}.Release|Win32.ActiveCfg = Release|Win32
 		{D7BEFF7A-4902-4B7E-922B-B0417A66864C}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
