@@ -11,6 +11,8 @@
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
 
+#define FLOCKING 1
+
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
 
@@ -177,6 +179,56 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
     //return calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 }
 
+// TODO
+__device__
+glm::vec3 Alignment( int N, glm::vec3* vel )
+{
+  glm::vec3 ave_vel;
+  // Compute average velocity
+  // Compute average position
+  for ( int i=0; i < N; ++i )
+    ave_vel += glm::vec3( vel[i].x, vel[i].y, vel[i].z );
+  ave_vel= ave_vel/float(N);
+
+  return ave_vel;
+  //return glm::vec3(0.0, 0.0, 0.0);
+} 
+
+// TODO
+__device__
+glm::vec3 Cohesion( int N, glm::vec4 my_pos, glm::vec4* pos)
+{
+  glm::vec3 ave_pos;
+  // Compute average position
+  for ( int i=0; i < N; ++i )
+    ave_pos += glm::vec3( pos[i].x, pos[i].y, pos[i].z );
+  ave_pos = ave_pos/float(N);
+
+  glm::vec3 d = glm::vec3(ave_pos.x-my_pos.x, ave_pos.y-my_pos.y, ave_pos.z-my_pos.z); 
+  return glm::normalize(d);
+} 
+
+// TODO
+__device__
+glm::vec3 Seperation( int N, glm::vec4 my_pos, glm::vec4* pos, float dt )
+{
+
+  int index = threadIdx.x + (blockIdx.x * blockDim.x);
+
+  glm::vec3 acc;
+  glm::vec3 d;
+  float r2;
+  // Compute repulsion force
+  for ( int i=0; i < N; ++i ) {
+    if ( i == index ) 
+      continue;
+    d = glm::vec3( pos[i].x-my_pos.x, pos[i].y-my_pos.y, pos[i].z-my_pos.z); 
+    r2 = glm::dot( d, d );
+    acc += -glm::normalize(d)*float(1.0/(r2 + 1e-2));
+  }
+  return acc;
+}
+
 
 //Simple Euler integration scheme
 __global__
@@ -186,8 +238,37 @@ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
     if( index < N )
     {
         glm::vec4 my_pos = pos[index];
+
+	#if FLOCKING == 0 
         glm::vec3 acc = ACC(N, my_pos, pos);
         vel[index] += acc * dt;
+	#else 
+	// Align velocity with flock average
+	glm::vec3 align_vel = Alignment( N, vel );
+	// Attract towards flock average
+	glm::vec3 cohesion_vel = Cohesion( N, my_pos, pos );
+	// Repel from nearby objects
+	glm::vec3 seperation_vel = Seperation( N, my_pos, pos, dt );
+
+	glm::vec3 weights = glm::vec3( 1.0, 1.0, 0.2 );	
+	// Need some weights
+	vel[index] = weights.x*align_vel + weights.y*cohesion_vel + weights.z*seperation_vel;
+
+	// Add in circular velocity around star
+        glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
+        float r = glm::length(R) + EPSILON;
+        float s = sqrt(G*starMass/r);
+        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
+	vel[index] += 10.0f*s*D;
+
+	// Add in attractive velocity toward star
+	vel[index] += -0.25f*R;
+
+	// Add in damping
+	vel[index] = 0.8f*vel[index];
+
+	#endif 
+
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;
