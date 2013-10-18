@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     // Launch CUDA/GL
 
     init(argc, argv);
-
+	
     cudaGLSetGLDevice( compat_getMaxGflopsDeviceId() );
     initPBO(&pbo);
     cudaGLRegisterBufferObject( planetVBO );
