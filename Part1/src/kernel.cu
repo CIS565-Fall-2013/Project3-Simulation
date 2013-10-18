@@ -15,7 +15,7 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
+const __device__ float planetMass = 3e8;
 const __device__ float starMass = 5e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
@@ -117,8 +117,12 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+	//return glm::vec3(0.0f);
+    float m = them.w;
+	glm::vec3 v(them - us);
+	float r = glm::length(v);
+	if (r < 0.01f) return glm::vec3(0.0f);
+    return glm::normalize(v) * float(G * m / (r * r));
 }
 
 //TODO: Core force calc kernel global memory
@@ -126,6 +130,10 @@ __device__
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	for (int i = 0; i < N; ++i)
+	{
+		acc += calculateAcceleration(my_pos, glm::vec4(their_pos[i].x, their_pos[i].y, their_pos[i].z, planetMass));
+	}
     return acc;
 }
 
@@ -134,8 +142,31 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	__shared__ glm::vec4 s[blockSize]; // Must hold: blockSize == blockDim.x
+	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
     return acc;
+	
+	int numBlocksForPlanets = N / gridDim.x + 1;
+	for ( int i = 0; i < numBlocksForPlanets; ++i )
+	{
+		// Calculate first & last thread indices for this block.
+		int startIdx = i * blockDim.x;		// Inclusive.
+		int endIdx = startIdx + blockDim.x; // Not including this.
+		if ( endIdx > N ) endIdx = N;
+
+		// Store pos[0 to blockDim.x-1] to shared memory.
+		if ( startIdx <= index && index < endIdx && index < N ) s[index - startIdx] = their_pos[index - startIdx];
+		__syncthreads();
+
+		int numPlanetsInThisBlock = endIdx - startIdx;
+		for ( int j = 0; j < numPlanetsInThisBlock; ++j )
+		{
+			acc += calculateAcceleration(my_pos, glm::vec4(s[j].x, s[j].y, s[j].z, planetMass));
+		}
+		__syncthreads();
+	}
+	return acc;
 }
 
 
