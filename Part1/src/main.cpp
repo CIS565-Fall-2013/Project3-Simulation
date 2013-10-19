@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 #if VISUALIZE == 1 
     initCuda(N_FOR_VIS);
 #else
-    initCuda(2*120);
+    initCuda(20*120);
 #endif
 
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
