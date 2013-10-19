@@ -76,7 +76,7 @@ particles | framerate
 - 24576 | 1.124
 
 
-One notices that the framerate does not start dropping considerably until the 
+The framerate does not start dropping considerably until the 
 number of particles exceeds the blocksize. There is a small performance 
 improvement when using shared memory but I had expected to see a larger gain. 
 Hopefully I will get nvvp up and running so that I can evaluate this more 
