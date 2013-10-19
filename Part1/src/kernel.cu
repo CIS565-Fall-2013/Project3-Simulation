@@ -129,29 +129,29 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     glm::vec3 them_pos(them.x, them.y, them.z);
     float m_them = them.w;
 	
-	// Calculate the distance and direction between the two objects (Note: the direction is them - us).
+    // Calculate the distance and direction between the two objects (Note: the direction is them - us).
     glm::vec3 r = them_pos - us_pos;
     float distance = glm::length(r);
     glm::vec3 direction = glm::normalize(r);
 	
-	// Return no acceleration when the two bodies are very close to each other
-	if (abs(distance) < EPSILON)
-		return glm::vec3(0.0f);
+    // Return no acceleration when the two bodies are very close to each other
+    if (abs(distance) < EPSILON)
+	  return glm::vec3(0.0f);
 
-	// Calculate the acceleration between two bodies using Newton's Law of Universal Gravitation, referring to http://en.wikipedia.org/wiki/Newton%27s_law_of_universal_gravitation
+    // Calculate the acceleration between two bodies using Newton's Law of Universal Gravitation, referring to http://en.wikipedia.org/wiki/Newton%27s_law_of_universal_gravitation
     glm::vec3 acc = direction * (float)G * m_them / pow(distance,2);
-	return acc;
+    return acc;
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-	// Naively calculate the acceleration one by one
+    // Naively calculate the acceleration one by one
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
     for( unsigned int i = 0; i < N; ++ i ) {
-       acc += calculateAcceleration(my_pos, their_pos[i]);
-	}
+      acc += calculateAcceleration(my_pos, their_pos[i]);
+    }
     return acc;
 }
 
@@ -161,20 +161,20 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 	
-	// Initialize the shared memory for shared position for each tile
-	__shared__ glm::vec4 shared_pos[blockSize];
+    // Initialize the shared memory for shared position for each tile
+    __shared__ glm::vec4 shared_pos[blockSize];
 
-	// Define one 1D grid of size N/p tiles, loop each tile to compute with the shared memory
-	unsigned int i, tileIdx;
-	for ( i = 0, tileIdx = 0; i < N; i += blockSize, ++ tileIdx) {
+    // Define one 1D grid of size N/p tiles, loop each tile to compute with the shared memory
+    unsigned int i, tileIdx;
+    for ( i = 0, tileIdx = 0; i < N; i += blockSize, ++ tileIdx) {
       unsigned int shared_idx = tileIdx * blockSize + threadIdx.x;
 	  shared_pos[threadIdx.x]  = their_pos[shared_idx];
-	  __syncthreads();
-	  for (unsigned int j; j < blockSize; ++ j) {
+      __syncthreads();
+      for (unsigned int j = 0; j < blockSize; ++ j) {
         acc += calculateAcceleration(my_pos, shared_pos[j]);
-	  }
-	  __syncthreads();
-	}
+      }
+      __syncthreads();
+    }
     return acc;
 }
 
@@ -182,25 +182,25 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__
 void eulerInt(float dt, glm::vec4& pos, glm::vec3& vel) {
     pos.x += vel.x * dt;
-	pos.y += vel.y * dt;
-	pos.z += vel.z * dt;
+    pos.y += vel.y * dt;
+    pos.z += vel.z * dt;
 }
 
 __device__
 void rungekuttaInt(float dt, glm::vec4& pos, glm::vec3& vel) {
     // Define the four increments for velocity according to Runge Kutta method, referring to http://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
-	glm::vec3 k1 = vel;                 // based on the slope at the beginning of the interval
-	glm::vec3 k2 = k1 + 0.5f * dt * k1;  // based on the slope at the midpoint of the interval
-	glm::vec3 k3 = k1 + 0.5f * dt * k2;  // based on the slope at the midpoint again
-	glm::vec3 k4 = k1 + dt * k3;        // based on  the slope at the end of the interval
+    glm::vec3 k1 = vel;                  // based on the slope at the beginning of the interval
+    glm::vec3 k2 = k1 + 0.5f * dt * k1;  // based on the slope at the midpoint of the interval
+    glm::vec3 k3 = k1 + 0.5f * dt * k2;  // based on the slope at the midpoint again
+    glm::vec3 k4 = k1 + dt * k3;         // based on  the slope at the end of the interval
 	
-	// Final increment on the position
+    // Final increment on the position
 	glm::vec3 pos_inc = 1.0f / 6 * ( k1 + 2.0f * k2 + 2.0f * k3 + k4);
 
-	// New position after RK4 integration
-	pos.x += pos_inc.x * dt;
-	pos.y += pos_inc.y * dt;
-	pos.z += pos_inc.z * dt;
+    // New position after RK4 integration
+    pos.x += pos_inc.x * dt;
+    pos.y += pos_inc.y * dt;
+    pos.z += pos_inc.z * dt;
 }
 
 //Update by integration scheme
@@ -210,10 +210,10 @@ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-        glm::vec4 my_pos = pos[index];
-        glm::vec3 acc = ACC(N, my_pos, pos);
-		vel[index] += acc * dt;
-		integration(dt, pos[index], vel[index]);
+      glm::vec4 my_pos = pos[index];
+      glm::vec3 acc = ACC(N, my_pos, pos);
+      vel[index] += acc * dt;
+      integration(dt, pos[index], vel[index]);
     }
 }
 
