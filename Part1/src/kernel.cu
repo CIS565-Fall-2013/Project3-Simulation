@@ -17,11 +17,11 @@ dim3 threadsPerBlock(blockSize);
 int numObjects;
 const float planetMass = 3e8;
 const __device__ float starMass = 5e10;
-
+const __device__ int integrateMode = 1;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
-glm::vec4 * dev_pos;
-glm::vec3 * dev_vel;
+vec4 * dev_pos;
+vec3 * dev_vel;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -50,23 +50,23 @@ unsigned int hash(unsigned int a){
 
 //Function that generates static.
 __host__ __device__ 
-glm::vec3 generateRandomNumberFromThread(float time, int index)
+vec3 generateRandomNumberFromThread(float time, int index)
 {
     thrust::default_random_engine rng(hash(index*time));
     thrust::uniform_real_distribution<float> u01(0,1);
 
-    return glm::vec3((float) u01(rng), (float) u01(rng), (float) u01(rng));
+    return vec3((float) u01(rng), (float) u01(rng), (float) u01(rng));
 }
 
 //Generate randomized starting positions for the planets in the XY plane
 //Also initialized the masses
 __global__
-void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float mass)
+void generateRandomPosArray(int time, int N, vec4 * arr, float scale, float mass)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
+        vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
         arr[index].z = 0.0f;//rand.z;
@@ -77,15 +77,15 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
 //Determine velocity from the distance from the center star. Not super physically accurate because 
 //the mass ratio is too close, but it makes for an interesting looking scene
 __global__
-void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
+void generateCircularVelArray(int time, int N, vec3 * arr, vec4 * pos)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
+        vec3 R = vec3(pos[index].x, pos[index].y, pos[index].z);
         float r = glm::length(R) + EPSILON;
         float s = sqrt(G*starMass/r);
-        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
+        vec3 D = glm::normalize(glm::cross(R/r,vec3(0,0,1)));
         arr[index].x = s*D.x;
         arr[index].y = s*D.y;
         arr[index].z = s*D.z;
@@ -94,12 +94,12 @@ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
 
 //Generate randomized starting velocities in the XY plane
 __global__
-void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
+void generateRandomVelArray(int time, int N, vec3 * arr, float scale)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
+        vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
         arr[index].z = 0.0;//rand.z;
@@ -108,7 +108,7 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
 
 //TODO: Determine force between two bodies
 __device__
-glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
+vec3 calculateAcceleration(vec4 us, vec4 them)
 {
     //    G*m_us*m_them
     //F = -------------
@@ -118,27 +118,20 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //a = ------------- = --------
     //      m_us*r^2        r^2
     
-   	glm::vec4 rvec4 = them-us;
-	glm::vec3 rvec = glm::vec3(rvec4.x, rvec4.y, rvec4.z);
-	//glm::vec3 accDir = glm::normalize(rvec);
-	float r = glm::length(rvec);
-
-	if (r < 0.001) //TODO: Fix this so that it doesnt cause a pole towards the sphere
-	{
-		return glm::vec3(0,0,0);
-	}
-	else 
-	{
-		glm::vec3 a = ((float)G * them.w * rvec) / (r * r * r);
-		return a;
-	}
+	float eps = 0.1f; // protect against division of small number
+   	vec4 rvec4 = them-us;
+	vec3 rvec = vec3(rvec4.x, rvec4.y, rvec4.z);
+	//vec3 accDir = glm::normalize(rvec);
+	float r = glm::length(rvec) + eps;
+	vec3 a = ((float)G * them.w * rvec) / (r * r * r);
+	return a;
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
-glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
+vec3 naiveAcc(int N, vec4 my_pos, vec4 * their_pos)
 {    
-	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
 
 	for (int i = 0 ; i < N ; ++i)
 	{
@@ -151,33 +144,109 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 
 //TODO: Core force calc kernel shared memory
 __device__ 
-glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
+vec3 sharedMemAcc(int N, vec4 my_pos, vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+    vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
     return acc;
 }
 
+__device__
+vec3 integrateAcceleration(vec3 vel, vec3 acc, float dt, int N, vec4 mypos, vec4 *positions)
+{
+	vec3 nextVel = vec3(0,0,0);
+
+	if (integrateMode == (int)EULER)
+	{
+		nextVel = vel + acc * dt;
+	}
+	else if (integrateMode == (int)RK2)
+	{
+		float halfDt = 0.5f * dt;
+		vec3 halfStepVel = vel + acc * halfDt;
+		vec3 halfStepPos = vec3(mypos) + halfStepVel * halfDt;
+		vec3 halfAcc = ACC(N, mypos, positions);
+
+		nextVel = vel + halfAcc * dt;
+	}
+	else if (integrateMode == (int)RK4)
+	{
+		// TODO
+	}
+	else 
+	{
+		// error
+	}
+
+	return nextVel;
+}
+
+__device__
+vec3 integrateVelocity(vec3 position, vec3 velocity, float dt)
+{
+	vec3 nextPosition = vec3(0,0,0);
+
+	if (integrateMode == (int)EULER)
+	{
+		nextPosition = position + velocity * dt;
+	}
+	else if (integrateMode == (int)RK2)
+	{
+		float halfDt = 0.5f * dt;
+		vec3 halfStepPos = position + velocity * halfDt;
+		vec3 halfStepVel = (halfStepPos - position) / halfDt;
+		nextPosition = position + halfStepVel * dt;
+	}
+	else if (integrateMode == (int)RK4)
+	{
+
+	}
+	else
+	{
+
+	}
+
+	return nextPosition;
+}
 
 //Simple Euler integration scheme
 __global__
-void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
+void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-        glm::vec4 my_pos = pos[index];
-        glm::vec3 acc = ACC(N, my_pos, pos);
-        vel[index] += acc * dt;
-        pos[index].x += vel[index].x * dt;
-        pos[index].y += vel[index].y * dt;
-        pos[index].z += vel[index].z * dt;
+        vec4 my_pos = pos[index];
+        vec3 acc = ACC(N, my_pos, pos);
+		//vel[index] += acc * dt;
+		vel[index] = integrateAcceleration(vel[index], acc, dt, N, my_pos, pos);
+     
     }
+}
+
+__global__
+void updatePosition(int N, float dt, vec4 *pos, vec3 *vel)
+{
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	if (index < N )
+	{
+		vec3 nextPosition = integrateVelocity(vec3(pos[index]), vel[index], dt);
+
+		pos[index].x = nextPosition.x;
+		pos[index].y = nextPosition.y;
+		pos[index].z = nextPosition.z;
+
+
+
+		//pos[index].x += vel[index].x * dt;
+  //      pos[index].y += vel[index].y * dt;
+  //      pos[index].z += vel[index].z * dt;
+	}
 }
 
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
 __global__
-void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
+void sendToVBO(int N, vec4 * pos, float * vbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -196,7 +265,7 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 //Update the texture pixel buffer object
 //(This texture is where openGL pulls the data for the height map)
 __global__
-void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, float s_scale)
+void sendToPBO(int N, vec4 * pos, float4 * pbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     int x = index % width;
@@ -209,11 +278,11 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
 
     if(x<width && y<height)
     {
-        glm::vec3 color(0.05, 0.15, 0.3);
+        vec3 color(0.05, 0.15, 0.3);
 
 		// figure out the acceleration of the texel with respect to the rest of the N-body
 		// these texels have a "weight" of 1 for the purpose of the calculations
-        glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+        vec3 acc = ACC(N, vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
         float mag = 1*sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z)); // multiplying this by 2 makes the black area around spikes larger
         
 		// Each thread writes one pixel location in the texture (textel)
@@ -231,9 +300,9 @@ void initCuda(int N)
     numObjects = N;
     dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
 
-    cudaMalloc((void**)&dev_pos, N*sizeof(glm::vec4));
+    cudaMalloc((void**)&dev_pos, N*sizeof(vec4));
     checkCUDAErrorWithLine("Kernel failed!");
-    cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
+    cudaMalloc((void**)&dev_vel, N*sizeof(vec3));
     checkCUDAErrorWithLine("Kernel failed!");
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
@@ -245,7 +314,8 @@ void initCuda(int N)
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    updateVelocity<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
