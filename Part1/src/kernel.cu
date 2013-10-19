@@ -96,8 +96,8 @@ __global__ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float s
     if(index < N)
     {
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
-        arr[index].x = rand.x;
-        arr[index].y = rand.y;
+        arr[index].x = rand.x / 10.0f;
+        arr[index].y = rand.y / 10.0f;
         arr[index].z = 0.0;//rand.z;
     }
 }
@@ -142,24 +142,20 @@ __device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos
 	int positionsFullBlocks = (int)ceil((float)N /(float)blockSize);
 	for(int i = 0; i < positionsFullBlocks; ++i)
 	{
-		int index = threadIdx.x + i * blockDim.x;
+		int index = threadIdx.x + i * blockSize; // index on global memory
 		if(index < N)
 		{
 			sharedPositions[threadIdx.x] = their_pos[index];		
 		}
-//		__syncthreads();
-		if(index < N)
-		{
-			for(int j = 0; j < blockSize; ++j) 
-			{
-				acc += calculateAcceleration(my_pos, sharedPositions[j]);
-			}
-			
-		}
 		__syncthreads();
-/*
-		else
-			__syncthreads();*/
+
+		for(int j = 0; j < blockSize && j + i * blockSize < N; ++j) 
+		{
+			acc += calculateAcceleration(my_pos, sharedPositions[j]);
+		}
+
+		__syncthreads();
+
 	}
     return acc;
 }
@@ -169,14 +165,14 @@ __device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos
 __global__ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if( index < N )
-    {
-        glm::vec4 my_pos = pos[index];
-        glm::vec3 acc = ACC(N, my_pos, pos);
+	glm::vec4 my_pos;
+
+    if( index < N )   my_pos = pos[index];
+    glm::vec3 acc = ACC(N, my_pos, pos);  
 /*
 		if(index == 0)
 			printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);*/
-        vel[index] += acc * dt;
+    if( index < N )   vel[index] += acc * dt;
 
 /*
 		// RK4 method
@@ -195,7 +191,6 @@ __global__ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
         /*pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;*/
-    }
 }
 
 __global__ void updatePosition(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
@@ -233,13 +228,16 @@ __global__ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int h
     float w2 = width / 2.0;
     float h2 = height / 2.0;
 
-    float c_scale_w = width / s_scale;
-    float c_scale_h = height / s_scale;
+    float convert_scale_w = width / s_scale;
+    float convert_scale_h = height / s_scale;
 
+
+	glm::vec3 color(0.05, 0.15, 0.3);
+    glm::vec3 acc = ACC(N, glm::vec4((x-w2)/convert_scale_w, (y-h2)/convert_scale_h, 0, 1), pos); // convert position on height map to actual simulated positions
+//	acc *= 20.0f;
+//	printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);
     if(x<width && y<height)
-    {
-        glm::vec3 color(0.05, 0.15, 0.3);
-        glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+    {   
         float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)
         pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
@@ -283,32 +281,36 @@ void initCuda(int N)
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass); // one dimensional block
     checkCUDAErrorWithLine("Kernel failed!");
-//    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
-	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, scene_scale/100.0);
+    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+//	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, scene_scale/100.0);
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize(); 
 }
 
 void cudaNBodyUpdateWrapper(float dt)
 {
-    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize))); // launch kernel for all bodies
     update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
 	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
 	checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize(); 
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 {
-    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
+    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize))); // launch kernel for all grid points on height map
     sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize(); 
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
-    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize))); // launch kernel for all bodies
     sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize(); 
 }
 
 
