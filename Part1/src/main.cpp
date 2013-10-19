@@ -59,9 +59,17 @@ int main(int argc, char** argv)
 
 void runCuda()
 {
+	//////////////////////
+	// Timing cuda call //
+	//////////////////////
+	float time;
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
+
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
-
     float4 *dptr=NULL;
     float *dptrvert=NULL;
     cudaGLMapBufferObject((void**)&dptr, pbo);
@@ -76,6 +84,14 @@ void runCuda()
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
     cudaGLUnmapBufferObject(pbo);
+
+	//////////////////////
+	// Timing cuda call //
+	//////////////////////
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&time, start, stop);
+	printf("runCuda runtime: %3.1f ms \n", time);
 }
 
 int timebase = 0;
