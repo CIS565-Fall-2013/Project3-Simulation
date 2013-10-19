@@ -48,28 +48,33 @@ is surprising ( I'm still investigating this ).
 Note: I removed the ACC calculation for the grid for the test, allowing me
 to observe the absolute number of particles that can be handled. 
 
-No shared memory:
-particles | Framerate
-64   , 38.31
-128  , 37.11
-256  , 37.00
-512  , 37.55
-------------
-1024 , 37.51
-2048 , 33.40
-4096 , 21.19
-8192 , 8.23
-16384, 2.50
-24576, 1.16
+no shared memory:
+
+particles | framerate
+
+- 64 | 38.31 
+- 128 | 37.11
+- 256 | 37.00
+- 512 | 37.55
+- 1024 | 37.51
+- 2048 | 33.40
+- 4096 | 21.19
+- 8192 | 8.23
+- 16384 | 2.50
+- 24576 | 1.16
+
+ 
+
 
 shared memory:
-particles | blockSize | Framerate
-1024 , 38.77
-2048 , 32.80
-4096 , 21.48
-8192 , 8.90
-16384, 2.67
-24576, 1.24
+particles | framerate
+- 1024 | 38.77
+- 2048 | 3280
+- 4096 | 21.48
+- 8192 | 8.90
+- 16384 | 2.67
+- 24576 | 1.124
+
 
 One notices that the framerate does not start dropping considerably until the 
 number of particles exceeds the blocksize. There is a small performance 
@@ -80,23 +85,23 @@ closely.
 
 GPU Info:
 GeForce 610M
-  Total amount of global memory:                 1024 MBytes (1073414144 bytes)
-  ( 1) Multiprocessors, ( 48) CUDA Cores/MP:     48 CUDA Cores
-  GPU Clock rate:                                1344 MHz (1.34 GHz)
-  Memory Clock rate:                             800 Mhz
-  Memory Bus Width:                              64-bit
-  Maximum Texture Dimension Size (x,y,z)         1D=(65536), 2D=(65536, 65535), 3D=(2048, 2048, 2048)
-  Maximum Layered 1D Texture Size, (num) layers  1D=(16384), 2048 layers
-  Maximum Layered 2D Texture Size, (num) layers  2D=(16384, 16384), 2048 layers
-  Total amount of constant memory:               65536 bytes
-  Total amount of shared memory per block:       49152 bytes
-  Total number of registers available per block: 32768
-  Warp size:                                     32
-  Maximum number of threads per multiprocessor:  1536
-  Maximum number of threads per block:           1024
-  Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
-  Max dimension size of a grid size    (x,y,z): (65535, 65535, 65535)
-  Maximum memory pitch:                          2147483647 bytes
+Total amount of global memory:                 1024 MBytes (1073414144 bytes)
+( 1) Multiprocessors, ( 48) CUDA Cores/MP:     48 CUDA Cores
+GPU Clock rate:                                1344 MHz (1.34 GHz)
+Memory Clock rate:                             800 Mhz
+Memory Bus Width:                              64-bit
+Maximum Texture Dimension Size (x,y,z)         1D=(65536), 2D=(65536, 65535), 3D=(2048, 2048, 2048)
+Maximum Layered 1D Texture Size, (num) layers  1D=(16384), 2048 layers
+Maximum Layered 2D Texture Size, (num) layers  2D=(16384, 16384), 2048 layers
+Total amount of constant memory:               65536 bytes
+Total amount of shared memory per block:       49152 bytes
+Total number of registers available per block: 32768
+Warp size:                                     32
+Maximum number of threads per multiprocessor:  1536
+Maximum number of threads per block:           1024
+Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
+Max dimension size of a grid size    (x,y,z): (65535, 65535, 65535)
+Maximum memory pitch:                          2147483647 bytes
 
 ===
 Fall 2013
