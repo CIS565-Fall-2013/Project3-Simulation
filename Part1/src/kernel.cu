@@ -17,7 +17,7 @@ dim3 threadsPerBlock(blockSize);
 int numObjects;
 const float planetMass = 3e8;
 const __device__ float starMass = 5e10;
-const __device__ int integrateMode = 1;
+const __device__ int integrateMode = (int)EULER;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
 vec4 * dev_pos;
@@ -146,12 +146,23 @@ vec3 naiveAcc(int N, vec4 my_pos, vec4 * their_pos)
 __device__ 
 vec3 sharedMemAcc(int N, vec4 my_pos, vec4 * their_pos)
 {
-    vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
+	__shared__ vec4 sharedPositions[blockSize];
 
+	vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
+	for (int i = 0, int blockNum = 0 ; i < N ; i = i + (int)blockSize, ++blockNum)
+	{
+		int id = blockNum * blockDim.x + threadIdx.x;
 
+		if (id < N)
+			sharedPositions[threadIdx.x] = their_pos[id];
 
+		__syncthreads();
 
+		if (id < N)
+			acc += calculateAcceleration(my_pos, sharedPositions[threadIdx.x]);
 
+		__syncthreads();
+	}
 
     return acc;
 }
