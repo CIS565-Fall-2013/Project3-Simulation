@@ -139,36 +139,28 @@ __device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 
 	__shared__ glm::vec4 sharedPositions[blockSize];
-//	if((threadIdx.x + (blockIdx.x * blockDim.x)) == 0) printf("%d\n",(int)ceil((float)N / blockSize));
-	int positionsFullBlocks = (int)ceil((float)N / blockSize);
+	int positionsFullBlocks = (int)ceil((float)N /(float)blockSize);
 	for(int i = 0; i < positionsFullBlocks; ++i)
 	{
 		int index = threadIdx.x + i * blockDim.x;
-/*
 		if(index < N)
 		{
 			sharedPositions[threadIdx.x] = their_pos[index];		
 		}
-		__syncthreads();
-		for(int j = 0; j < blockSize; ++j) 
-		{
-			acc += calculateAcceleration(my_pos, sharedPositions[j]);
-		}
-		__syncthreads();*/
+//		__syncthreads();
 		if(index < N)
 		{
-			sharedPositions[threadIdx.x] = their_pos[index];		
-			__syncthreads();
 			for(int j = 0; j < blockSize; ++j) 
 			{
 				acc += calculateAcceleration(my_pos, sharedPositions[j]);
 			}
-			__syncthreads();
+			
 		}
+		__syncthreads();
+/*
 		else
-			__syncthreads();
+			__syncthreads();*/
 	}
-//	printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);
     return acc;
 }
 
@@ -186,7 +178,32 @@ __global__ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
 			printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);*/
         vel[index] += acc * dt;
 
+/*
 		// RK4 method
+		glm::vec3 k1 = vel[index];
+		glm::vec3 k2 = k1 + 0.5f * dt * k1;
+		glm::vec3 k3 = k1 + 0.5f * dt * k2;
+		glm::vec3 k4 = k1 + dt * k3;
+
+		glm::vec3 increment = 1.0f/6.0f * (k1 + 2.0f*k2 + 2.0f*k3 + k4);
+
+		pos[index].x += increment.x * dt;
+        pos[index].y += increment.y * dt;
+        pos[index].z += increment.z * dt;*/
+
+		 //Euler method
+        /*pos[index].x += vel[index].x * dt;
+        pos[index].y += vel[index].y * dt;
+        pos[index].z += vel[index].z * dt;*/
+    }
+}
+
+__global__ void updatePosition(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
+{
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    if( index < N )
+    {
+        // RK4 method
 		glm::vec3 k1 = vel[index];
 		glm::vec3 k2 = k1 + 0.5f * dt * k1;
 		glm::vec3 k3 = k1 + 0.5f * dt * k2;
@@ -205,23 +222,6 @@ __global__ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
     }
 }
 
-//Update the vertex buffer object
-//(The VBO is where OpenGL looks for the positions for the planets)
-__global__ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
-{
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-
-    float c_scale_w = -2.0f / s_scale;
-    float c_scale_h = -2.0f / s_scale;
-
-    if(index<N)
-    {
-        vbo[4*index+0] = pos[index].x*c_scale_w;
-        vbo[4*index+1] = pos[index].y*c_scale_h;
-        vbo[4*index+2] = 0;
-        vbo[4*index+3] = 1;
-    }
-}
 
 //Update the texture pixel buffer object
 //(This texture is where openGL pulls the data for the height map)
@@ -245,6 +245,26 @@ __global__ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int h
         pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
     }
 }
+
+//Update the vertex buffer object
+//(The VBO is where OpenGL looks for the positions for the planets)
+__global__ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+
+    float c_scale_w = -2.0f / s_scale;
+    float c_scale_h = -2.0f / s_scale;
+
+    if(index<N)
+    {
+        vbo[4*index+0] = pos[index].x*c_scale_w;
+        vbo[4*index+1] = pos[index].y*c_scale_h;
+        vbo[4*index+2] = 0;
+        vbo[4*index+3] = 1;
+    }
+}
+
+
 
 /*************************************
  * Wrappers for the __global__ calls *
@@ -273,6 +293,8 @@ void cudaNBodyUpdateWrapper(float dt)
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
+	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+	checkCUDAErrorWithLine("Kernel failed!");
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)

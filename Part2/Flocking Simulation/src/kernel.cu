@@ -15,10 +15,15 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
+const float boidMass = 3e8;
 const __device__ float starMass = 5e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
+const __device__ float neighborRadius = 8.0f;
+const __device__ float g_fVelKv = 0.5f; 
+const __device__ float g_fMaxSpeed = 4.0f;
+const __device__ float g_fMaxAccel = 10.0f;
+const __device__ float neighborAngle = 180.0f;
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
@@ -179,14 +184,50 @@ __global__ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-        glm::vec4 my_pos = pos[index];
-        glm::vec3 acc = ACC(N, my_pos, pos);
-/*
-		if(index == 0)
-			printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);*/
-        vel[index] += acc * dt;
+		glm::vec3 myPosition(pos[index].x, pos[index].y, pos[index].z);
+		glm::vec3 myVelocity = vel[index];
 
-		// RK4 method
+		int numberOfNeighbors = 0;
+		glm::vec3 alignmentNumerator(0.0f);	
+		glm::vec3 alignmentVelocity(0.0f);
+		glm::vec3 separationVel(0.0f);
+		glm::vec3 centerOfMas(0.0f);
+		// find neighborhood
+		for(int i = 0; i < N; ++i) 
+		{
+			glm::vec3 theirPos(pos[i].x, pos[i].y, pos[i].z);
+			float distanceToNeighbor = glm::distance(myPosition, theirPos) + EPSILON;
+			if(distanceToNeighbor < neighborRadius && glm::dot(glm::normalize(myVelocity), glm::normalize(theirPos - myPosition)) > cos(neighborAngle/2))
+			{
+				alignmentNumerator += vel[i];				
+				separationVel += (myPosition - theirPos) / distanceToNeighbor /distanceToNeighbor;
+				centerOfMas += theirPos;
+				++numberOfNeighbors;
+
+			}
+		}
+		alignmentVelocity = numberOfNeighbors > 0 ? (alignmentNumerator / float(numberOfNeighbors)) : myVelocity;
+		centerOfMas = numberOfNeighbors > 0 ? (centerOfMas / float(numberOfNeighbors)) : myPosition;
+		glm::vec3 desiredVel = alignmentVelocity + 0.5f*separationVel + 0.05f*(centerOfMas - myPosition);
+		// calculate allignment velocity
+
+		// calculate cohesion velocity
+
+		// calculate separation velocity
+
+//        glm::vec3 acc = ACC(N, my_pos, pos);
+
+		vel[index] += g_fVelKv * (desiredVel - myVelocity) * dt;
+
+    }
+}
+
+__global__ void updatePosition(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
+{
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    if( index < N )
+    {
+        // RK4 method
 		glm::vec3 k1 = vel[index];
 		glm::vec3 k2 = k1 + 0.5f * dt * k1;
 		glm::vec3 k3 = k1 + 0.5f * dt * k2;
@@ -261,18 +302,20 @@ void initCuda(int N)
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
 
-    generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass); // one dimensional block
+    generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, boidMass); // one dimensional block
     checkCUDAErrorWithLine("Kernel failed!");
 //    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
 	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, scene_scale/100.0);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
-void cudaNBodyUpdateWrapper(float dt)
+void cudaFlockingUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
+	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+	checkCUDAErrorWithLine("Kernel failed!");
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)

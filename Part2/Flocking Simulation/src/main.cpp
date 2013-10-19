@@ -63,15 +63,93 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+    cudaFlockingUpdateWrapper(DT);
 #if VISUALIZE == 1
-    cudaUpdatePBO(dptr, field_width, field_height);
+//    cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
 #endif
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
     cudaGLUnmapBufferObject(pbo);
 }
+/*
+float ORG[3] = {0,0,0};
+
+
+float XP[3] = {1,0,0}, XN[3] = {-1,0,0},
+	YP[3] = {0,1,0}, YN[3] = {0,-1,0},
+	ZP[3] = {0,0,1}, ZN[3] = {0,0,-1};
+
+
+float w, h, tip = 0, turn = 0;
+void Draw_Axes (void)
+{
+	glPushMatrix ();
+
+	glTranslatef (-2.4, -1.5, -5);
+	glRotatef (tip , 1,0,0);
+	glRotatef (turn, 0,1,0);
+	glScalef (0.25, 0.25, 0.25);
+
+	glLineWidth (2.0);
+
+	glBegin (GL_LINES);
+	glColor3f (1,0,0); // X axis is red.
+	glVertex3fv (ORG);
+	glVertex3fv (XP ); 
+	glColor3f (0,1,0); // Y axis is green.
+	glVertex3fv (ORG);
+	glVertex3fv (YP );
+	glColor3f (0,0,1); // z axis is blue.
+	glVertex3fv (ORG);
+	glVertex3fv (ZP ); 
+	glEnd();
+
+	glPopMatrix ();
+}
+
+void drawAxes(void)
+{
+	glPushAttrib(GL_LIGHTING_BIT | GL_LINE_BIT);
+	glDisable(GL_LIGHTING);
+	//draw axis.
+	GLfloat modelview[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+	GLint viewport[4];
+	glGetIntegerv(GL_VIEWPORT, &viewport[0]);
+	GLint width = viewport[2] / 16;
+	GLint height = viewport[3] / 16;
+	glViewport(0, 0, width, height);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	//get the camera position and up vector from the modelview matrix.
+	double campos[3] = {0.0 + 2.0f * modelview[2], 0.0 + 2.0f * modelview[6], 0.0 + 2.0f * modelview[10]};
+	double up[3] = {modelview[1], modelview[5], modelview[9]};
+	//set up the view matrix.
+	gluLookAt(campos[0], campos[1], campos[2], 
+		0.0, 0.0, 0.0,
+		up[0], up[1], up[2]);
+
+	glBegin(GL_LINES);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(1.0f, 0.0f, 0.0f);
+
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f);
+
+	glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, 1.0f);
+	glEnd();
+
+	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+	glPopMatrix();
+	glPopAttrib();
+}*/
 
 int timebase = 0;
 int frame = 0;
@@ -94,7 +172,7 @@ void display()
     /*char title[100];
     sprintf( title, "565 NBody sim [%0.2f fps]", fps );*/
 	char title[100];
-	sprintf( title, "565 NBody sim [%0.2f fps] [%0.2fms] ", fps, executionTime);
+	sprintf( title, "Flocking Simulation [%0.2f fps] [%0.2fms] ", fps, executionTime);
     glutSetWindowTitle(title);
 
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
@@ -141,7 +219,7 @@ void display()
     glPointSize(1.0f);
 
     glDisableVertexAttribArray(positionLocation);
-
+//	Draw_Axes();
 #endif
     glutPostRedisplay();
     glutSwapBuffers();
@@ -230,7 +308,7 @@ void initVAO(void)
     GLuint *indices    = new GLuint[6*num_faces];
     GLuint *bindices   = new GLuint[N_FOR_VIS+1];
 
-    glm::vec4 ul(-1.0,-1.0,1.0,1.0);
+    glm::vec4 ul(-5.0,-5.0,5.0,5.0);
     glm::vec4 lr(1.0,1.0,0.0,0.0);
 
     for(int i = 0; i < field_width; ++i)
