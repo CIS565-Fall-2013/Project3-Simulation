@@ -63,9 +63,6 @@ particles | framerate
 - 16384 | 2.50
 - 24576 | 1.16
 
- 
-
-
 shared memory:
 particles | framerate
 - 1024 | 38.77
@@ -82,7 +79,7 @@ improvement when using shared memory but I had expected to see a larger gain.
 Hopefully I will get nvvp up and running so that I can evaluate this more 
 closely. 
 
-
+```
 GPU Info:
 GeForce 610M
 Total amount of global memory:                 1024 MBytes (1073414144 bytes)
@@ -102,6 +99,7 @@ Maximum number of threads per block:           1024
 Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
 Max dimension size of a grid size    (x,y,z): (65535, 65535, 65535)
 Maximum memory pitch:                          2147483647 bytes
+```
 
 ===
 Fall 2013
