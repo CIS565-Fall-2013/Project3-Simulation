@@ -126,7 +126,7 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     float r_mag_2 = r.x*r.x+r.y*r.y+r.z*r.z;
 	float eps_2 = 0.1;
 	float d = r_mag_2+eps_2;
-	float a = them.w*G/sqrt(d*d*d);
+	float a = them.w*G/sqrtf(d*d*d);
     return a*glm::vec3(r);//use diff as direction;;
 }
 
@@ -145,15 +145,43 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 }
 
 
+
 //TODO: Core force calc kernel shared memory
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
+	__shared__ glm::vec4 shPosition[blockSize];  
+	
+	//Do initial hardcoded calcuation from star position
 	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 
-	for(int i = 0; i < N; ++i)
-	{
-		acc = acc + calculateAcceleration(my_pos, their_pos[i]);
+	//Compute for each tile
+	int numTiles = N/blockDim.x;
+	if(N % blockDim.x != 0)
+		numTiles++;//Add a tile for the extras
+
+	//For each full tile
+	for(int tile = 0; tile < numTiles; ++tile){
+
+		int tileOffset = tile*blockDim.x;
+		//Load into shared memory using coallesed acces
+		int loadIndex = threadIdx.x + tileOffset;
+		if(loadIndex < N)
+			shPosition[threadIdx.x] = their_pos[loadIndex];
+		//Wait for load to finish
+		__syncthreads();
+
+		//Perform update for entire tile using shared memory
+		//No bank conflicts because this is broadcast
+		for(int i = 0; i < blockDim.x; ++i)
+		{
+			int idx = tileOffset+i;
+			if(idx < N)
+				acc = acc + calculateAcceleration(my_pos, shPosition[idx]);
+		}
+		
+		__syncthreads();
+
 	}
     return acc;
 }
