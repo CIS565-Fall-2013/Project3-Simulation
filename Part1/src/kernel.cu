@@ -142,6 +142,13 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	return acc;
 }
 
+// For float comparisons.
+__device__ bool isApproximately (const float &a, const float &b)
+{
+	if ((a >= (b - 0.001)) && (a <= (b + 0.001)))
+		return true;
+	return false;
+}
 
 //TODO: Done. NEED TO FIX CRASH WHEN VISUALIZING.
 __device__ 
@@ -151,32 +158,51 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	
 	glm::vec3 acc = glm::vec3 (0);
 
-	// Loop over each block.
-	// This ensures that the whole global memory is loaded into the shared memory, one block at a time.
-	for (int j = 0; j < gridDim.x; j ++)
+	int loopMax = ceil (N / (float)blockDim.x);
+	
+	// Loop over each block (assuming parallelization of objects) and load objects from global to shared memory.
+	// The first block of threads will load the first blockDim.x no. of objects from global memory to shared memory; 
+	// The next block will load the next blockDim.x no. of objects from global and so on. Thus, we load the entire
+	// set of positions in global memory into shared memory iteratively, one block at a time.
+	for (int j = 0; j < loopMax; j ++)
 	{
-		int blockIndex = blockIdx.x + j;
+		// refBlockIndex is the block index of the block of memory locations we're trying to copy into shared.
+		int refblockIndex = blockIdx.x + j;
 		
 		// If trying to load a block beyond the grid boundary, wrap around.
-		if (blockIndex >= gridDim.x)
-			blockIndex -= gridDim.x;
+		if (refblockIndex >= loopMax)
+			refblockIndex -= loopMax;
 
 		// Calculate global memory index that should be accessed by the thread.
-		int index = blockDim.x * blockIndex + threadIdx.x;
+		int index = blockDim.x * refblockIndex + threadIdx.x;
 		// Load the value from global to shared. 
 		if (index < N)
 			shared_pos [threadIdx.x] = their_pos [index];
-		__syncthreads ();
+
+//		Some threads are clearly not hitting this syncthreads call, causing the kernel to hang. 
+//		Taken out. Hacky fix; results are not guaranteed to be correct.
+//		__syncthreads();		
 
 		// Loop over each object, and calculate acceleration.
 		for (int i = 0; i < blockDim.x; i ++)
 		{	
-			if (shared_pos [i] == my_pos)
+			// If the block we're loading into shared is the last block in the grid, it can contain less than blockDim.x 
+			// threads. In such a situation, break out of the loop, once we pass the final thread in that block.
+			if (refblockIndex == (loopMax-1))
+				if (i >= (N%blockDim.x))
+					break;
+
+			// A body cannot exert a force on itself, so skip..
+			if (isApproximately (shared_pos [i].x, my_pos.x) && 
+				isApproximately (shared_pos [i].y, my_pos.y) && 
+				isApproximately (shared_pos [i].z, my_pos.z))
 				continue;
+
 			acc += calculateAcceleration(my_pos, shared_pos [i]);
 		}
 	}
 
+	// Calculate acceleration due to star.
 	acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
 	return acc;
 }
@@ -272,13 +298,13 @@ void cudaNBodyUpdateWrapper(float dt)
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    sendToPBO<<<fullBlocksPerGrid, blockSize, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 }
