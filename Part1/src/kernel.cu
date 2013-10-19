@@ -151,7 +151,17 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	extern __shared__ glm::vec4 sharedPos[];
+	int sharedIdx = threadIdx.x;
+	sharedPos[sharedIdx] = their_pos[sharedIdx]; //read into shared memory
+
+	__syncthreads(); //everything must be in shared before we can proceed
+
+    glm::vec3 acc;
+	acc = acc + calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
+	for(int i = 0; i < N; i++){
+		 acc = acc + calculateAcceleration(my_pos, sharedPos[i]);
+	}
     return acc;
 }
 
@@ -159,7 +169,9 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __global__
 void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 {
+	
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
+
     glm::vec4 my_pos;
     glm::vec3 accel;
 
