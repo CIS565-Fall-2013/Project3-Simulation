@@ -135,8 +135,8 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	glm::vec3 acc = glm::vec3 (0);
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
-	if (index < N)
-	{	
+//	if (index < N)
+//	{	
 		for (int i = 0; i < N; i ++)
 		{	
 			if (their_pos [i] == my_pos)
@@ -144,7 +144,7 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 			acc += calculateAcceleration(my_pos, their_pos [i]);
 		}
 		acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
-	}
+//	}
 	return acc;
 }
 
