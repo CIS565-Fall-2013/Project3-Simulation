@@ -74,7 +74,7 @@ int main(int argc, char** argv);
 //---------RUNTIME STUFF---------
 //-------------------------------
 
-void runCuda();
+void runCuda(bool customSimulation);
 
 void display();
 void keyboard(unsigned char key, int x, int y);

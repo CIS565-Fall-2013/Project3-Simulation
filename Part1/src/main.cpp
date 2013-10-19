@@ -7,6 +7,9 @@
 #define N_FOR_VIS 25
 #define DT 0.2
 #define VISUALIZE 1
+
+bool customSimulation = false;
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -53,7 +56,7 @@ int main(int argc, char** argv)
 //---------RUNTIME STUFF---------
 //-------------------------------
 
-void runCuda()
+void runCuda(bool customSimulation)
 {
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
@@ -64,7 +67,7 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+    cudaNBodyUpdateWrapper(DT, customSimulation);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
@@ -88,7 +91,7 @@ void display()
         timebase = time;
         frame = 0;
     }
-    runCuda();
+    runCuda(customSimulation);
 
     char title[100];
     sprintf( title, "565 NBody sim [%0.2f fps]", fps );
@@ -177,6 +180,12 @@ void init(int argc, char* argv[])
         std::cout << "glewInit failed, aborting." << std::endl;
         exit (1);
     }
+
+	if (argc > 1)
+	{
+		if (!strcmp (argv [1], "true"))
+			customSimulation = true;
+	}
 
     initVAO();
     initTextures();

@@ -17,7 +17,7 @@
 #define SHARED 0
 
 void checkCUDAError(const char *msg, int line);
-void cudaNBodyUpdateWrapper(float dt);
+void cudaNBodyUpdateWrapper(float dt, bool customSimulation);
 void initCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height);
