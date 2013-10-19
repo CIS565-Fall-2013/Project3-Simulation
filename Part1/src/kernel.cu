@@ -132,13 +132,18 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	// NOTE: their_pos is a pointer to global memory.
 	glm::vec3 acc = glm::vec3 (0);
-	for (int i = 0; i < N; i ++)
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+
+	if (index < N)
 	{	
-		if (their_pos [i] == my_pos)
-			continue;
-		acc += calculateAcceleration(my_pos, their_pos [i]);
+		for (int i = 0; i < N; i ++)
+		{	
+			if (their_pos [i] == my_pos)
+				continue;
+			acc += calculateAcceleration(my_pos, their_pos [i]);
+		}
+		acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
 	}
-	acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
 	return acc;
 }
 
@@ -150,12 +155,13 @@ __device__ bool isApproximately (const float &a, const float &b)
 	return false;
 }
 
-//TODO: Done. NEED TO FIX CRASH WHEN VISUALIZING.
+//TODO: Done! 
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	extern __shared__ glm::vec4 shared_pos [];
-	
+	int threadNo = blockDim.x * blockIdx.x + threadIdx.x;
+
 	glm::vec3 acc = glm::vec3 (0);
 
 	int loopMax = ceil (N / (float)blockDim.x);
@@ -173,37 +179,42 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 		if (refblockIndex >= loopMax)
 			refblockIndex -= loopMax;
 
-		// Calculate global memory index that should be accessed by the thread.
+		// Calculate global memory index that should be accessed by this thread.
 		int index = blockDim.x * refblockIndex + threadIdx.x;
 		// Load the value from global to shared. 
 		if (index < N)
 			shared_pos [threadIdx.x] = their_pos [index];
 
-//		Some threads are clearly not hitting this syncthreads call, causing the kernel to hang. 
-//		Taken out. Hacky fix; results are not guaranteed to be correct.
-//		__syncthreads();		
+//		Synchronize here.
+		__syncthreads();		
 
-		// Loop over each object, and calculate acceleration.
-		for (int i = 0; i < blockDim.x; i ++)
-		{	
-			// If the block we're loading into shared is the last block in the grid, it can contain less than blockDim.x 
-			// threads. In such a situation, break out of the loop, once we pass the final thread in that block.
-			if (refblockIndex == (loopMax-1))
-				if (i >= (N%blockDim.x))
-					break;
+		// Compute acceleration only for valid threads.
+		if (threadNo < N)
+		{
+			// Loop over each object, and calculate acceleration.
+			for (int i = 0; i < blockDim.x; i ++)
+			{	
+				// If the block of global memory we're loading into shared mem corresponds to the last block in the grid, 
+				// it can contain less than blockDim.x elements. In such a situation, break out of the loop once we pass 
+				// the last element in that "block".
+				if (refblockIndex == (loopMax-1))
+					if (i >= (N%blockDim.x))
+						break;
 
-			// A body cannot exert a force on itself, so skip..
-			if (isApproximately (shared_pos [i].x, my_pos.x) && 
-				isApproximately (shared_pos [i].y, my_pos.y) && 
-				isApproximately (shared_pos [i].z, my_pos.z))
-				continue;
+				// A body cannot exert a force on itself, so skip..
+				if (isApproximately (shared_pos [i].x, my_pos.x) && 
+					isApproximately (shared_pos [i].y, my_pos.y) && 
+					isApproximately (shared_pos [i].z, my_pos.z))
+					continue;
 
-			acc += calculateAcceleration(my_pos, shared_pos [i]);
+				acc += calculateAcceleration(my_pos, shared_pos [i]);
+			}
 		}
 	}
 
 	// Calculate acceleration due to star.
-	acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
+	if (threadNo < N)	// Only for valid threads.
+		acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
 	return acc;
 }
 
@@ -213,10 +224,16 @@ __global__
 void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if( index < N )
-    {
-        glm::vec4 my_pos = pos[index];
-        glm::vec3 acc = ACC(N, my_pos, pos);
+    glm::vec4 my_pos = glm::vec4 (0);
+	if( index < N )
+        my_pos = pos[index];    
+	
+	// For invalid threads, we still compute dummy acceleration.
+	// This is because sharedMemAcc will cause a deadlocked kernel if there is a divergence here.
+	glm::vec3 acc = ACC(N, my_pos, pos);
+
+	if( index < N )
+	{
         vel[index] += acc * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
@@ -258,9 +275,12 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     float c_scale_h = height / s_scale;
 
     if(x<width && y<height)
-    {
         glm::vec3 color(0.05, 0.15, 0.3);
-        glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+        
+	glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+	
+	if(x<width && y<height)
+	{
         float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)
         pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
