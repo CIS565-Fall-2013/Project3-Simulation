@@ -137,11 +137,11 @@ __device__
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	glm::vec3 acc;
-	acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
+	acc = acc + calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
 
-	/*for(int i = 0; i < N; i++){
+	for(int i = 0; i < N; i++){
 		 acc = acc + calculateAcceleration(my_pos, their_pos[i]);
-	}*/
+	}
     return acc;
 }
 
