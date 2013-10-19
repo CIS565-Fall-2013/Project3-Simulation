@@ -117,8 +117,14 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+    glm::vec3 us3(us);
+	glm::vec3 them3(them);
+	float r= glm::distance(us3, them3);
+	float rSquared = r*r;
+	float m_them = them.w;
+	glm::vec3 dir = them3 - us3;
+	float mag = (G*(m_them / rSquared));
+	return mag*glm::normalize(dir);
 }
 
 //TODO: Core force calc kernel global memory
