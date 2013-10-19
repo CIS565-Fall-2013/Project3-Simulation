@@ -17,7 +17,7 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
+const float planetMass = 3e10;
 const __device__ float starMass = 5e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
@@ -231,6 +231,9 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
  * Wrappers for the __global__ calls *
  *************************************/
 
+void cleanupCuda(){
+	cudaDeviceReset();
+}
 //Initialize memory, update some globals
 void initCuda(int N)
 {
@@ -249,6 +252,8 @@ void initCuda(int N)
     generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
+
+	//atexit(cleanupCuda);
 }
 
 void cudaNBodyUpdateWrapper(float dt)
