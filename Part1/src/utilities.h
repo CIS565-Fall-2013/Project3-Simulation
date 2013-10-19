@@ -24,6 +24,7 @@
 #define G                           6.67384e-11
 #define EPSILON                     .000000001
 #define ZERO_ABSORPTION_EPSILON     0.00001
+#define PHYS_EPSILON				0.0001
 
 namespace utilityCore {
     extern float clamp(float f, float min, float max);

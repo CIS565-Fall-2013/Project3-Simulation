@@ -2,8 +2,10 @@
 #include <cuda.h>
 #include <cmath>
 #include "glm/glm.hpp"
+#include "glm/gtx/norm.hpp"
 #include "utilities.h"
 #include "kernel.h"
+
 
 #if SHARED == 1
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
@@ -119,19 +121,27 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //      m_us*r^2        r^2
     glm::vec3 us3(us);
 	glm::vec3 them3(them);
-	float r= glm::distance(us3, them3);
-	float rSquared = r*r;
+	float rSquared = glm::distance2(us3, them3);
 	float m_them = them.w;
 	glm::vec3 dir = them3 - us3;
 	float mag = (G*(m_them / rSquared));
-	return mag*glm::normalize(dir);
+	float dirLen = glm::length(dir);
+	if( dirLen < PHYS_EPSILON )
+		return glm::vec3(0, 0, 0);
+	else
+		return mag*dir/dirLen;
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	glm::vec3 acc;
+	acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
+
+	/*for(int i = 0; i < N; i++){
+		 acc = acc + calculateAcceleration(my_pos, their_pos[i]);
+	}*/
     return acc;
 }
 
