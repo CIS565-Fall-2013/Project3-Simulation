@@ -147,6 +147,12 @@ __device__
 vec3 sharedMemAcc(int N, vec4 my_pos, vec4 * their_pos)
 {
     vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
+
+
+
+
+
+
     return acc;
 }
 
@@ -198,7 +204,7 @@ vec3 integrateVelocity(vec3 position, vec3 velocity, float dt)
 	}
 	else if (integrateMode == (int)RK4)
 	{
-
+		// TODO
 	}
 	else
 	{
@@ -219,7 +225,6 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel)
         vec3 acc = ACC(N, my_pos, pos);
 		//vel[index] += acc * dt;
 		vel[index] = integrateAcceleration(vel[index], acc, dt, N, my_pos, pos);
-     
     }
 }
 
@@ -235,11 +240,9 @@ void updatePosition(int N, float dt, vec4 *pos, vec3 *vel)
 		pos[index].y = nextPosition.y;
 		pos[index].z = nextPosition.z;
 
-
-
 		//pos[index].x += vel[index].x * dt;
-  //      pos[index].y += vel[index].y * dt;
-  //      pos[index].z += vel[index].z * dt;
+		//pos[index].y += vel[index].y * dt;
+		//pos[index].z += vel[index].z * dt;
 	}
 }
 
@@ -278,8 +281,6 @@ void sendToPBO(int N, vec4 * pos, float4 * pbo, int width, int height, float s_s
 
     if(x<width && y<height)
     {
-        vec3 color(0.05, 0.15, 0.3);
-
 		// figure out the acceleration of the texel with respect to the rest of the N-body
 		// these texels have a "weight" of 1 for the purpose of the calculations
         vec3 acc = ACC(N, vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
@@ -309,6 +310,7 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
     generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize();
 }
 
 void cudaNBodyUpdateWrapper(float dt)
@@ -317,6 +319,7 @@ void cudaNBodyUpdateWrapper(float dt)
     updateVelocity<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
 	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize();
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
@@ -324,6 +327,7 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize();
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
@@ -331,4 +335,5 @@ void cudaUpdatePBO(float4 * pbodptr, int width, int height)
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
     sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize();
 }
