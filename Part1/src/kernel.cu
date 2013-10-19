@@ -15,8 +15,8 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
-const __device__ float starMass = 5e10;
+const float planetMass = 3e9;
+const __device__ float starMass = 6e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 
@@ -117,13 +117,17 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-	glm::vec4 diff = them-us;
-    float r2 = diff.x*diff.x+diff.y*diff.y+diff.z*diff.z;
-	if(abs(r2) < EPSILON)
-		return glm::vec3(0,0,0);
-
-	float a = them.w*G/r2;
-    return a*glm::normalize(glm::vec3(diff.x+EPSILON,diff.y+EPSILON,diff.z+EPSILON));//use diff as direction;;
+	//
+	//                       ->
+	//->			G*m_them*r   
+    //a  = ---------------------------
+    //         (||r||^2+eps^2)^3/2     
+	glm::vec4 r = them-us;
+    float r_mag_2 = r.x*r.x+r.y*r.y+r.z*r.z;
+	float eps_2 = 0.1;
+	float d = r_mag_2+eps_2;
+	float a = them.w*G/sqrt(d*d*d);
+    return a*glm::vec3(r);//use diff as direction;;
 }
 
 //TODO: Core force calc kernel global memory
@@ -145,7 +149,12 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+	for(int i = 0; i < N; ++i)
+	{
+		acc = acc + calculateAcceleration(my_pos, their_pos[i]);
+	}
     return acc;
 }
 
