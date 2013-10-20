@@ -54,7 +54,7 @@ void main()
 	vec3 Pos = Position - delta*Forward + wingspan/2.0*Right;
 	mat4 Rotate = rotationMatrix(Forward, -deflectionAngle);
 
-	Normal = vec3(Rotate*vec4(Up,0.0));
+	Normal = vec3(u_projMatrix*Rotate*vec4(Up,0.0));
 	Pos = vec3(Rotate*vec4(Pos,0.0));
 
 	gl_Position = u_projMatrix*vec4(Pos,1.0);
@@ -64,7 +64,7 @@ void main()
 	//Compute front point:
 	Pos = Position + length*Forward;
 	gl_Position = u_projMatrix*vec4(Pos,1.0);
-	Normal = Up;
+	Normal = vec3(u_projMatrix*vec4(Up,0.0));
 	TexCoord = vec2(0.5,1.0);
     EmitVertex();
 
@@ -79,7 +79,7 @@ void main()
 	Pos = Position - delta*Forward - wingspan/2.0*Right;
 	Rotate = transpose(Rotate);
 
-	Normal = vec3(Rotate*vec4(Up,0.0));
+	Normal = vec3(u_projMatrix*Rotate*vec4(Up,0.0));
 	Pos = vec3(Rotate*vec4(Pos,0.0));
 
 	gl_Position = u_projMatrix*vec4(Pos,1.0);
