@@ -6,11 +6,10 @@
 #include "utilities.h"
 #include "kernel.h"
 
-
 #if SHARED == 1
-    #define ACC(x,y,z) sharedMemAcc(x,y,z)
+    //#define ACC(x,y,z) sharedMemAcc(x,y,z)
 	//#define ACC(x,y,z) prefetchAcc(x,y,z)
-	//#define ACC(x,y,z) unrolledAcc(x,y,z)
+	#define ACC(x,y,z) unrolledAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
@@ -22,6 +21,8 @@ int numObjects;
 const float planetMass = 3e10;
 //const __device__ float starMass = 5e10;
 const __device__ float starMass = 0;
+float totalTime = 0;
+int timeCount = 0;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 
@@ -366,8 +367,27 @@ void initCuda(int N, int blockSize)
 void cudaNBodyUpdateWrapper(float dt, int blockSize)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+
+	cudaEvent_t start, stop;
+	float nathanTime;
+	cudaEventCreate(&start);
+	cudaEventRecord(start,0);
     updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+	cudaEventCreate(&stop);
+	cudaEventRecord(stop,0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&nathanTime, start,stop);
+	/*printf("Elapsed time : %f ms\n",nathanTime);*/
+	totalTime = totalTime + nathanTime;
+	timeCount++;
+	if(timeCount >= 100){
+		printf("Avg kernel time : %f ms\n",totalTime/100);
+		totalTime = 0;
+		timeCount = 0;
+	}
+
     checkCUDAErrorWithLine("Kernel failed!");
+
     updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
