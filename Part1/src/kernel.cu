@@ -216,10 +216,11 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	return acc;
 }
 
-__device__ glm::vec3 Flock (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, glm::vec4 *vel)
+__device__ glm::vec3 Flock (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, glm::vec3 *vel)
 {
+//	int my_index = 0;
 	glm::vec3	acc = glm::vec3 (0);
-	glm::vec4 my_vel;
+	glm::vec3 my_vel;
 
 	glm::vec3 sumVelocities = glm::vec3 (0);
 	glm::vec3 sumPositions = glm::vec3 (0);
@@ -231,21 +232,24 @@ __device__ glm::vec3 Flock (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, g
 
 	if (index < N)
 	{
+		my_vel = vel [index];
+
 		for (int i = 0; i < N; i ++)
 		{	
 			glm::vec4 curPos = pos [i];
-			glm::vec4 curVel = vel [i];
-
-			if (curPos == my_pos)
-				my_vel = curVel;
+			glm::vec3 curVel = vel [i];
 		
 			float distance = glm::length (curPos - my_pos);
-			if (/*(distance > 0 ) &&*/ (distance <= 5.0))
+			if (/*(distance > 0 ) &&*/ (distance <= 2.0))
 			{
 				sumVelocities += curVel;
-				sumPositions += curPos;
+				sumPositions.x += curPos.x;
+				sumPositions.y += curPos.y;
+				sumPositions.z += curPos.z;
 
-				sumSepVelocities += (my_pos - curPos);
+				sumSepVelocities.x += (my_pos.x - curPos.x);
+				sumSepVelocities.y += (my_pos.y - curPos.y);
+				sumSepVelocities.z += (my_pos.z - curPos.z);
 				neighbours ++;
 			}
 		}
@@ -258,17 +262,25 @@ __device__ glm::vec3 Flock (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, g
 		}
 
 		// Calculate total velocity:
-		glm::vec3 totalVel = (glm::normalize (sumVelocities) * glm::length (my_vel))							// Align component
-							 +	(glm::normalize (sumPositions - glm::vec3 (my_pos)) * glm::length (my_vel))		// Cohesion component
-							 +	(glm::normalize (sumSepVelocities) * glm::length (my_vel));						// Separation component
+		glm::vec3 flockVel = (safeNormalize (sumVelocities) * glm::length (my_vel))//	* 0.4f							// Align component
+							 +	(safeNormalize (sumPositions - glm::vec3 (my_pos)) * glm::length (my_vel))//	* 0.2f	// Cohesion component
+							 +	(safeNormalize (sumSepVelocities) * glm::length (my_vel));// * 0.4f;					// Separation component
 
-
-		acc = (totalVel - glm::vec3 (my_vel))/DT;
+		acc = ((glm::length (flockVel) - glm::length (my_vel))/DT) * safeNormalize (flockVel);
 	}
 	return acc;
 }
 
-//Simple Euler integration scheme
+// normalize only if length > 0
+inline __device__ glm::vec3 safeNormalize (glm::vec3 vectorToBeNormalized)
+{
+	float len = glm::length (vectorToBeNormalized);
+	if (len > 0.001)
+		return vectorToBeNormalized / len;
+	return vectorToBeNormalized;
+}
+
+// Calculate gravitational acceleration.
 __global__
 void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 {
@@ -293,11 +305,12 @@ void updateFCustom (int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3
 
     if(index < N) my_pos = pos[index];
 
-    accel = Flock (N, dt, my_pos, pos, vel);
+    accel = 0.3f*Flock (N, dt, my_pos, pos, vel) + 0.7f*calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
 
     if(index < N) acc[index] = accel;
 }
 
+//Simple Euler integration scheme
 __global__
 void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 {
@@ -383,11 +396,16 @@ void cudaNBodyUpdateWrapper(float dt, bool customSimulation)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
 	if (customSimulation)
-		updateFCustom<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+		updateFCustom<<<fullBlocksPerGrid, blockSize/*, blockSize*sizeof(glm::vec4)*/>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
 	else
 		updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
-    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+	glm::vec3 *accn = new glm::vec3 [numObjects];
+	for (int i= 0; i < numObjects; i ++)
+		accn [i] = glm::vec3 (0);
+	cudaMemcpy (accn, dev_acc, sizeof(glm::vec3)*numObjects, cudaMemcpyDeviceToHost);
+	int breakHere = -1;
+	updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }
