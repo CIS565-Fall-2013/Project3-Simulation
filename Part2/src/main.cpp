@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 9999
+#define N_FOR_VIS 25
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -44,10 +44,8 @@ int main(int argc, char** argv)
 
     glEnable(GL_DEPTH_TEST);
 
-
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
-
     glutMainLoop();
 
     return 0;
@@ -170,6 +168,7 @@ void display()
     glutSwapBuffers();
 }
 
+// keyboard call back function
 void keyboard(unsigned char key, int x, int y)
 {
     std::cout << key << std::endl;
@@ -180,7 +179,6 @@ void keyboard(unsigned char key, int x, int y)
             break;
     }
 }
-
 
 //-------------------------------
 //----------SETUP STUFF----------

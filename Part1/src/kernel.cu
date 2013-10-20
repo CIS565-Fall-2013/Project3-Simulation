@@ -149,17 +149,23 @@ vec3 sharedMemAcc(int N, vec4 my_pos, vec4 * their_pos)
 	__shared__ vec4 sharedPositions[blockSize];
 
 	vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
-	for (int i = 0, int blockNum = 0 ; i < N ; i = i + (int)blockSize, ++blockNum)
+	for (int i = 0, int tileNum = 0 ; i < N ; i = i + (int)blockSize, ++tileNum)
 	{
-		int id = blockNum * blockDim.x + threadIdx.x;
-
+		int id = tileNum * blockDim.x + threadIdx.x;
 		if (id < N)
 			sharedPositions[threadIdx.x] = their_pos[id];
 
 		__syncthreads();
 
-		if (id < N)
-			acc += calculateAcceleration(my_pos, sharedPositions[threadIdx.x]);
+		// iterate through all the sharePositions set by all threads within this tile
+		for (int j = 0 ; j < blockDim.x ; ++j)
+		{
+			// need to make sure that the current sharedPosition that we are trying to access 
+			// falls within the total objects that we have.
+			int index = tileNum * blockDim.x + j;
+			if (index < N)
+				acc += calculateAcceleration(my_pos, sharedPositions[j]);
+		}
 
 		__syncthreads();
 	}
@@ -219,7 +225,7 @@ vec3 integrateVelocity(vec3 position, vec3 velocity, float dt)
 	}
 	else
 	{
-
+		// error
 	}
 
 	return nextPosition;
