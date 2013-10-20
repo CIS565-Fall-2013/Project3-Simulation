@@ -13,8 +13,9 @@
 #endif
 
 #define blockSize 128
+#define TILE_SIZE 32
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
-#define SHARED 1
+#define SHARED 0
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);
