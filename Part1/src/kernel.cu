@@ -48,6 +48,14 @@ __host__ __device__ unsigned int hash(unsigned int a){
     return a;
 }
 
+__host__ __device__ glm::vec3 truncate(glm::vec3 direction, float maxLength)
+{
+	if(glm::length(direction) > maxLength)
+		return glm::normalize(direction) * maxLength;
+	else
+		return direction;
+}
+
 //Function that generates static.
 __host__ __device__ glm::vec3 generateRandomNumberFromThread(float time, int index)
 {
@@ -129,7 +137,8 @@ __device__  glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 		acc += calculateAcceleration(my_pos, their_pos[i]);
 	}
 //	printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);
-    return acc;
+    return truncate(acc, g_fMaxAcc);
+//	return acc;
 }
 
 
@@ -157,7 +166,7 @@ __device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos
 		__syncthreads();
 
 	}
-    return acc;
+    return truncate(acc, g_fMaxAcc);
 }
 
 

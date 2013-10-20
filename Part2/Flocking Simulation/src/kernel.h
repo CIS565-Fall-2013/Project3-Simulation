@@ -16,6 +16,7 @@
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 0
 #define N_FOR_VIS 320
+#define g_fMaxSpeed 0.5f
 
 void checkCUDAError(const char *msg, int line);
 void cudaFlockingUpdateWrapper(float dt);

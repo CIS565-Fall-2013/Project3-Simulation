@@ -27,6 +27,7 @@
 
 namespace utilityCore {
     extern float clamp(float f, float min, float max);
+//	__host__ __device__ extern glm::vec3 truncate(glm::vec3 direction, float maxLength);
     extern bool replaceString(std::string& str, const std::string& from, const std::string& to);
     extern glm::vec3 clampRGB(glm::vec3 color);
     extern bool epsilonCheck(float a, float b);
