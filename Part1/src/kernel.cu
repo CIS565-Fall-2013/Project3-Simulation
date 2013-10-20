@@ -157,7 +157,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	glm::vec3 acc;
 	acc = acc + calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 
-	for(int j = 0; j < N/TILE_SIZE - 1; j++){
+	for(int j = 0; j < N/TILE_SIZE; j++){
 		//read tile into shared memory
 		for(int i = 0; i < TILE_SIZE; i++){
 			sharedPos[i] = their_pos[i + j*TILE_SIZE]; 
