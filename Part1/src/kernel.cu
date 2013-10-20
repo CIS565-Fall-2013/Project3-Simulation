@@ -165,7 +165,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
     // Initialize the shared memory for shared position for each tile
     __shared__ glm::vec4 shared_pos[blockSize];
 
-    // Define one 1D grid of size N/p tiles, loop each tile to compute with the shared memory
+    // Define one 1D grid of size N/p tiles, loop each tile to compute with the shared memory referring to http://http.developer.nvidia.com/GPUGems3/gpugems3_ch31.html
     unsigned int i, tileIdx;
     for ( i = 0, tileIdx = 0; i < N; i += blockSize, ++ tileIdx) {
       unsigned int shared_idx = tileIdx * blockSize + threadIdx.x;
