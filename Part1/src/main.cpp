@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 64
+//#define N_FOR_VIS 64
 
 
 #define DT 0.2
