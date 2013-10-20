@@ -48,8 +48,8 @@ GLuint program[2];
 const unsigned int HEIGHT_FIELD = 0;
 const unsigned int PASS_THROUGH = 1;
 
-const int field_width  = 800;
-const int field_height = 800;
+const int field_width  = 200;
+const int field_height = 200;
 
 float fovy = 60.0f;
 float zNear = 0.10;
@@ -62,7 +62,7 @@ glm::vec3 cameraPosition(1.75,1.75,1.35);
 //----------CUDA STUFF-----------
 //-------------------------------
 
-int width=1000; int height=1000;
+int width=750; int height=750;
 
 //-------------------------------
 //-------------MAIN--------------

@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
+#define N_FOR_VIS 2401
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -107,21 +107,21 @@ void display()
 
     glUseProgram(program[HEIGHT_FIELD]);
 
-    glEnableVertexAttribArray(positionLocation);
-    glEnableVertexAttribArray(texcoordsLocation);
+    //glEnableVertexAttribArray(positionLocation);
+    //glEnableVertexAttribArray(texcoordsLocation);
     
-    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-    glVertexAttribPointer((GLuint)positionLocation, 2, GL_FLOAT, GL_FALSE, 0, 0); 
+    //glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    //glVertexAttribPointer((GLuint)positionLocation, 2, GL_FLOAT, GL_FALSE, 0, 0); 
 
-    glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
-    glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    //glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
+    //glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
 
-    glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
+    //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
-    glDisableVertexAttribArray(positionLocation);
-    glDisableVertexAttribArray(texcoordsLocation);
+    //glDisableVertexAttribArray(positionLocation);
+    //glDisableVertexAttribArray(texcoordsLocation);
 
     glUseProgram(program[PASS_THROUGH]);
 
@@ -133,7 +133,7 @@ void display()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
    
     glPointSize(4.0f); 
-    glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_POINTS, N_FOR_VIS, GL_UNSIGNED_INT, 0);
 
     glPointSize(1.0f);
 

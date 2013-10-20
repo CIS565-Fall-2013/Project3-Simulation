@@ -14,11 +14,6 @@ void main()
     if (r >= 1.0) { discard; }
 
 	float dist = length(WorldCoord);
-    if(dist <= 0.01)
-    {
-        FragColor = vec4(1.0);
-        return;
-    }
 
 	vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
     vec3 L = normalize(-WorldCoord);
