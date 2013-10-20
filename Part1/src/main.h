@@ -48,8 +48,8 @@ GLuint program[2];
 const unsigned int HEIGHT_FIELD = 0;
 const unsigned int PASS_THROUGH = 1;
 
-const int field_width  = 400;
-const int field_height = 400;
+const int field_width  = 200;
+const int field_height = 200;
 
 float fovy = 60.0f;
 float zNear = 0.10;

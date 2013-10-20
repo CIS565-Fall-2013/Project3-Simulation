@@ -151,7 +151,7 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-	__shared__ glm::vec4 shPosition[blockSize];  
+	extern __shared__ glm::vec4 shPosition[];  
 	
 	//Do initial hardcoded calcuation from star position
 	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
@@ -169,6 +169,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 		int loadIndex = threadIdx.x + tileOffset;
 		if(loadIndex < N)
 			shPosition[threadIdx.x] = their_pos[loadIndex];
+
 		//Wait for load to finish
 		__syncthreads();
 
@@ -179,6 +180,8 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 			int idx = tileOffset+i;
 			if(idx < N)
 				acc = acc + calculateAcceleration(my_pos, shPosition[idx]);
+			else
+				break;
 		}
 		
 		__syncthreads();
