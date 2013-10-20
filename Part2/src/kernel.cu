@@ -160,7 +160,8 @@ vec3 sharedMemAcc(int N, vec4 my_pos, vec4 * their_pos)
 	__shared__ vec4 sharedPositions[blockSize];
 
 	vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
-	for (int i = 0, int tileNum = 0 ; i < N ; i = i + (int)blockSize, ++tileNum)
+	int i, tileNum;
+	for (i = 0, tileNum = 0 ; i < N ; i = i + (int)blockSize, ++tileNum)
 	{
 		int id = tileNum * blockDim.x + threadIdx.x;
 		if (id < N)
@@ -279,12 +280,12 @@ vec3 naiveCohesion(int N, vec4 my_pos, vec4* boids_pos)
 		if (my_pos == boids_pos[i])
 			continue;
 
-		vec3 toBoidI = vec3(my_pos) - vec3(boids_pos[i]);
+		vec3 toBoidI = vec3(my_pos.x, my_pos.y, my_pos.z) - vec3(boids_pos[i].x, boids_pos[i].y, boids_pos[i].z);
 		float toBoidILen = length(toBoidI);
 
 		if (toBoidILen < g_kCohNeighborhood && toBoidILen > 0)
 		{
-			com += boids_pos[i];
+			com += vec3(boids_pos[i]);
 			numBoids++;
 		}
 	}
@@ -294,7 +295,7 @@ vec3 naiveCohesion(int N, vec4 my_pos, vec4* boids_pos)
 		com = com / (float)numBoids;
 	}
 
-	cohesionDirection = com - vec3(my_pos);
+	cohesionDirection = com - vec3(my_pos.x, my_pos.y, my_pos.z);
 	return g_kCohesion * cohesionDirection;
 }
 
@@ -322,7 +323,7 @@ vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
 
 	if (numBoids > 0)
 	{
-		alignmentDirection = alignmentDirection / numBoids;
+		alignmentDirection = alignmentDirection / (float)numBoids;
 	}
 
 	return g_kAlignment * alignmentDirection;
@@ -348,7 +349,9 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel)
     if( index < N )
     {
         vec4 my_pos = pos[index];
-        vec3 acc = ACC(N, my_pos, pos);
+		vec3 my_vel = vel[index];
+        //vec3 acc = ACC(N, my_pos, pos); // old
+		vec3 acc = (flock(N, my_pos, pos, vel) - my_vel) * dt;
 		//vel[index] += acc * dt;
 		vel[index] = integrateAcceleration(vel[index], acc, dt, N, my_pos, pos);
     }
