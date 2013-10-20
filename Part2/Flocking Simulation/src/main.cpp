@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 #endif
 
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
-    view = glm::lookAt(cameraPosition, glm::vec3(0), glm::vec3(0,0,1));
+    view = glm::lookAt(cameraPosition, glm::vec3(1.0, 1.0, 0), glm::vec3(0,0,1));
 
     projection = projection * view;
 

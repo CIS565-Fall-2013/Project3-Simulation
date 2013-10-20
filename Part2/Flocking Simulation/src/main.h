@@ -51,13 +51,13 @@ const unsigned int PASS_THROUGH = 1;
 const int field_width  = 800;
 const int field_height = 800;
 
-float fovy = 60.0f;
+float fovy = 70.0f;
 float zNear = 0.10;
 float zFar = 100.0;
 
 glm::mat4 projection;
 glm::mat4 view;
-glm::vec3 cameraPosition(2.5,2.5,2);
+glm::vec3 cameraPosition(3.5,3.5,3);
 //-------------------------------
 //----------CUDA STUFF-----------
 //-------------------------------

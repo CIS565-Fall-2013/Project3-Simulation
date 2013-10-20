@@ -157,7 +157,7 @@ __global__ void updateAccelaration(int N, float dt, glm::vec4 *pos, glm::vec3 *v
 		}
 		else desiredVel = myVelocity;
 
-		if(glm::length(myPosition) > 200.0f) desiredVel = c_seek * (-myPosition);
+		if(glm::length(myPosition) > 400.0f) desiredVel = c_seek * (-myPosition);
 		
 		// Calculate acceleration from steering direction
 		acc[index] = truncate(desiredVel - myVelocity, g_fMaxForce) / pos[index].w;

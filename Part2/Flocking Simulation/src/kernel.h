@@ -15,7 +15,7 @@
 #define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 0
-#define N_FOR_VIS 320
+#define N_FOR_VIS 1500
 #define g_fMaxSpeed 0.5f
 
 void checkCUDAError(const char *msg, int line);
