@@ -132,8 +132,8 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4* them)
 __device__
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    
-    glm::vec3 acc = calculateAcceleration(my_pos, &glm::vec4(0,0,0,starMass));
+    glm::vec4 sun(0.0f,.0f,.0f,starMass);
+    glm::vec3 acc = calculateAcceleration(my_pos, &sun);
 
     for( int i = 0; i < N; ++i )
     {
@@ -151,13 +151,14 @@ extern __shared__ glm::vec4 sh_pos[];
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
+    glm::vec4 sun(0.0f,.0f,.0f,starMass);
     int i,n, tile, idx;
-    glm::vec3 acc = calculateAcceleration(my_pos, &glm::vec4(0,0,0,starMass));
+    glm::vec3 acc = calculateAcceleration(my_pos, &sun);
     tile = 0;
     for( i = 0; i < N; i += blockDim.x )
     {
         idx = tile * blockDim.x + threadIdx.x;
-        if( idx < N )
+        if( idx < N && threadIdx.x < N )
             sh_pos[threadIdx.x] = their_pos[idx];
         __syncthreads();
 
@@ -177,13 +178,19 @@ __global__
 void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if( index >= N )
-        return;
+    glm::vec4 my_pos;
+    glm::vec3 acc;
 
+    if( index < N )
     {
-        glm::vec4 my_pos = pos[index];
-        glm::vec3 acc = ACC(N, my_pos, pos);
+        my_pos = pos[index];
+    }
+   
+    acc = ACC(N, my_pos, pos);
 
+
+    if( index < N )
+    {
         vel[index] += acc * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
@@ -258,10 +265,10 @@ void initCuda(int N)
 void cudaNBodyUpdateWrapper(float dt)
 {
     GpuTimer timer;
-    
+    int sharedNum = numObjects > blockSize ? blockSize: numObjects;
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     timer.Start();
-    update<<<fullBlocksPerGrid, blockSize, sizeof( glm::vec4 ) * numObjects >>>(numObjects, dt, dev_pos, dev_vel);
+    update<<<fullBlocksPerGrid, blockSize, sizeof( glm::vec4 ) * sharedNum >>>(numObjects, dt, dev_pos, dev_vel);
     timer.Stop();
     printf( "UPDATE time: %f\n", timer.Elapsed() );
 
@@ -277,7 +284,9 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 {
+    int sharedNum = numObjects > blockSize ? blockSize: numObjects;
+
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize,sizeof(glm::vec4)*numObjects>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    sendToPBO<<<fullBlocksPerGrid, blockSize,sizeof(glm::vec4)*sharedNum>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 }
