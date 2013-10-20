@@ -9,5 +9,5 @@ in vec4 Position;
 
 void main(void)
 {
-	gl_Position = /*u_projMatrix * u_modelviewMatrix **/ Position;
+	gl_Position = Position;
 }

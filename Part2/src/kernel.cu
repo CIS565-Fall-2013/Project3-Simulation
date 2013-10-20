@@ -6,11 +6,9 @@
 #include "kernel.h"
 
 #if SHARED == 1
-    #define ACC(x,y,z) sharedMemAcc(x,y,z)
-	#define FLOCK(x,y,z,v) sharedMemFlocking(x,y,z,v)
+    #define FLOCK(x,y,z,v) sharedMemFlocking(x,y,z,v)
 #else
-    #define ACC(x,y,z) naiveAcc(x,y,z)
-	#define FLOCK(x,y,z,v) navieFlocking(x,y,z,v)
+    #define FLOCK(x,y,z,v) navieFlocking(x,y,z,v)
 #endif
 
 
@@ -150,11 +148,10 @@ glm::vec3 navieFlocking(int N, glm::vec4 my_pos, glm::vec4* their_pos, glm::vec3
 		}
 	}
 
-	if(totalDist >= DBL_EPSILON)
-		align /= totalDist;
-
-	if(totalMass >= DBL_EPSILON)
-		cohes = cohes / totalMass - glm::vec3(my_pos);
+	totalDist += DBL_EPSILON;
+	totalMass += DBL_EPSILON;
+	align /= totalDist;
+	cohes = cohes / totalMass - glm::vec3(my_pos);
 
 	//if(glm::length(align) < DBL_EPSILON  && glm::length(separa) < DBL_EPSILON && glm::length(cohes) < DBL_EPSILON)
 	//	return glm::vec3(10,0,0);
@@ -197,12 +194,14 @@ void updateDroid(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec4 * 
 			}
 			else{
 				dir = FLOCK(N, my_pos, pos, vel);
-				if(glm::length(dir) > DBL_EPSILON)
+				if(glm::length(dir) > 2)
 					dir = glm::normalize(dir);
+				else
+					dir = glm::normalize(vel[index]);
 			}
 		}
 
-		vel[index] = scale * dir * 5.0f;		
+		vel[index] = scale * dir * 5.0f;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;
@@ -237,9 +236,8 @@ void updatePredator(int P, float dt, glm::vec4 * pos, glm::vec3 * vel, int time,
 }
 
 //Update the vertex buffer object
-//(The VBO is where OpenGL looks for the positions for the planets)
 __global__
-void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, int height, float s_scale)
+void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, float* nbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -248,100 +246,145 @@ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, 
 
     if(index<N)
     {
-      	float scale = 2.0f;
+      	float scale = 3.0f;
 		glm::vec3 n;
 		if(glm::length(vel[index]) > DBL_EPSILON)
 		{
 			n = glm::normalize(vel[index]);
 		}
-			/*glm::vec3 up = glm::vec3(0,0,1);
-
-			glm::vec3 right = (glm::cross(up, n));
-			if(glm::length(right) > DBL_EPSILON)
-				right = glm::normalize(right);
-			
-			up = (glm::cross(n, right));
-			if(glm::length(up) > DBL_EPSILON)
-				up = glm::normalize(up);
-
-			glm::mat4x4 modelMatrix;
-			modelMatrix[0][0] = right.x;
-			modelMatrix[1][0] = right.y;
-			modelMatrix[2][0] = right.z;
-			modelMatrix[3][0] = pos[index].x;
-			
-			modelMatrix[0][1] = up.x;
-			modelMatrix[1][1] = up.y;
-			modelMatrix[2][1] = up.z;
-			modelMatrix[3][1] = pos[index].y;
-
-			modelMatrix[0][2] = n.x;
-			modelMatrix[1][2] = n.y;
-			modelMatrix[2][2] = n.z;
-			modelMatrix[3][2] = pos[index].z;
-
-			modelMatrix[0][3] = modelMatrix[1][3] = modelMatrix[2][3] = 0;
-			modelMatrix[3][3] = 1;		
-
-			for(int i = 0; i < 12; i += 4)
-			{
-				glm::vec4 newPos(vbo[12*index+i] / c_scale_w , vbo[12*index+i+1] / c_scale_w, vbo[12*index+i+2] / c_scale_w, vbo[12*index+i+3]);
-				newPos = modelMatrix * newPos;
-				vbo[12*index+i] = newPos.x * c_scale_w;
-				vbo[12*index+i+1] = newPos.y * c_scale_w;
-				vbo[12*index+i+2] = newPos.z * c_scale_w;
-				vbo[12*index+i+3] = 1;
-			}
-		}*/
-
-
-		/*glm::mat4x4 modelMatrix;
-		modelMatrix[0][0] = 1;
-		modelMatrix[1][0] = 0;
-		modelMatrix[2][0] = 0;
-		modelMatrix[3][0] = pos[index].x;
-			
-		modelMatrix[0][1] = 0;
-		modelMatrix[1][1] = 1;
-		modelMatrix[2][1] = 0;
-		modelMatrix[3][1] = pos[index].y;
-
-		modelMatrix[0][2] = 0;
-		modelMatrix[1][2] = 0;
-		modelMatrix[2][2] = 1;
-		modelMatrix[3][2] = pos[index].z;
-
-		modelMatrix[0][3] = modelMatrix[1][3] = modelMatrix[2][3] = 0;
-		modelMatrix[3][3] = 1;		
-
-		for(int i = 0; i < 12; i += 4)
-		{
-			glm::vec4 newPos(vbo[12*index+i] , vbo[12*index+i+1], vbo[12*index+i+2], vbo[12*index+i+3]);
-			newPos = modelMatrix * newPos;
-			vbo[12*index+i] = newPos.x * c_scale_w;
-			vbo[12*index+i+1] = newPos.y * c_scale_w;
-			vbo[12*index+i+2] = newPos.z * c_scale_w;
-			vbo[12*index+i+3] = 1;
-		}*/
-	
 		
-		vbo[12*index+0] = (pos[index].x + 5*scale*n.x)*c_scale_w;
-		vbo[12*index+1] = (pos[index].y + 5*scale*n.y)*c_scale_h;
-		vbo[12*index+2] = (pos[index].z + 5*scale*n.z)*c_scale_h;
-		vbo[12*index+3] = 1;
+		glm::vec3 p1,p2,p3,p4;
+		p1 = glm::vec3((pos[index].x + 5*scale*n.x)*c_scale_w, (pos[index].y + 5*scale*n.y)*c_scale_h, (pos[index].z + 5*scale*n.z)*c_scale_h);
+		p2 = glm::vec3((pos[index].x - scale*n.x - scale)*c_scale_w, (pos[index].y - scale*n.y - scale)*c_scale_h, (pos[index].z - scale*n.z - scale)*c_scale_h);
+		p3 = glm::vec3((pos[index].x - scale*n.x + scale)*c_scale_w, (pos[index].y - scale*n.y + scale)*c_scale_h, (pos[index].z - scale*n.z + scale)*c_scale_h);
+		p4 = glm::vec3((pos[index].x - scale*n.x + scale)*c_scale_w, (pos[index].y - scale*n.y - scale)*c_scale_h, (pos[index].z - scale*n.z + scale)*c_scale_h);			
 
-		vbo[12*index+4] = (pos[index].x - scale*n.x - scale)*c_scale_w;
-		vbo[12*index+5] = (pos[index].y - scale*n.y - scale)*c_scale_h;
-		vbo[12*index+6] = (pos[index].z - scale*n.z - scale)*c_scale_h;
-		vbo[12*index+7] = 1;
+		//first
+		vbo[48*index+0] = p1.x;
+		vbo[48*index+1] = p1.y;
+		vbo[48*index+2] = p1.z;
+		vbo[48*index+3] = 1;
 
-		vbo[12*index+8] = (pos[index].x - scale*n.x + scale)*c_scale_w;
-		vbo[12*index+9] = (pos[index].y - scale*n.y + scale)*c_scale_h;
-		vbo[12*index+10] = (pos[index].z - scale*n.z + scale)*c_scale_h;
-		vbo[12*index+11] = 1;
+		vbo[48*index+4] = p2.x;
+		vbo[48*index+5] = p2.y;
+		vbo[48*index+6] = p2.z;
+		vbo[48*index+7] = 1;
+
+		vbo[48*index+8] = p3.x;
+		vbo[48*index+9] = p3.y;
+		vbo[48*index+10] = p3.z;
+		vbo[48*index+11] = 1;
+
+		glm::vec3 n1 = glm::cross(p2-p1, p3 - p1);
+		for(int i = 0;i <= 11; i+=4)
+		{
+			nbo[48*index+i+0] = n1.x; nbo[48*index+i+1] = n1.y; nbo[48*index+i+2] = n1.z; nbo[48*index+i+3] = 0;
+		}
+
+		
+		//second
+		vbo[48*index+12] = p1.x;
+		vbo[48*index+13] = p1.y;
+		vbo[48*index+14] = p1.z;
+		vbo[48*index+15] = 1;
+
+		vbo[48*index+16] = p2.x;
+		vbo[48*index+17] = p2.y;
+		vbo[48*index+18] = p2.z;
+		vbo[48*index+19] = 1;
+
+		vbo[48*index+20] = p4.x;
+		vbo[48*index+21] = p4.y;
+		vbo[48*index+22] = p4.z;
+		vbo[48*index+23] = 1;
+
+		n1 = glm::cross(p2-p1, p4 - p1);
+		for(int i = 12;i <= 23; i+=4)
+		{
+			nbo[48*index+i+0] = n1.x; nbo[48*index+i+1] = n1.y; nbo[48*index+i+2] = n1.z; nbo[48*index+i+3] = 0;
+		}
+
+		//third
+		vbo[48*index+24] = p1.x;
+		vbo[48*index+25] = p1.y;
+		vbo[48*index+26] = p1.z;
+		vbo[48*index+27] = 1;
+
+		vbo[48*index+28] = p3.x;
+		vbo[48*index+29] = p3.y;
+		vbo[48*index+30] = p3.z;
+		vbo[48*index+31] = 1;
+
+		vbo[48*index+32] = p4.x;
+		vbo[48*index+33] = p4.y;
+		vbo[48*index+34] = p4.z;
+		vbo[48*index+35] = 1;
+
+		n1 = glm::cross(p3-p1, p4 - p1);
+		for(int i = 24;i <= 35; i+=4)
+		{
+			nbo[48*index+i+0] = n1.x; nbo[48*index+i+1] = n1.y; nbo[48*index+i+2] = n1.z; nbo[48*index+i+3] = 0;
+		}
+
+		//frouth
+		vbo[48*index+36] = p2.x;
+		vbo[48*index+37] = p2.y;
+		vbo[48*index+38] = p2.z;
+		vbo[48*index+39] = 1;
+
+		vbo[48*index+40] = p3.x;
+		vbo[48*index+41] = p3.y;
+		vbo[48*index+42] = p3.z;
+		vbo[48*index+43] = 1;
+
+		vbo[48*index+44] = p4.x;
+		vbo[48*index+45] = p4.y;
+		vbo[48*index+46] = p4.z;
+		vbo[48*index+47] = 1;
+
+		n1 = glm::cross(p3-p2, p4 - p2);
+		for(int i = 36;i <= 47; i+=4)
+		{
+			nbo[48*index+i+0] = n1.x; nbo[48*index+i+1] = n1.y; nbo[48*index+i+2] = n1.z; nbo[48*index+i+3] = 0;
+		}
+		__syncthreads();
 	}
 }
 
+//
+//__global__
+//void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, int height, float s_scale)
+//{
+//    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+//
+//    float c_scale_w = -2.0f / s_scale;
+//    float c_scale_h = -2.0f / s_scale;
+//
+//    if(index<N)
+//    {
+//      	float scale = 2.0f;
+//		glm::vec3 n;
+//		if(glm::length(vel[index]) > DBL_EPSILON)
+//		{
+//			n = glm::normalize(vel[index]);
+//		}
+//		
+//		vbo[12*index+0] = (pos[index].x + 5*scale*n.x)*c_scale_w;
+//		vbo[12*index+1] = (pos[index].y + 5*scale*n.y)*c_scale_h;
+//		vbo[12*index+2] = (pos[index].z + 5*scale*n.z)*c_scale_h;
+//		vbo[12*index+3] = 1;
+//
+//		vbo[12*index+4] = (pos[index].x - scale*n.x - scale)*c_scale_w;
+//		vbo[12*index+5] = (pos[index].y - scale*n.y - scale)*c_scale_h;
+//		vbo[12*index+6] = (pos[index].z - scale*n.z - scale)*c_scale_h;
+//		vbo[12*index+7] = 1;
+//
+//		vbo[12*index+8] = (pos[index].x - scale*n.x + scale)*c_scale_w;
+//		vbo[12*index+9] = (pos[index].y - scale*n.y + scale)*c_scale_h;
+//		vbo[12*index+10] = (pos[index].z - scale*n.z + scale)*c_scale_h;
+//		vbo[12*index+11] = 1;
+//	}
+//}
 
 
 __global__
@@ -361,30 +404,6 @@ void sendToVBOPre(int P, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int widt
     }
 }
 
-//Update the texture pixel buffer object
-//(This texture is where openGL pulls the data for the height map)
-__global__
-void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, float s_scale)
-{
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    int x = index % width;
-    int y = index / width;
-    float w2 = width / 2.0;
-    float h2 = height / 2.0;
-
-    float c_scale_w = width / s_scale;
-    float c_scale_h = height / s_scale;
-	
-
-    if(x<width && y<height)
-    {
-	    glm::vec3 color(0.05, 0.15, 0.3);
-        glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
-        float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
-        // Each thread writes one pixel location in the texture (textel)
-        pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
-    }
-}
 
 /*************************************
  * Wrappers for the __global__ calls *
@@ -439,10 +458,10 @@ void cudaNBodyUpdateWrapper(float dt, int time)
     checkCUDAErrorWithLine("Kernel failed!");	
 }
 
-void cudaUpdateVBO(float * vbodptr, int width, int height)
+void cudaUpdateVBO(float * vbodptr, float * nbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, dev_vel, vbodptr, width, height, scene_scale);
+    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, dev_vel, vbodptr, nbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");	  
 }
 
@@ -451,11 +470,4 @@ void cudaUpdateVBOPre(float * vbodptr, int width, int height)
 	dim3 fullBlocksPerGrid((int)ceil(float(numPredator)/float(blockSize)));
     sendToVBOPre<<<fullBlocksPerGrid, blockSize>>>(numPredator, pre_pos, pre_vel, vbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");	  
-}
-
-void cudaUpdatePBO(float4 * pbodptr, int width, int height)
-{
-	dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
-    checkCUDAErrorWithLine("Kernel failed!");	
 }

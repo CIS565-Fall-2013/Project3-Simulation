@@ -110,11 +110,9 @@
   <ItemGroup>
     <None Include="shaders\droidFS.glsl" />
     <None Include="shaders\droidVS.glsl" />
-    <None Include="shaders\heightFS.glsl" />
-    <None Include="shaders\heightVS.glsl" />
-    <None Include="shaders\planetFS.glsl" />
-    <None Include="shaders\planetGS.glsl" />
-    <None Include="shaders\planetVS.glsl" />
+    <None Include="shaders\predatorFS.glsl" />
+    <None Include="shaders\predatorGS.glsl" />
+    <None Include="shaders\predatorVS.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

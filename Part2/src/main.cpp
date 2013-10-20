@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 8000
+#define N_FOR_VIS 6000
 #define N_FOR_PREDATOR 10
 #define DT 0.3
 #define VISUALIZE 1
@@ -21,6 +21,7 @@ int main(int argc, char** argv)
     cudaGLSetGLDevice( compat_getMaxGflopsDeviceId() );
     initPBO(&pbo);
     cudaGLRegisterBufferObject( droidVBO );
+	cudaGLRegisterBufferObject( droidNBO );
 	cudaGLRegisterBufferObject( predatorVBO );
     
 #if VISUALIZE == 1 
@@ -60,11 +61,13 @@ void runCuda()
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
     
-    float *dptrvert=NULL;
-	float *dptrpredvert=NULL;
+	GLfloat *dptrvert=NULL;
+	GLfloat *dptnormal=NULL;
+	float *dptrpredvert=NULL;	
     //cudaGLMapBufferObject((void**)&dptr, pbo);
     cudaGLMapBufferObject((void**)&dptrvert, droidVBO);
 	cudaGLMapBufferObject((void**)&dptrpredvert, predatorVBO);
+	cudaGLMapBufferObject((void**)&dptnormal, droidNBO);
 	  
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
@@ -74,11 +77,12 @@ void runCuda()
     // execute the kernel
     cudaNBodyUpdateWrapper(DT, frame);
 #if VISUALIZE == 1
-    cudaUpdateVBO(dptrvert, field_width, field_height);
+    cudaUpdateVBO(dptrvert, dptnormal, field_width, field_height);
 	cudaUpdateVBOPre(dptrpredvert, field_width, field_height);
 #endif
     // unmap buffer object
     cudaGLUnmapBufferObject(droidVBO);
+	cudaGLUnmapBufferObject(droidNBO);
 	cudaGLUnmapBufferObject(predatorVBO);
 
 	cudaEventRecord( stop, 0);
@@ -110,9 +114,6 @@ void display()
     glutSetWindowTitle(title);
 
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
-   /* glBindTexture(GL_TEXTURE_2D, displayImage);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, field_width, field_height, 
-            GL_RGBA, GL_FLOAT, NULL);*/
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
 
@@ -136,8 +137,9 @@ void display()
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, droidIBO);
    
-   	glDrawElements(GL_TRIANGLES, N_FOR_VIS * 3, GL_UNSIGNED_SHORT, 0);
-   
+   	glDrawElements(GL_TRIANGLES, N_FOR_VIS * 12, GL_UNSIGNED_INT, 0);
+    //glDrawRangeElements(GL_TRIANGLES, 0, N_FOR_VIS * 12, N_FOR_VIS * 12, GL_UNSIGNED_SHORT, 0);
+
 	glDisableVertexAttribArray(positionLocation);
 	glDisableVertexAttribArray(colorLocation);
 	glDisableVertexAttribArray(normalLocation);
@@ -153,8 +155,9 @@ void display()
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, predatorIBO);
    
-    glPointSize(4.0f); 
+    //glPointSize(4.0f); 
     glDrawElements(GL_POINTS, N_FOR_PREDATOR, GL_UNSIGNED_INT, 0);
+
     glPointSize(1.0f);
 
     glDisableVertexAttribArray(positionLocation);
@@ -321,10 +324,8 @@ void init(int argc, char* argv[])
         exit (1);
     }
 
-    //initVAO();
 	initDroid();
 	initPredator();
-   // initTextures();
 }
 
 void initPBO(GLuint* pbo)
@@ -346,7 +347,84 @@ void initPBO(GLuint* pbo)
     }
 }
 
-
+//void initDroid()
+//{
+//	glGenBuffers(1, &droidVBO);
+//    glGenBuffers(1, &droidIBO);
+//	glGenBuffers(1, &droidNBO);
+//	glGenBuffers(1, &droidCBO);
+//
+//	float scale = 0.2f;
+//
+//	float* vertices = new float[48 * N_FOR_VIS];
+//
+//	for(int i = 0; i < 12 * N_FOR_VIS; i += 12)
+//	{
+//		float var = 0.0f;
+//		vertices[i + 0] = var-scale; vertices[i + 1] = var+scale; vertices[i + 2] = var+scale; vertices[i + 3] = 1.0f;
+//		vertices[i + 4] = var-scale; vertices[i + 5] = var-scale; vertices[i + 6] = var+scale; vertices[i + 7] = 1.0f;
+//		vertices[i + 8] = var+scale; vertices[i + 9] = var-scale; vertices[i + 10] = var+scale; vertices[i + 11] = 1.0f;	
+//		vertices[i + 15] = 1.0f; vertices[i + 19] = 1.0f; vertices[i + 23] = 1.0f; vertices[i + 27] = 1.0f;
+//		vertices[i + 31] = 1.0f; vertices[i + 35] = 1.0f; vertices[i + 39] = 1.0f; vertices[i + 43] = 1.0f;
+//		vertices[i + 47] = 1.0f;
+//	}
+//		
+//	glBindBuffer(GL_ARRAY_BUFFER, droidVBO);
+//	glBufferData(GL_ARRAY_BUFFER, 12 * N_FOR_VIS* sizeof(float), vertices, GL_DYNAMIC_DRAW);
+//		
+//	delete [] vertices;
+//
+//	//again with colors
+//	float* colors = new float[36 * N_FOR_VIS];
+//
+//	for(int i = 0; i < N_FOR_VIS; i++)
+//	{
+//		float color[3] = {(float)rand()/(float)RAND_MAX,(float)rand()/(float)RAND_MAX,(float)rand()/(float)RAND_MAX};
+//		
+//		for(int j = 0; j < 9; j += 3)
+//		{
+//			colors[i*9+j] = color[0];
+//			colors[i*9+j+1] = color[1];
+//			colors[i*9+j+2] = color[2];
+//		}
+//	}
+//	
+//	glBindBuffer(GL_ARRAY_BUFFER, droidCBO);
+//	
+//	glBufferData(GL_ARRAY_BUFFER, 9 * N_FOR_VIS * sizeof(float), colors, GL_STREAM_DRAW);
+//																				
+//	delete [] colors;
+//
+//	//once more, this time with normals
+//	float* normals = new float[12 * N_FOR_VIS];
+//	
+//	for(int i = 0; i < 12 * N_FOR_VIS; i += 12)
+//	{
+//		normals[i + 0] = 0; normals[i + 1] = 0; normals[i + 2] = 1; normals[i + 3] = 0;
+//		normals[i + 4] = 0; normals[i + 5] = 0; normals[i + 6] = 1; normals[i + 7] = 0;
+//		normals[i + 8] = 0; normals[i + 9] = 0; normals[i + 10] = 1; normals[i + 11] = 0;		
+//	}
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, droidNBO);
+//	glBufferData(GL_ARRAY_BUFFER, 12 * N_FOR_VIS * sizeof(float), normals, GL_STATIC_DRAW); 
+//																				 
+//	delete [] normals;
+//
+//	unsigned short* indices = new unsigned short[3 * N_FOR_VIS];
+//
+//	for(int i = 0; i < 3 * N_FOR_VIS; i += 3)
+//	{
+//		indices[i + 0] = i + 0; indices[i + 1] = i + 1; indices[i + 2] = i + 2;		
+//	}
+//
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, droidIBO);
+//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * N_FOR_VIS * sizeof(unsigned short), indices, GL_STATIC_DRAW);
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, 0);
+//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+//
+//	delete [] indices;
+//}
 void initDroid()
 {
 	glGenBuffers(1, &droidVBO);
@@ -356,73 +434,52 @@ void initDroid()
 
 	float scale = 0.2f;
 
-	float* vertices = new float[12 * N_FOR_VIS];
+	GLfloat* vertices = new GLfloat[48 * N_FOR_VIS];
 
-	for(int i = 0; i < 12 * N_FOR_VIS; i += 12)
-	{
-		float var = 0.0f;//(float)rand()/(float)RAND_MAX;
-		vertices[i + 0] = var-scale; vertices[i + 1] = var+scale; vertices[i + 2] = var+scale; vertices[i + 3] = 1.0f;
-		vertices[i + 4] = var-scale; vertices[i + 5] = var-scale; vertices[i + 6] = var+scale; vertices[i + 7] = 1.0f;
-		vertices[i + 8] = var+scale; vertices[i + 9] = var-scale; vertices[i + 10] = var+scale; vertices[i + 11] = 1.0f;
-		//vertices[i + 12] = scale; vertices[i + 13] = scale; vertices[i + 14] = scale; vertices[i + 15] = 1.0f;
-	}
-
-	//now we put the data into the Vertex Buffer Object for the graphics system to use
+		
 	glBindBuffer(GL_ARRAY_BUFFER, droidVBO);
-	glBufferData(GL_ARRAY_BUFFER, 12 * N_FOR_VIS* sizeof(float), vertices, GL_DYNAMIC_DRAW); //the square vertices don't need to change, ever,
-																				 //while the program runs
-
-	//once the data is loaded, we can delete the float arrays, the data is safely stored with OpenGL
-	//vertices is an array that we created under this scope and stored in the HEAP, so release it if we don't want to use it anymore. 
+	glBufferData(GL_ARRAY_BUFFER, 48 * N_FOR_VIS* sizeof(GLfloat), vertices, GL_DYNAMIC_DRAW);
+		
 	delete [] vertices;
 
 	//again with colors
-	float* colors = new float[9 * N_FOR_VIS];
+	GLfloat* colors = new GLfloat[36 * N_FOR_VIS];
 
 	for(int i = 0; i < N_FOR_VIS; i++)
 	{
 		float color[3] = {(float)rand()/(float)RAND_MAX,(float)rand()/(float)RAND_MAX,(float)rand()/(float)RAND_MAX};
 		
-		for(int j = 0; j < 9; j += 3)
+		for(int j = 0; j < 36; j += 3)
 		{
-			colors[i*9+j] = color[0];
-			colors[i*9+j+1] = color[1];
-			colors[i*9+j+2] = color[2];
+			colors[i*36+j] = color[0];
+			colors[i*36+j+1] = color[1];
+			colors[i*36+j+2] = color[2];
 		}
 	}
 	
-	glBindBuffer(GL_ARRAY_BUFFER, droidCBO);
-	//always make sure you are telling OpenGL the right size to make the buffer, color data doesn't have as much data!
-	glBufferData(GL_ARRAY_BUFFER, 9 * N_FOR_VIS * sizeof(float), colors, GL_STREAM_DRAW);	//the color is going to change every frame
-																				//as it bounces between squares
+	glBindBuffer(GL_ARRAY_BUFFER, droidCBO);	
+	glBufferData(GL_ARRAY_BUFFER, 36 * N_FOR_VIS * sizeof(GLfloat), colors, GL_STREAM_DRAW);
+																				
 	delete [] colors;
 
 	//once more, this time with normals
-	float* normals = new float[12 * N_FOR_VIS];
+	GLfloat* normals = new GLfloat[48 * N_FOR_VIS];	
 	
-	for(int i = 0; i < 12 * N_FOR_VIS; i += 12)
-	{
-		normals[i + 0] = 0; normals[i + 1] = 0; normals[i + 2] = 1; normals[i + 3] = 0;
-		normals[i + 4] = 0; normals[i + 5] = 0; normals[i + 6] = 1; normals[i + 7] = 0;
-		normals[i + 8] = 0; normals[i + 9] = 0; normals[i + 10] = 1; normals[i + 11] = 0;
-		//normals[i + 12] = 0; normals[i + 13] = 0; normals[i + 14] = 1; normals[i + 15] = 0;
-	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, droidNBO);
-	glBufferData(GL_ARRAY_BUFFER, 12 * N_FOR_VIS * sizeof(float), normals, GL_STATIC_DRAW); //the square normals don't need to change, ever,
-																				 //while the program runs
+	glBufferData(GL_ARRAY_BUFFER, 48 * N_FOR_VIS * sizeof(GLfloat), normals, GL_STATIC_DRAW); 
+																				 
 	delete [] normals;
 
-	unsigned short* indices = new unsigned short[3 * N_FOR_VIS];
+	GLuint * indices = new GLuint [12 * N_FOR_VIS];
 
-	for(int i = 0; i < 3 * N_FOR_VIS; i += 3)
+	for(int i = 0; i < 12 * N_FOR_VIS; i ++)
 	{
-		indices[i + 0] = i + 0; indices[i + 1] = i + 1; indices[i + 2] = i + 2;
-		//indices[i + 3] = i + 3; indices[i + 4] = i + 0; indices[i + 5] = i + 2;
+		indices[i] = i;
 	}
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, droidIBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * N_FOR_VIS * sizeof(unsigned short), indices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * N_FOR_VIS * sizeof(GLuint), indices, GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -458,89 +515,6 @@ void initPredator()
 
    
     delete[] bodies;
-    delete[] bindices;
-}
-
-void initVAO(void)
-{
-    const int fw_1 = field_width-1;
-    const int fh_1 = field_height-1;
-
-    int num_verts = field_width*field_height;
-    int num_faces = fw_1*fh_1;
-
-    GLfloat *vertices  = new GLfloat[2*num_verts];
-    GLfloat *texcoords = new GLfloat[2*num_verts]; 
-    GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS+1)];
-    GLuint *indices    = new GLuint[6*num_faces];
-    GLuint *bindices   = new GLuint[N_FOR_VIS+1];
-
-    glm::vec4 ul(-1.0,-1.0,1.0,1.0);
-    glm::vec4 lr(1.0,1.0,0.0,0.0);
-
-   /* for(int i = 0; i < field_width; ++i)
-    {
-        for(int j = 0; j < field_height; ++j)
-        {
-            float alpha = float(i) / float(fw_1);
-            float beta = float(j) / float(fh_1);
-            vertices[(j*field_width + i)*2  ] = alpha*lr.x + (1-alpha)*ul.x;
-            vertices[(j*field_width + i)*2+1] = beta*lr.y + (1-beta)*ul.y;
-            texcoords[(j*field_width + i)*2  ] = alpha*lr.z + (1-alpha)*ul.z;
-            texcoords[(j*field_width + i)*2+1] = beta*lr.w + (1-beta)*ul.w;
-        }
-    }
-
-    for(int i = 0; i < fw_1; ++i)
-    {
-        for(int j = 0; j < fh_1; ++j)
-        {
-            indices[6*(i+(j*fw_1))    ] = field_width*j + i;
-            indices[6*(i+(j*fw_1)) + 1] = field_width*j + i + 1;
-            indices[6*(i+(j*fw_1)) + 2] = field_width*(j+1) + i;
-            indices[6*(i+(j*fw_1)) + 3] = field_width*(j+1) + i;
-            indices[6*(i+(j*fw_1)) + 4] = field_width*(j+1) + i + 1;
-            indices[6*(i+(j*fw_1)) + 5] = field_width*j + i + 1;
-        }
-    }*/
-
-    for(int i = 0; i < N_FOR_VIS+1; i++)
-    {
-        bodies[4*i+0] = 0.0f;
-        bodies[4*i+1] = 0.0f;
-        bodies[4*i+2] = 0.0f;
-        bodies[4*i+3] = 1.0f;
-        bindices[i] = i;
-    }
-
-    //glGenBuffers(1, &planeVBO);
-    //glGenBuffers(1, &planeTBO);
-    //glGenBuffers(1, &planeIBO);
-    glGenBuffers(1, &droidVBO);
-    glGenBuffers(1, &planetIBO);
-    
-   /* glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-    glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
-    glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), texcoords, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6*num_faces*sizeof(GLuint), indices, GL_STATIC_DRAW);*/
-
-    glBindBuffer(GL_ARRAY_BUFFER, droidVBO);
-    glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS+1)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    delete[] vertices;
-    delete[] texcoords;
-    delete[] bodies;
-    delete[] indices;
     delete[] bindices;
 }
 

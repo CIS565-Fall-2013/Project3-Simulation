@@ -25,6 +25,4 @@ void main()
     float light = 0.2 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
     vec3 color = vec3(0.9, 0.1, 0.6);
 	FragColor = vec4(color*light,1.0);
-	//FragColor = vec4(1.0);
-	//gl_FragColor = vec4(light * 1.0);
 } 

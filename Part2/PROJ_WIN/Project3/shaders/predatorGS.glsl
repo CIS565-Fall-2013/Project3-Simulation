@@ -19,12 +19,7 @@ const float scale = 0.05;
 
 void main()
 {
-    /*vec3 Position = gl_in[0].gl_Position.xyz;
-    gl_Position = u_projMatrix * vec4(Position, 1.0);
-    EmitVertex();
-    EndPrimitive();*/
-
-	vec3 Position = gl_in[0].gl_Position.xyz;
+  	vec3 Position = gl_in[0].gl_Position.xyz;
     WorldCoord = Position;
 
     ToCam = normalize(u_cameraPos - Position);
