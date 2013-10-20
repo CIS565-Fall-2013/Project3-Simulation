@@ -20,16 +20,17 @@ const __device__ float starMass = 5e10;
 const __device__ int integrateMode = (int)EULER;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
-const __device__ float g_maxSpeed = 6.0f;
+const __device__ float g_velKv = 0.1f;
+const __device__ float g_maxSpeed = 1.0f;
 const __device__ float g_kSepNeighborhood = 10.0f;
 const __device__ float g_kCohNeighborhood = 10.0f;
 const __device__ float g_kAlgnNieghborhood = 10.0f;
 const __device__ float g_kAlignment = 1.0f;
 const __device__ float g_kSeparation = 1.0f;
 const __device__ float g_kCohesion = 1.0f;
-const __device__ float cseparation = 2.0f;
-const __device__ float ccohesion = 1.2f;
-const __device__ float calignment = 1.5f;
+const __device__ float cseparation = 1.0f;
+const __device__ float ccohesion = 0.0f; // DISABLED
+const __device__ float calignment = 0.0f; // DISABLED
 
 vec4 * dev_pos;
 vec3 * dev_vel;
@@ -199,7 +200,7 @@ vec3 integrateAcceleration(vec3 vel, vec3 acc, float dt, int N, vec4 mypos, vec4
 		float halfDt = 0.5f * dt;
 		vec3 halfStepVel = vel + acc * halfDt;
 		vec3 halfStepPos = vec3(mypos) + halfStepVel * halfDt;
-		vec3 halfAcc = ACC(N, mypos, positions);
+		vec3 halfAcc = ACC(N, mypos, positions); // TODO: update this to get the right acceleration
 
 		nextVel = vel + halfAcc * dt;
 	}
@@ -243,8 +244,22 @@ vec3 integrateVelocity(vec3 position, vec3 velocity, float dt)
 	return nextPosition;
 }
 
+__device__
+vec3 arrival(vec4 my_pos, vec3 target)
+{
+	vec3 arrivalDirection = target - vec3(my_pos);
+	float distToTarget = length(arrivalDirection);
+	float threshold = 10.0f; // TODO: Adjust how close the boids would go near the target before stopping
 
-// calculate separate velocity
+	if (distToTarget < threshold) 
+		return vec3(0,0,0);
+	else
+	{
+		return normalize(arrivalDirection) * g_maxSpeed;
+	}
+}
+
+// calculate separate velocity: maintain constant distance between all boids within neighborhood
 __device__
 vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos)
 {
@@ -263,11 +278,11 @@ vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos)
 		}
 	}
 
-	// TODO: define target. 
-	return normalize(separateDirection) * (g_maxSpeed / 2.0f);
+	vec3 arrivalVelocity = arrival(my_pos, vec3(0,0,0)); // LOOK: Arrival velocity to fixed target
+	return arrivalVelocity + separateDirection;
 }
 
-// calculate cohesion velocity
+// calculate cohesion velocity: moves boids towards the center of a group of boids within neighborhood
 __device__
 vec3 naiveCohesion(int N, vec4 my_pos, vec4* boids_pos)
 {
@@ -299,7 +314,7 @@ vec3 naiveCohesion(int N, vec4 my_pos, vec4* boids_pos)
 	return g_kCohesion * cohesionDirection;
 }
 
-// calculate alignment velocity
+// calculate alignment velocity: average velocity of all boids within neighborhood
 __device__
 vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
 {
@@ -324,9 +339,12 @@ vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
 	if (numBoids > 0)
 	{
 		alignmentDirection = alignmentDirection / (float)numBoids;
+		return g_kAlignment * alignmentDirection;
 	}
-
-	return g_kAlignment * alignmentDirection;
+	else
+	{
+		return arrival(my_pos, vec3(0,0,0)); // LOOK: seek to the origin if only 1 in neighborhood
+	}
 }
 
 // calculate flocking velocity
@@ -351,9 +369,19 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel)
         vec4 my_pos = pos[index];
 		vec3 my_vel = vel[index];
         //vec3 acc = ACC(N, my_pos, pos); // old
-		vec3 acc = (flock(N, my_pos, pos, vel) - my_vel) * dt;
-		//vel[index] += acc * dt;
+
+		vec3 flockVel = flock(N, my_pos, pos, vel);
+		float flockVelMag = length(flockVel);
+		float myVelMag = length(my_vel);
+		vec3 flockDirection = normalize(flockVel);
+		//vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;
+		vec3 acc = (g_velKv * (flockVelMag) / dt) * flockDirection;
+
 		vel[index] = integrateAcceleration(vel[index], acc, dt, N, my_pos, pos);
+
+
+		// consider just setting the velocity to flock velocity
+		vel[index] = flockVel;
     }
 }
 
