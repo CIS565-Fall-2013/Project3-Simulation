@@ -5,7 +5,7 @@
 #include "utilities.h"
 #include "kernel.h"
 
-#if SHARED == 1
+#if SHARED == 0
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
@@ -143,12 +143,11 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
+	extern __shared__ glm::vec4 s[]; // Must hold: blockSize == blockDim.x
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
-	__shared__ glm::vec4 s[blockSize]; // Must hold: blockSize == blockDim.x
 	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
-	
-	int numBlocksForPlanets = N / gridDim.x + 1;
+
+	int numBlocksForPlanets = N / blockDim.x + 1;
 	for ( int i = 0; i < numBlocksForPlanets; ++i )
 	{
 		// Calculate first & last thread indices for this block.
@@ -157,7 +156,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 		if ( endIdx > N ) endIdx = N;
 
 		// Store pos[0 to blockDim.x-1] to shared memory.
-		if ( startIdx <= index && index < endIdx && index < N ) s[index - startIdx] = their_pos[index - startIdx];
+		if ( startIdx <= index && index < endIdx ) s[index - startIdx] = their_pos[index - startIdx];
 		__syncthreads();
 
 		int numPlanetsInThisBlock = endIdx - startIdx;
