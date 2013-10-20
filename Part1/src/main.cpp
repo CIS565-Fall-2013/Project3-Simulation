@@ -62,6 +62,11 @@ void runCuda()
     float *dptrvert=NULL;
     cudaGLMapBufferObject((void**)&dptr, pbo);
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
+	  
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord( start, 0);
 
     // execute the kernel
     cudaNBodyUpdateWrapper(DT);
@@ -72,6 +77,14 @@ void runCuda()
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
     cudaGLUnmapBufferObject(pbo);
+
+	cudaEventRecord( stop, 0);
+	cudaEventSynchronize( stop );
+
+	float seconds = 0.0f;
+	cudaEventElapsedTime( &seconds, start, stop);
+  
+	printf("time %f \n", seconds);
 }
 
 int timebase = 0;

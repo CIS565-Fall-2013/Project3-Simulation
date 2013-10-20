@@ -118,23 +118,73 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //a = ------------- = --------
     //      m_us*r^2        r^2
     
-    return glm::vec3(0.0f);
+	glm::vec3 r;
+	r.x = us.x - them.x;
+	r.y = us.y - them.y;
+	r.z = us.z - them.z;
+	//faster in this way
+	float dis = sqrtf(r.x*r.x + r.y*r.y + r.z*r.z);
+	if(dis > EPSILON){
+		return (float(G * them.w) * r)  / (dis*dis*dis);
+	}
+	else
+		return glm::vec3(0.0f);	
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+	glm::vec3 acc;// = glm::vec3(0.0f);
+	for(int i = 0; i < N; i++)
+	{
+		acc += calculateAcceleration(my_pos, their_pos[i]);		
+	}
+	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	return acc;
 }
+
 
 
 //TODO: Core force calc kernel shared memory
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	//int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec3 acc;
+	__shared__ glm::vec4 shPos[blockSize]; 
+
+	/*__shared__ int num;
+	num = (int)ceil(float(N)/float(blockSize));
+
+	for (int i = 0; i < num; i++)
+    {		
+		int index = i * blockDim.x + threadIdx.x;
+		if(index < N)
+			shPos[threadIdx.x] = their_pos[index];
+		__syncthreads();
+
+		for(int j = 0; j < blockDim.x; j++)
+		{
+			acc += calculateAcceleration(my_pos, shPos[j]);		
+		}
+
+		acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
+		__syncthreads();
+	}*/
+
+	if(threadIdx.x < N)
+	{
+		shPos[threadIdx.x] = their_pos[threadIdx.x];		
+	}
+	__syncthreads();
+	
+	for(int i = 0; i < N; i++)
+	{
+		acc += calculateAcceleration(my_pos, shPos[i]);		
+	}
+	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
+	
     return acc;
 }
 
@@ -143,10 +193,12 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __global__
 void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
 {
+	//extern __shared__ glm::vec4 shPos[blockSize];  
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	
     if( index < N )
     {
-        glm::vec4 my_pos = pos[index];
+		glm::vec4 my_pos = pos[index];
         glm::vec3 acc = ACC(N, my_pos, pos);
         vel[index] += acc * dt;
         pos[index].x += vel[index].x * dt;
@@ -187,10 +239,11 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
 
     float c_scale_w = width / s_scale;
     float c_scale_h = height / s_scale;
+	
 
     if(x<width && y<height)
     {
-        glm::vec3 color(0.05, 0.15, 0.3);
+	    glm::vec3 color(0.05, 0.15, 0.3);
         glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
         float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)
@@ -235,7 +288,7 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 {
-    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
+	dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
     sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
-    checkCUDAErrorWithLine("Kernel failed!");
+    checkCUDAErrorWithLine("Kernel failed!");	
 }
