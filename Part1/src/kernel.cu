@@ -122,10 +122,10 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //      m_us*r^2        r^2
     glm::vec3 us3(us);
 	glm::vec3 them3(them);
-	float rSquared = glm::distance2(us3, them3);
+	float rSquared = glm::distance2(us3, them3) + 1;
 
-	if(rSquared < RSQUARED_CUTOFF)
-		return glm::vec3(0, 0, 0);
+	/*if(rSquared < RSQUARED_CUTOFF)
+		return glm::vec3(0, 0, 0);*/
 
 	float m_them = them.w;
 	glm::vec3 dir = them3 - us3;
@@ -150,10 +150,31 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
     return acc;
 }
 
-
-//TODO: Core force calc kernel shared memory
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
+{
+	extern __shared__ glm::vec4 sharedPos[];
+	int tx = threadIdx.x;
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec3 acc;
+	acc = acc + calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+	for(int j = 0; j < N/TILE_SIZE; j++){
+		//read tile into shared memory
+		for(int i = 0; i < TILE_SIZE; i++){
+			sharedPos[i] = their_pos[i + j*TILE_SIZE]; 
+		}
+		__syncthreads(); //everything must be in shared before we can proceed
+		for(int i = 0; i < TILE_SIZE; i++){
+			 acc = acc + calculateAcceleration(my_pos, sharedPos[i]);
+		}
+		__syncthreads(); 
+	}
+    return acc;
+}
+
+__device__ 
+glm::vec3 prefetchAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	extern __shared__ glm::vec4 sharedPos[];
 	int tx = threadIdx.x;
