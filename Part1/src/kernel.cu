@@ -8,7 +8,9 @@
 
 
 #if SHARED == 1
-    #define ACC(x,y,z) sharedMemAcc(x,y,z)
+    //#define ACC(x,y,z) sharedMemAcc(x,y,z)
+	//#define ACC(x,y,z) prefetchAcc(x,y,z)
+	#define ACC(x,y,z) unrolledAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
@@ -182,12 +184,66 @@ glm::vec3 prefetchAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	glm::vec3 acc;
 	acc = acc + calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 
-	for(int j = 0; j < N/TILE_SIZE; j++){
-		//read tile into shared memory
+	//load first tile into registers
+	glm::vec4 nextTile[TILE_SIZE];
+
+	for(int i = 0; i < TILE_SIZE; i++){
+		nextTile[i] = their_pos[i]; 
+	}
+	for(int j = 0; j < NUM_TILES; j++){
+		//deposit registers into shared memory
 		for(int i = 0; i < TILE_SIZE; i++){
-			sharedPos[i] = their_pos[i + j*TILE_SIZE]; 
+			sharedPos[i] = nextTile[i]; 
 		}
-		__syncthreads(); //everything must be in shared before we can proceed
+		__syncthreads(); 
+		//Load next tile into registers
+		for(int i = 0; i < TILE_SIZE; i++){
+			//when j == numTiles-1, then there is no j+1th tile.
+			nextTile[i] = their_pos[i + min((j+1),NUM_TILES-1)*TILE_SIZE]; 
+		}
+		//Accumulate acceleration
+		for(int i = 0; i < TILE_SIZE; i++){
+			 acc = acc + calculateAcceleration(my_pos, sharedPos[i]);
+		}
+		__syncthreads(); 
+	}
+    return acc;
+}
+
+__device__ 
+glm::vec3 unrolledAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
+{
+	extern __shared__ glm::vec4 sharedPos[];
+	int tx = threadIdx.x;
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec3 acc;
+	acc = acc + calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+	//load first tile into registers
+	glm::vec4 nextTile[TILE_SIZE];
+
+	#pragma unroll TILE_SIZE
+	for(int i = 0; i < TILE_SIZE; i++){
+		nextTile[i] = their_pos[i]; 
+	}
+
+	//#pragma unroll NUM_TILES
+	for(int j = 0; j < NUM_TILES; j++){
+		//deposit registers into shared memory
+
+		#pragma unroll TILE_SIZE
+		for(int i = 0; i < TILE_SIZE; i++){
+			sharedPos[i] = nextTile[i]; 
+		}
+		__syncthreads(); 
+		//Load next tile into registers
+		#pragma unroll TILE_SIZE
+		for(int i = 0; i < TILE_SIZE; i++){
+			//when j == numTiles-1, then there is no j+1th tile.
+			nextTile[i] = their_pos[i + min((j+1),NUM_TILES-1)*TILE_SIZE]; 
+		}
+		//Accumulate acceleration
+		#pragma unroll TILE_SIZE
 		for(int i = 0; i < TILE_SIZE; i++){
 			 acc = acc + calculateAcceleration(my_pos, sharedPos[i]);
 		}

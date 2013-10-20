@@ -14,6 +14,7 @@
 
 #define blockSize 128
 #define TILE_SIZE 32
+#define NUM_TILES 2 //N_FOR_VIS/TILE_SIZE
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 1
 
