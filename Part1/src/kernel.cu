@@ -163,7 +163,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 			sharedPos[i] = their_pos[i + j*TILE_SIZE]; 
 		}
 		__syncthreads(); //everything must be in shared before we can proceed
-		for(int i = 0; i < N; i++){
+		for(int i = 0; i < TILE_SIZE; i++){
 			 acc = acc + calculateAcceleration(my_pos, sharedPos[i]);
 		}
 		__syncthreads(); 
