@@ -194,11 +194,18 @@ void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-        vel[index]   += acc[index]   * dt;
-        pos[index].x += vel[index].x * dt;
-        pos[index].y += vel[index].y * dt;
-        pos[index].z += vel[index].z * dt;
-    }
+		if(INTEGRATION_TYPE == 0){ //Symplectic Euler
+				vel[index]   += acc[index]   * dt;
+				pos[index].x += vel[index].x * dt;
+				pos[index].y += vel[index].y * dt;
+				pos[index].z += vel[index].z * dt;
+		}else if ( INTEGRATION_TYPE == 1 ){ //Forward Euler
+				pos[index].x += vel[index].x * dt;
+				pos[index].y += vel[index].y * dt;
+				pos[index].z += vel[index].z * dt;
+				vel[index]   += acc[index]   * dt;
+		}
+	}
 }
 
 //Update the vertex buffer object

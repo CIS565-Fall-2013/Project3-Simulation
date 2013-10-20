@@ -17,6 +17,10 @@
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 1
 
+//0 is symplectic Euler
+//1 is forward Euler
+#define INTEGRATION_TYPE 1
+
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);
 void initCuda(int N);
