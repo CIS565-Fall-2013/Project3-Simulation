@@ -21,6 +21,7 @@ void cudaNBodyUpdateWrapper(float dt, bool customSimulation);
 void initCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height);
+void setDevicePrefetch (bool prefetchEnabled);
 
 inline __device__ glm::vec3 safeNormalize (glm::vec3 vectorToBeNormalized);		// normalize only if length > 0
 #endif

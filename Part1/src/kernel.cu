@@ -5,13 +5,13 @@
 #include "utilities.h"
 #include "kernel.h"
 
-#if SHARED == 1
-    #define ACC(x,y,z) sharedMemAcc(x,y,z)
-	#define FLOCK(p,q,r,s,t) FlockShared(p,q,r,s,t)
-#else
-    #define ACC(x,y,z) naiveAcc(x,y,z)
-	#define FLOCK(p,q,r,s,t) FlockGlobal(p,q,r,s,t)
-#endif
+//#if SHARED == 1
+//	#define ACC(x,y,z) pfSharedMemAcc(x,y,z)
+//	#define FLOCK(p,q,r,s,t) FlockShared(p,q,r,s,t)
+//#else
+//    #define ACC(x,y,z) naiveAcc(x,y,z)
+//	#define FLOCK(p,q,r,s,t) FlockGlobal(p,q,r,s,t)
+//#endif
 
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
@@ -20,7 +20,19 @@ int numObjects;
 const float planetMass = 3e8;
 const __device__ float starMass = 5e10;
 const __device__ float GravConst = 6.67384e-11;
+__device__ bool prefetch;
 const float scene_scale = 2e2; //size of the height map in simulation space
+
+#if SHARED == 1
+//	if (prefetch)
+		#define ACC(x,y,z) pfSharedMemAcc(x,y,z)
+//	else
+//		#define ACC(x,y,z) sharedMemAcc(x,y,z)
+	#define FLOCK(p,q,r,s,t) FlockGlobal(p,q,r,s,t)
+#else
+    #define ACC(x,y,z) naiveAcc(x,y,z)
+	#define FLOCK(p,q,r,s,t) FlockGlobal(p,q,r,s,t)
+#endif
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
@@ -36,6 +48,7 @@ void checkCUDAError(const char *msg, int line = -1)
             fprintf(stderr, "Line %d: ", line);
         }
         fprintf(stderr, "Cuda error: %s: %s.\n", msg, cudaGetErrorString( err) ); 
+		std::cin.get ();
         exit(EXIT_FAILURE); 
     }
 } 
@@ -171,20 +184,20 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 
 	glm::vec3 acc = glm::vec3 (0);
 
-	int loopMax = ceil (N / (float)blockDim.x);
-	
+//	int loopMax = ceil (N / (float)blockDim.x);
+
 	// Loop over each block (assuming parallelization of objects) and load objects from global to shared memory.
 	// The first block of threads will load the first blockDim.x no. of objects from global memory to shared memory; 
 	// The next block will load the next blockDim.x no. of objects from global and so on. Thus, we load the entire
 	// set of positions in global memory into shared memory iteratively, one block at a time.
-	for (int j = 0; j < loopMax; j ++)
+	for (int j = 0; j < ceil (N / (float)blockDim.x); j ++)
 	{
 		// refBlockIndex is the block index of the block of memory locations we're trying to copy into shared.
 		int refblockIndex = blockIdx.x + j;
 		
 		// If trying to load a block beyond the grid boundary, wrap around.
-		if (refblockIndex >= loopMax)
-			refblockIndex -= loopMax;
+		if (refblockIndex >= ceil (N / (float)blockDim.x))
+			refblockIndex -= ceil (N / (float)blockDim.x);
 
 		// Calculate global memory index that should be accessed by this thread.
 		int index = blockDim.x * refblockIndex + threadIdx.x;
@@ -202,7 +215,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 			// If the block of global memory we're loading into shared mem corresponds to the last block in the grid, 
 			// it can contain less than blockDim.x elements. In such a situation, break out of the loop once we pass 
 			// the last element in that "block".
-			if (refblockIndex == (loopMax-1))
+			if (refblockIndex == (floor (N / (float)blockDim.x)))
 				if (i >= (N%blockDim.x))
 					break;
 
@@ -222,6 +235,59 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	return acc;
 }
 
+// Shared memory acceleration calculation with prefetching.
+// Written as a separate function to compare performance.
+__device__ 
+glm::vec3 pfSharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
+{
+	extern __shared__ glm::vec4 shared_pos [];
+	int threadNo = blockDim.x * blockIdx.x + threadIdx.x;
+
+	glm::vec3 acc = glm::vec3 (0);
+	glm::vec4 prefetcher = glm::vec4 (0);
+
+	int index = blockDim.x * blockIdx.x + threadIdx.x;
+	if (index < N)
+		prefetcher = their_pos [index];		// Prefetch first element into register.
+
+	for (int j = 0; j < ceil (N / (float)blockDim.x); j ++)
+	{
+		int refblockIndex = blockIdx.x + j + 1;
+		if (refblockIndex >= ceil (N / (float)blockDim.x))
+			refblockIndex -= ceil (N / (float)blockDim.x);
+
+		index = blockDim.x * refblockIndex + threadIdx.x;
+
+		shared_pos [threadIdx.x] = prefetcher;	// Copy prefetched element into shared memory.
+		prefetcher = glm::vec4 (0);
+		__syncthreads();		
+
+		if (index < N)
+			if (j < floor (N / (float)blockDim.x))		// Prefetching to stop at the penultimate block, after the final
+				prefetcher = their_pos [index];			// block has been loaded.
+
+		for (int i = 0; i < blockDim.x; i ++)
+		{	
+			if (refblockIndex == (floor (N / (float)blockDim.x)))
+				if (i >= (N%blockDim.x))
+					break;
+
+			if (isApproximately (shared_pos [i].x, my_pos.x) && 
+				isApproximately (shared_pos [i].y, my_pos.y) && 
+				isApproximately (shared_pos [i].z, my_pos.z))
+				continue;
+
+			acc += calculateAcceleration(my_pos, shared_pos [i]);
+		}
+	}
+
+	// Calculate acceleration due to star.
+	acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
+	
+	return acc;
+}
+
+// Calculate flocking velocity.
 __device__ glm::vec3 FlockGlobal (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, glm::vec3 *vel)
 {
 	glm::vec3	acc = glm::vec3 (0);
@@ -242,12 +308,12 @@ __device__ glm::vec3 FlockGlobal (int N, float DT, glm::vec4 my_pos, glm::vec4 *
 		for (int i = 0; i < N; i ++)
 		{	
 			glm::vec4 curPos = pos [i];
-			glm::vec3 curVel = vel [i];
-		
 			float distance = glm::length (curPos - my_pos);
+			
 			if (distance <= 5.0)
 			{
-				sumVelocities += curVel;
+				sumVelocities += vel [i];
+
 				sumPositions.x += curPos.x;
 				sumPositions.y += curPos.y;
 				sumPositions.z += curPos.z;
@@ -255,15 +321,16 @@ __device__ glm::vec3 FlockGlobal (int N, float DT, glm::vec4 my_pos, glm::vec4 *
 				sumSepVelocities.x += (my_pos.x - curPos.x);
 				sumSepVelocities.y += (my_pos.y - curPos.y);
 				sumSepVelocities.z += (my_pos.z - curPos.z);
+
 				neighbours ++;
 			}
 		}
 
 		if (neighbours > 0)
 		{
-			sumVelocities /= neighbours;	
 			sumSepVelocities /= neighbours;
 			sumPositions /= neighbours;		// Centre of mass.
+			sumVelocities /= neighbours;	
 		}
 
 		// Calculate total velocity:
@@ -280,7 +347,7 @@ __device__ glm::vec3 FlockGlobal (int N, float DT, glm::vec4 my_pos, glm::vec4 *
 inline __device__ glm::vec3 safeNormalize (glm::vec3 vectorToBeNormalized)
 {
 	float len = glm::length (vectorToBeNormalized);
-	if (len > 0.001)
+	if (len > 0.01)
 		return vectorToBeNormalized / len;
 	return vectorToBeNormalized;
 }
@@ -405,11 +472,11 @@ void cudaNBodyUpdateWrapper(float dt, bool customSimulation)
 	else
 		updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
-	glm::vec3 *accn = new glm::vec3 [numObjects];
-	for (int i= 0; i < numObjects; i ++)
-		accn [i] = glm::vec3 (0);
-	cudaMemcpy (accn, dev_acc, sizeof(glm::vec3)*numObjects, cudaMemcpyDeviceToHost);
-	int breakHere = -1;
+	//glm::vec3 *accn = new glm::vec3 [numObjects];
+	//for (int i= 0; i < numObjects; i ++)
+	//	accn [i] = glm::vec3 (0);
+	//cudaMemcpy (accn, dev_acc, sizeof(glm::vec3)*numObjects, cudaMemcpyDeviceToHost);
+	//int breakHere = -1;
 	updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
@@ -429,4 +496,7 @@ void cudaUpdatePBO(float4 * pbodptr, int width, int height)
     cudaThreadSynchronize();
 }
 
-
+void setDevicePrefetch (bool prefetchEnabled)
+{
+	cudaMemcpyToSymbol (&prefetch, &prefetchEnabled, sizeof (bool), 0);
+}

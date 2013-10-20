@@ -9,6 +9,7 @@
 #define VISUALIZE 1
 
 bool customSimulation = false;
+bool prefetchEnabled = false;
 
 //-------------------------------
 //-------------MAIN--------------
@@ -29,7 +30,7 @@ int main(int argc, char** argv)
 #else
     initCuda(20*120);
 #endif
-
+//	setDevicePrefetch (prefetchEnabled);
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
     view = glm::lookAt(cameraPosition, glm::vec3(0), glm::vec3(0,0,1));
 
@@ -185,7 +186,10 @@ void init(int argc, char* argv[])
 	{
 		if (!strcmp (argv [1], "true"))
 			customSimulation = true;
-	}
+		if (argc > 2)
+			if (!strcmp (argv [2], "prefetch"))
+				prefetchEnabled = true;
+	}			
 
     initVAO();
     initTextures();
