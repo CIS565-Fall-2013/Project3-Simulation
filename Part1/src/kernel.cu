@@ -16,7 +16,7 @@
 #endif
 
 //GLOBALS
-dim3 threadsPerBlock(blockSize);
+//dim3 threadsPerBlock(blockSize);
 
 int numObjects;
 const float planetMass = 3e10;
@@ -341,7 +341,7 @@ void cleanupCuda(){
 	cudaDeviceReset();
 }
 //Initialize memory, update some globals
-void initCuda(int N)
+void initCuda(int N, int blockSize)
 {
     numObjects = N;
     dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
@@ -362,7 +362,7 @@ void initCuda(int N)
 	//atexit(cleanupCuda);
 }
 
-void cudaNBodyUpdateWrapper(float dt)
+void cudaNBodyUpdateWrapper(float dt, int blockSize)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
@@ -372,14 +372,14 @@ void cudaNBodyUpdateWrapper(float dt)
     cudaThreadSynchronize();
 }
 
-void cudaUpdateVBO(float * vbodptr, int width, int height)
+void cudaUpdateVBO(float * vbodptr, int width, int height, int blockSize)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
 }
 
-void cudaUpdatePBO(float4 * pbodptr, int width, int height)
+void cudaUpdatePBO(float4 * pbodptr, int width, int height, int blockSize)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
     sendToPBO<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);

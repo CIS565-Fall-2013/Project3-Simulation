@@ -6,7 +6,7 @@
 
 //#define N_FOR_VIS 64
 
-
+#define blockSize 128
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     cudaGLRegisterBufferObject( planetVBO );
     
 #if VISUALIZE == 1 
-    initCuda(N_FOR_VIS);
+    initCuda(N_FOR_VIS, blockSize);
 #else
     initCuda(2*128);
 #endif
@@ -66,10 +66,10 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+    cudaNBodyUpdateWrapper(DT, blockSize);
 #if VISUALIZE == 1
-    cudaUpdatePBO(dptr, field_width, field_height);
-    cudaUpdateVBO(dptrvert, field_width, field_height);
+    cudaUpdatePBO(dptr, field_width, field_height, blockSize);
+    cudaUpdateVBO(dptrvert, field_width, field_height, blockSize);
 #endif
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
