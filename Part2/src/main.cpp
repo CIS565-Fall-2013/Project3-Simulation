@@ -11,6 +11,8 @@
 //-------------MAIN--------------
 //-------------------------------
 
+Behavior mode = Arrival;
+
 int main(int argc, char** argv)
 {
     // Launch CUDA/GL
@@ -64,7 +66,7 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+    cudaNBodyUpdateWrapper(DT,mode);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
@@ -152,6 +154,18 @@ void keyboard(unsigned char key, int x, int y)
         case(27):
             exit(1);
             break;
+		case 'a': mode = Arrival;
+				  break;
+		case 'd': mode = Departure;
+				  break;
+		case 'S': mode = Separation;
+				  break;
+		case 'A': mode = Alignment;
+				  break;
+		case 'C': mode = Cohesion;
+				  break;
+		case 'F': mode = Flocking;
+				  break;
     }
 }
 

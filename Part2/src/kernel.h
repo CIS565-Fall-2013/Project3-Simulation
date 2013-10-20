@@ -17,9 +17,23 @@
 #define SHARED 1
 #define RK4 0
 
+enum Behavior 
+{
+	Seek,
+	Flee,
+	Arrival,
+	Departure,
+	Alignment,
+	Cohesion,
+	Separation,
+	Flocking
+};
+
 void checkCUDAError(const char *msg, int line);
-void cudaNBodyUpdateWrapper(float dt);
+void cudaNBodyUpdateWrapper(float dt, Behavior mode);
 void initCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height);
+
+
 #endif

@@ -27,8 +27,15 @@ void main()
 */
 	vec3 N = Normal;
     vec3 L = normalize(-WorldCoord);
-    float light = 0.1 + 0.9*clamp(dot(N,L),0.0, 1.0);
+    float light = 0.1 + 0.9*clamp( abs(dot(N,L)),0.0, 1.0);
     vec3 color = vec3(0.4, 0.1, 0.6);
-    FragColor = vec4(color*light,1.0);
+	if( length(WorldCoord) < 0.01)
+	{
+		FragColor = vec4(1.0,1.0,1.0,1.0);
+	}
+	else
+	{
+		FragColor = vec4(color*light,1.0);
+	}
 	//FragColor = vec4(color,1.0);
 } 

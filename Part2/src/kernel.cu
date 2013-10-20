@@ -18,7 +18,7 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
+const __device__ float planetMass = 3e8;
 const __device__ float starMass = 5e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
@@ -200,6 +200,18 @@ glm::vec2 polarToWorld( glm::vec2 in)
 	return in.y*glm::vec2( cos(in.x), sin(in.x));
 }
 
+
+__device__
+glm::vec2 calculateArrivalVelocity( glm::vec2 myPos, glm::vec2 target)
+{
+		float dx =  target.x - myPos.x;
+		float dy =  target.y - myPos.y;
+		
+		glm::vec2 e(dx,dy);
+		float vDesired = KArrival*glm::length(e);
+		return vDesired*e;
+}
+
 __device__
 glm::vec2 calculateDepartureVelocity( glm::vec2 myPos, glm::vec2 target)
 {
@@ -220,7 +232,7 @@ glm::vec3 calculateAlignVelocity(glm::vec4 us, glm::vec4 them)
 	glm::vec2 themPos(them.x,them.y);
 
 	float distSq = (them.x-us.x)*(them.x-us.x) + (them.y-us.y)*(them.y-us.y);
-	if (distSq < RNeighborhood)
+	if (distSq < RNeighborhoodSq)
 	{
 		glm::vec2 velWorld = polarToWorld( glm::vec2(them.z,them.w));
 		return glm::vec3( velWorld.x, velWorld.y, 1);
@@ -237,7 +249,7 @@ glm::vec3 calculateCohesionPosition(glm::vec4 us, glm::vec4 them)
 	glm::vec2 themPos(them.x,them.y);
 
 	float distSq = (them.x-us.x)*(them.x-us.x) + (them.y-us.y)*(them.y-us.y);
-	if (distSq < RNeighborhood)
+	if (distSq < RNeighborhoodSq)
 	{
 		return glm::vec3( them.x, them.y, 1);
 	}
@@ -252,7 +264,7 @@ glm::vec3 calculateSeparationVelocity(glm::vec4 us, glm::vec4 them)
 	glm::vec2 themPos(them.x,them.y);
 
 	float distSq = (them.x-us.x)*(them.x-us.x) + (them.y-us.y)*(them.y-us.y);
-	if (distSq < RNeighborhood)
+	if (distSq < RNeighborhoodSq)
 	{
 		glm::vec2 dv =  calculateDepartureVelocity( glm::vec2(us.x,us.y) , glm::vec2(them.x,them.y));
 		return glm::vec3( dv.x, dv.y, 1);
@@ -293,7 +305,7 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	//glm::vec3 acc(0.0f);
 	for(int i=0; i<N; ++i)
 	{
-		acc+= calculateAcceleration(my_pos, their_pos[i]);
+		acc+= calculateAcceleration(my_pos, glm::vec4(their_pos[i].x, their_pos[i].y,0,planetMass));
 	}
     return acc;
 }
@@ -321,7 +333,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 
 		for(int i=0;i<tileSize;i++)
 		{
-			acc+= calculateAcceleration(my_pos, sharedPos[i]);
+			acc+= calculateAcceleration(my_pos, glm::vec4(sharedPos[i].x, sharedPos[i].y,0,planetMass));
 		}
 		__syncthreads();
 	}
@@ -375,7 +387,7 @@ glm::vec2 naiveVel(int N, glm::vec4 my_pos, glm::vec4 * their_pos, Behavior beha
 	else if(behavior == Cohesion)
 	{
 		glm::vec2 e(average.x-my_pos.x,average.y-my_pos.y);
-		return KArrival*e;
+		return KCohesion*e;
 	}
 	else if(behavior == Separation)
 	{
@@ -448,7 +460,7 @@ glm::vec2 sharedMemVel(int N, glm::vec4 my_pos, glm::vec4 * their_pos, Behavior 
 	else if(behavior == Cohesion)
 	{
 		glm::vec2 e(average.x-my_pos.x,average.y-my_pos.y);
-		return KArrival*e;
+		return KCohesion*e;
 	}
 	else if(behavior == Separation)
 	{
@@ -484,6 +496,12 @@ void updateF(int N, float dt, glm::vec4 * state,float* angVel, glm::vec2 * acc, 
 
 		worldVel = 0.2f*sVel + 0.2f*cVel + 0.6f*aVel;
 	}
+	else if ( behavior == Arrival)
+		worldVel = calculateArrivalVelocity( glm::vec2(my_state.x,my_state.y), glm::vec2(0));
+
+	else if (behavior == Departure)
+		worldVel = calculateDepartureVelocity( glm::vec2(my_state.x,my_state.y), glm::vec2(0));
+
 	float thetaDesired = getWorldOrientation( worldVel);
 	float vDesired = glm::length(worldVel);
 	clamp(vDesired,0.0f,MaxVelocity);
@@ -631,7 +649,7 @@ void initCuda(int N)
     cudaThreadSynchronize();
 }
 
-void cudaNBodyUpdateWrapper(float dt)
+void cudaNBodyUpdateWrapper(float dt, Behavior mode)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
 #if RK4 == 1
@@ -655,7 +673,7 @@ void cudaNBodyUpdateWrapper(float dt)
 	cudaMemset(dev_accumaccel,0,numObjects*sizeof(glm::vec3));
 	cudaMemset(dev_accumvel,0,numObjects*sizeof(glm::vec3));
 #else
-    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_state, dev_angularvel,dev_acc, Flocking);
+    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_state, dev_angularvel,dev_acc, mode);
     checkCUDAErrorWithLine("Kernel failed!");
     updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_state, dev_angularvel, dev_acc);
 	checkCUDAErrorWithLine("Kernel failed!");

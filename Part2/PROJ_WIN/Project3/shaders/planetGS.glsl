@@ -28,7 +28,7 @@ void main()
 
 	vec3 triangleDir = vec3( cos(orientation), sin(orientation), 0.0);
 	Up = vec3(0.0,0.0,1.0);
-	Normal = cross(triangleDir, Up);
+	Normal = cross(triangleDir,Up);
 
 	/*
     ToCam = normalize(u_cameraPos - Position);
