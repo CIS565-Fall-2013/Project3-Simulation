@@ -1,7 +1,6 @@
 #ifndef BOID_H
 #define BOID_H
 
-const __device__ float radius = 5.0;
 const __device__ float Mass = 1.0;
 const __device__ float Inertia = 1.0;
 const __device__ float MaxVelocity = 5.0;
@@ -13,10 +12,6 @@ const __device__ float Kp1 = 1.0;
 const __device__ float Kv1 = 1.0;
 const __device__ float KArrival = 0.1;
 const __device__ float KDeparture = 10.0;
-const __device__ float KNoise = 10.0;
-const __device__ float KWander = 6.0;
-const __device__ float KAvoid = 1.0;
-const __device__ float TAvoid = 1.0;
 const __device__ float RNeighborhood = 10000.0;
 const __device__ float KSeparate = 20.0;
 const __device__ float KAlign = 5.0;
