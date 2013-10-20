@@ -24,7 +24,8 @@ void main(void)
     vec3 L = normalize(-WorldCoord);
     float light = 0.5 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
 
-	vec3 Color =  clamp(col,0.0,1.0);//,1.0);
+	vec3 Color =  abs(col);
+	Color = clamp(Color,0.0,1.0);//,1.0);
 	FragColor =  vec4(clamp(Color*light,0.0,1.0),1.0);
 }
 //#version 330

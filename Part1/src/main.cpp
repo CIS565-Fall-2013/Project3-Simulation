@@ -54,7 +54,8 @@ int main(int argc, char** argv)
 //-------------------------------
 //---------RUNTIME STUFF---------
 //-------------------------------
-
+int timebase = 0;
+int frame = 0;
 void runCuda()
 {
     // Map OpenGL buffer object for writing from CUDA on a single GPU
@@ -66,7 +67,7 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+    cudaNBodyUpdateWrapper(DT,frame);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
@@ -76,8 +77,7 @@ void runCuda()
     cudaGLUnmapBufferObject(pbo);
 }
 
-int timebase = 0;
-int frame = 0;
+
 
 void display()
 {
