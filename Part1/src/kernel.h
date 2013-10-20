@@ -15,7 +15,7 @@
 #define blockSize 128
 #define tileSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
-#define SHARED 0
+#define SHARED 1
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt,int N);
