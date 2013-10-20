@@ -259,7 +259,7 @@ void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 	  vel[index] = glm::length(vel[index]) > maxVelocity ? (float) maxVelocity * glm::normalize(vel[index]) : (vel[index]);
       integration(dt, pos[index], vel[index]);
     }
-	borderHandle(pos[index], vel[index], 200.0f, 200.0f, 50.0f);
+	borderHandle(pos[index], vel[index], 200.0f-10.0f, 200.0f-10.0f, 50.0f);
 }
 
 
@@ -285,7 +285,7 @@ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, 
 //Update the texture pixel buffer object
 //(This texture is where openGL pulls the data for the height map)
 __global__
-void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, float s_scale)
+void sendToPBO(int N, glm::vec4 * pos, glm::vec3 *vel, float4 * pbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     int x = index % width;
@@ -297,8 +297,8 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     float c_scale_h = height / s_scale;
 
     glm::vec3 color(0.05, 0.15, 0.3);
-    glm::vec3 acc = glm::vec3(0.0f, 0.0f, 0.0f);
-	// glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+    //glm::vec3 acc = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::vec3 acc = 0.3f * cohesion(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos, glm::vec3(0)); 
     if(x<width && y<height) {
       float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
       // Each thread writes one pixel location in the texture (textel)
@@ -351,8 +351,7 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
  void cudaUpdatePBO(float4 * pbodptr, int width, int height)
  {
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
-    sendToPBO<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    sendToPBO<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dev_pos, dev_vel, pbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
  } 

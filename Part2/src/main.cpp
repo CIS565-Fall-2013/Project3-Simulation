@@ -4,10 +4,11 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 1000
+#define N_FOR_VIS 500
 #define DT 0.1
 #define VISUALIZE 1
 int init_time;   // Global starting time
+bool pauseFlag = false;
 
 //-------------------------------
 //-------------MAIN--------------
@@ -28,7 +29,7 @@ int main(int argc, char** argv)
 #else
     initCuda(2*128);
 #endif
-
+	
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
     view = glm::lookAt(cameraPosition, glm::vec3(0), glm::vec3(0,0,1));
 
@@ -41,7 +42,6 @@ int main(int argc, char** argv)
     glActiveTexture(GL_TEXTURE0);
 
     glEnable(GL_DEPTH_TEST);
-
 
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
@@ -92,7 +92,8 @@ void display()
         frame = 0;
     }
 
-    runCuda();
+    if (!pauseFlag)
+      runCuda();
 
     char title[100];
 
@@ -112,6 +113,16 @@ void display()
 
     glUseProgram(program[HEIGHT_FIELD]);
 
+    GLuint location;
+	if ((location = glGetUniformLocation(program[HEIGHT_FIELD], "u_projMatrix")) != -1)
+    {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
+    }
+    if ((location = glGetUniformLocation(program[1], "u_cameraPos")) != -1)
+    {
+        glUniform3fv(location, 1, &cameraPosition[0]);
+    }
+
     glEnableVertexAttribArray(positionLocation);
     glEnableVertexAttribArray(texcoordsLocation);
     
@@ -123,12 +134,22 @@ void display()
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
 
-    //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
+	//Disable the plane if comment the following line
+    glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
     glDisableVertexAttribArray(positionLocation);
     glDisableVertexAttribArray(texcoordsLocation);
 
     glUseProgram(program[PASS_THROUGH]);
+	location;
+	if ((location = glGetUniformLocation(program[HEIGHT_FIELD], "u_projMatrix")) != -1)
+    {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
+    }
+    if ((location = glGetUniformLocation(program[1], "u_cameraPos")) != -1)
+    {
+        glUniform3fv(location, 1, &cameraPosition[0]);
+    }
 
     glEnableVertexAttribArray(positionLocation);
 
@@ -152,11 +173,28 @@ void display()
 void keyboard(unsigned char key, int x, int y)
 {
     std::cout << key << std::endl;
+	float fraction = 1.0f;
+	float angle = 1.2f;
     switch (key) 
     {
         case(27):
             exit(1);
             break;
+        case('p'):
+            pauseFlag = !pauseFlag;
+            break; 
+        case GLUT_KEY_LEFT :
+            cameraPosition += glm::vec3 (sin(angle)*fraction, 0, cos(angle)*fraction);
+			break;
+		case GLUT_KEY_RIGHT :
+            cameraPosition += glm::vec3 (sin(angle)*fraction, 0, -cos(angle)*fraction);
+			break;
+		case GLUT_KEY_UP :
+            cameraPosition += glm::vec3 (fraction, 0, fraction);
+			break;
+		case GLUT_KEY_DOWN :
+            cameraPosition += glm::vec3 (-fraction, 0, -fraction);
+			break;
     }
 }
 

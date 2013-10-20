@@ -5,31 +5,23 @@ in vec3 WorldVec;
 in vec3 ToCam;
 in vec3 Up;
 in vec3 Right;
-in vec2 TexCoord;
+in vec3 TexCoord;
 in vec4 tag;
 
 out vec4 FragColor;
 
 void main()
-{/*
-	vec2 coord = 2.01 * (TexCoord - vec2(0.5));
-    float r = length(coord);
-    if (r >= 1.0) { discard; }
-	 float dist = length(WorldCoord);
-    if(dist <= 0.01)
-    {
-        FragColor = vec4(1.0);
-        return;
-    }
-	vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
+{
+	vec3 N = Right * TexCoord.x + Up * TexCoord.y + WorldVec * TexCoord.z;
+    float dist = length(WorldCoord);
     vec3 L = normalize(-WorldCoord);
-    float light = 0.1 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
-    vec3 color = vec3(0.4, 0.1, 0.6);
-    FragColor = vec4(color*light,1.0);*/
+    float light = (0.3 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist));
 
     // Set the four points with different color
-    if( tag.x < 0.0001 ) FragColor = vec4(0.8, 0.2, 0.1, 1.0);
-    if( tag.y < 0.0001 ) FragColor = vec4(0.2, 0.8, 0.1, 1.0);
-    if( tag.z < 0.0001 ) FragColor = vec4(0.1, 0.2, 0.8, 1.0);
-    if( tag.w < 0.0001 ) FragColor = vec4(0.1, 0.2, 0.1, 1.0);
+	vec3 color = vec3(0.0);
+    if( tag.x < 0.0001 ) color = vec3(0.8, 0.2, 0.1);
+    if( tag.y < 0.0001 ) color = vec3(0.2, 0.8, 0.1);
+    if( tag.z < 0.0001 ) color = vec3(0.8, 0.9, 0.1);
+    if( tag.w < 0.0001 ) color = vec3(0.6, 0.2, 0.6);
+	FragColor = vec4(color*light,1.0);
 } 
