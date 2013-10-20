@@ -8,9 +8,9 @@
 
 
 #if SHARED == 1
-    //#define ACC(x,y,z) sharedMemAcc(x,y,z)
+    #define ACC(x,y,z) sharedMemAcc(x,y,z)
 	//#define ACC(x,y,z) prefetchAcc(x,y,z)
-	#define ACC(x,y,z) unrolledAcc(x,y,z)
+	//#define ACC(x,y,z) unrolledAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
@@ -20,7 +20,8 @@
 
 int numObjects;
 const float planetMass = 3e10;
-const __device__ float starMass = 5e10;
+//const __device__ float starMass = 5e10;
+const __device__ float starMass = 0;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 
