@@ -118,15 +118,23 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+    glm::vec3 them_pos = glm::vec3(them.x, them.y, them.z);
+	glm::vec3 us_pos = glm::vec3(us.x, us.y, us.z);
+	float r = glm::length(them_pos - us_pos);
+	if(r < .001) return glm::vec3(0.0f);
+	float F = (us.w > them.w ? -1.0f : 1.0f) * G * them.w / (r * r);
+	glm::vec3 r_hat = glm::normalize(them_pos - us_pos);
+	return F * r_hat;
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
-{
+{ 
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	for(int i = 0; i < N; i++){
+		acc += calculateAcceleration(my_pos, their_pos[i]);
+	}
     return acc;
 }
 
@@ -135,8 +143,25 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+	int index = threadIdx.x + (blockDim.x * blockIdx.x);
+	int numBlocks = (int)ceil((float)N/blockSize);
+	
+	__shared__ glm::vec4 pos[blockSize];
+
+	for(int i = 0; i < numBlocks; i++){
+		if(index < N){
+			pos[threadIdx.x] = their_pos[index];
+		}
+		__syncthreads();
+
+		for(int j = 0; j < blockSize && j + i * blockSize < N; j++){
+			acc += calculateAcceleration(my_pos, pos[j]);
+		}
+	}
+
+	return acc;
 }
 
 //Simple Euler integration scheme
