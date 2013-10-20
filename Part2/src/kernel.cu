@@ -26,10 +26,10 @@ const __device__ float g_kSepNeighborhood = 15.0f;
 const __device__ float g_kCohNeighborhood = 30.0f;
 const __device__ float g_kAlgnNieghborhood = 10.0f;
 const __device__ float g_kAlignment = 1.0f;
-const __device__ float g_kSeparation = 10.0f;
+const __device__ float g_kSeparation = 15.0f;
 const __device__ float g_kCohesion = 0.5f;
 const __device__ float cseparation = 1.0f;
-const __device__ float ccohesion = 1.2f;
+const __device__ float ccohesion = 2.0f;
 const __device__ float calignment = 1.5f; 
 
 vec4 * dev_pos;
@@ -255,7 +255,7 @@ vec3 arrival(vec4 my_pos, vec3 target)
 		return vec3(0,0,0);
 	else
 	{
-		return normalize(arrivalDirection) * g_maxSpeed;
+		return arrivalDirection * g_maxSpeed;
 	}
 }
 
