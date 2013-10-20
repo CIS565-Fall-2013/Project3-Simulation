@@ -15,11 +15,12 @@
 #define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define RK 0
-#define separationDistance 1
-#define alignmentDistance 3
-#define cohesionDistance 2.5
-#define maxForce 2.5
-#define maxVelocity 5
+#define separationDistance 50 
+#define alignmentDistance 30
+#define cohesionDistance 5
+#define maxForce 5
+#define maxVelocity 7
+#define neighborAngle 220.0
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);

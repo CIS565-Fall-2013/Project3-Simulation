@@ -5,7 +5,7 @@
 #include "main.h"
 
 #define N_FOR_VIS 1000
-#define DT 0.2
+#define DT 0.1
 #define VISUALIZE 1
 int init_time;   // Global starting time
 
@@ -123,7 +123,7 @@ void display()
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
 
-    glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
+    //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
     glDisableVertexAttribArray(positionLocation);
     glDisableVertexAttribArray(texcoordsLocation);
@@ -138,7 +138,7 @@ void display()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
    
     glPointSize(4.0f); 
-    glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_POINTS, N_FOR_VIS, GL_UNSIGNED_INT, 0);
 
     glPointSize(1.0f);
 
@@ -228,9 +228,10 @@ void initVAO(void)
 
     GLfloat *vertices  = new GLfloat[2*num_verts];
     GLfloat *texcoords = new GLfloat[2*num_verts]; 
-    GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS+1)];
+    GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS)];
     GLuint *indices    = new GLuint[6*num_faces];
-    GLuint *bindices   = new GLuint[N_FOR_VIS+1];
+    //GLuint *bindices   = new GLuint[N_FOR_VIS+1];
+	GLuint *bindices   = new GLuint[N_FOR_VIS];
 
     glm::vec4 ul(-1.0,-1.0,1.0,1.0);
     glm::vec4 lr(1.0,1.0,0.0,0.0);
@@ -261,7 +262,7 @@ void initVAO(void)
         }
     }
 
-    for(int i = 0; i < N_FOR_VIS+1; i++)
+    for(int i = 0; i < N_FOR_VIS; i++)
     {
         bodies[4*i+0] = 0.0f;
         bodies[4*i+1] = 0.0f;
@@ -286,10 +287,10 @@ void initVAO(void)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6*num_faces*sizeof(GLuint), indices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
-    glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS+1)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

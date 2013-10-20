@@ -16,13 +16,14 @@ dim3 threadsPerBlock(blockSize);
 
 int numObjects;
 //const float planetMass = 3e8;
-const __device__ float starMass = 5e10;
-const __device__ float boidMass = 5;
+//const __device__ float starMass = 5e10;
+const __device__ float boidMass = 1;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
+glm::vec3 * dev_acc;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -75,24 +76,6 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
     }
 }
 
-//Determine velocity from the distance from the center star. Not super physically accurate because 
-//the mass ratio is too close, but it makes for an interesting looking scene
-__global__
-void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
-{
-    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if(index < N)
-    {
-        glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
-        float r = glm::length(R) + EPSILON;
-        float s = sqrt(G*starMass/r);
-        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
-        arr[index].x = s*D.x;
-        arr[index].y = s*D.y;
-        arr[index].z = s*D.z;
-    }
-}
-
 //Generate randomized starting velocities in the XY plane
 __global__
 void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
@@ -100,42 +83,11 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
+        glm::vec3 rand = scale * (generateRandomNumberFromThread(time, index) - 0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
         arr[index].z = rand.z;
     }
-}
-
-//TODO: Determine force between two bodies
-__device__
-glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
-{
-    //    G*m_us*m_them
-    //F = -------------
-    //         r^2
-    //
-    //    G*m_us*m_them   G*m_them
-    //a = ------------- = --------
-    //      m_us*r^2        r^2
-
-    // Load the data
-    glm::vec3 us_pos(us.x, us.y, us.z);
-    glm::vec3 them_pos(them.x, them.y, them.z);
-    float m_them = them.w;
-	
-    // Calculate the distance and direction between the two objects (Note: the direction is them - us).
-    glm::vec3 r = them_pos - us_pos;
-    float distance = glm::length(r);
-    glm::vec3 direction = glm::normalize(r);
-	
-    // Return no acceleration when the two bodies are very close to each other
-    if (abs(distance) < EPSILON)
-	  return glm::vec3(0.0f);
-
-    // Calculate the acceleration between two bodies using Newton's Law of Universal Gravitation, referring to http://en.wikipedia.org/wiki/Newton%27s_law_of_universal_gravitation
-    glm::vec3 acc = direction * (float)G * m_them / pow(distance,2);
-    return acc;
 }
 
 // REFERENCE for flocking: Craig's Paper http://www.red3d.com/cwr/papers/1999/gdc99steer.pdf
@@ -152,10 +104,11 @@ glm::vec3 alignment(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm::vec3 my
 
     // Align the boids in the region within the aligment distance
     for (unsigned int i = 0; i < N; ++ i ) {
-      float distance = glm::distance(my_pos, their_pos[i]);
-      if (distance > alignmentDistance || distance <= EPSILON)
+      glm::vec3 dist_vec = glm::vec3(my_pos.x - their_pos[i].x, my_pos.y - their_pos[i].y, my_pos.z - their_pos[i].z);
+      float distance = glm::length(dist_vec);
+      if (distance > alignmentDistance || distance <= EPSILON || glm::dot (my_vel, glm::normalize(-dist_vec)) < cos(neighborAngle/2))
         continue;
-      average_vel += glm::vec3(vel[i].x, vel[i].y, vel[i].z);
+      average_vel += vel[i];
       ++ count;
     }
 
@@ -174,15 +127,16 @@ glm::vec3 alignment(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm::vec3 my
 
 // TODO: Cohesion for boids in a specific region of distance
 __device__
-glm::vec3 cohesion(int N, glm::vec4 my_pos, glm::vec4 * their_pos) {
+glm::vec3 cohesion(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm::vec3 my_vel) {
     glm::vec3 steering_force;
     glm::vec3 average_pos(0.0f);
     unsigned int count = 0;
 
     // Make the boids cohere in the region within the cohesion distance
     for (unsigned int i = 0; i < N; ++ i ) {
-      float distance = glm::distance(my_pos, their_pos[i]);
-      if (distance > cohesionDistance || distance <= EPSILON)
+      glm::vec3 dist_vec = glm::vec3(my_pos.x - their_pos[i].x, my_pos.y - their_pos[i].y, my_pos.z - their_pos[i].z);
+      float distance = glm::length(dist_vec);
+      if (distance > cohesionDistance || distance <= EPSILON || glm::dot (my_vel, glm::normalize(-dist_vec)) < cos(neighborAngle/2))
         continue;
       average_pos += glm::vec3(their_pos[i].x, their_pos[i].y, their_pos[i].z);
       ++ count;
@@ -203,18 +157,18 @@ glm::vec3 cohesion(int N, glm::vec4 my_pos, glm::vec4 * their_pos) {
 
 // TODO: Separation for boids in a specific region of distance
 __device__
-glm::vec3 separation(int N, glm::vec4 my_pos, glm::vec4 * their_pos) {
+glm::vec3 separation(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm::vec3 my_vel) {
     glm::vec3 steering_force(0.0f);
 
     // Separate the boids in the region within the separation distance
     for (unsigned int i = 0; i < N; ++ i ) {
-      float distance = glm::distance(my_pos, their_pos[i]);
-      if (distance > separationDistance || distance <= EPSILON)
+      glm::vec3 dist_vec = glm::vec3(my_pos.x - their_pos[i].x, my_pos.y - their_pos[i].y, my_pos.z - their_pos[i].z);
+      float distance = glm::length(dist_vec);
+      if (distance > separationDistance || distance <= EPSILON || glm::dot (my_vel, glm::normalize(-dist_vec)) < cos(neighborAngle/2))
         continue;
-      steering_force += glm::vec3(my_pos.x - their_pos[i].x, my_pos.y - their_pos[i].y, my_pos.z - their_pos[i].z) / pow(distance, 2);
-	  //steering_force += -glm::normalize(glm::vec3(my_pos.x - their_pos[i].x, my_pos.y - their_pos[i].y, my_pos.z - their_pos[i].z) );
+      steering_force += dist_vec / pow(distance, 2);
     }
-
+	
     // Clamp the force less than the maximum force
     glm::vec3 steering_dir = glm::normalize(steering_force);
     steering_force = glm::length(steering_force) > maxForce ? (float) maxForce * steering_dir : (steering_force);
@@ -247,29 +201,72 @@ void rungekuttaInt(float dt, glm::vec4& pos, glm::vec3& vel) {
     pos.z += pos_inc.z * dt;
 }
 
-//Update by integration scheme
-__global__
-void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
-{
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if( index < N )
-    {
-      glm::vec4 my_pos = pos[index];
-	  glm::vec3 my_vel = vel[index];
-	  glm::vec3 weights = glm::vec3(1.0f, 1.0f, 0.6f);
-	  glm::vec3 alignment_acc = alignment(N, my_pos, pos, my_vel, vel);
-	  glm::vec3 cohesion_acc = cohesion(N, my_pos, pos);
-	  glm::vec3 separation_acc = separation(N, my_pos, pos);
-      glm::vec3 acc = weights.x * alignment_acc + weights.y * cohesion_acc + weights.z * separation_acc;	  
-	  vel[index] += acc * dt;
-      integration(dt, pos[index], vel[index]);
+__device__
+void borderHandle(glm::vec4& pos, glm::vec3& vel, float length, float width, float height) {
+    if (pos.x > length / 2.0f) {
+		pos.x = length / 2.0f;
+		vel.x *= -1.0;
+	} else if(pos.x < - length / 2.0f) {
+      pos.x =  - length / 2.0f;
+      vel.x *= -1.0f;
+    }
+    if (pos.y > width / 2.0f) {
+      pos.y = width / 2.0f;
+      vel.y *= -1.0f;
+	} else if(pos.y <  - width / 2.0f) {
+      pos.y =  - width / 2.0f;
+	  vel.y *= -1.0f;
+    }
+    if (pos.z > height / 2.0f) {
+      pos.z = height / 2.0f;
+      vel.z *= -1.0f;
+	} else if(pos.z < - height / 2.0f) {
+      pos.z =  - height / 2.0f;
+      vel.z *= -1.0f;
     }
 }
+//Update by integration scheme
+__global__
+void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    glm::vec4 my_pos;
+	glm::vec3 my_vel;
+    glm::vec3 accel;
+
+    if(index < N) {
+      my_pos = pos[index];
+	  my_vel = vel[index];
+	}
+
+	glm::vec3 weights(1.0f, 1.0f, 0.6f);
+    glm::vec3 alignment_acc = alignment(N, my_pos, pos, my_vel, vel);
+    glm::vec3 cohesion_acc = cohesion(N, my_pos, pos, my_vel);
+    glm::vec3 separation_acc = separation(N, my_pos, pos, my_vel);
+    accel = weights.x * alignment_acc + weights.y * cohesion_acc + weights.z * separation_acc;	 
+    
+	if(index < N) 
+      acc[index] = accel;
+} 
+
+__global__
+void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    if( index < N ) {
+      glm::vec3 dir = glm::normalize(vel[index] + acc[index] * dt);
+      vel[index] = glm::length(vel[index]) * dir;
+	  vel[index] = glm::length(vel[index]) > maxVelocity ? (float) maxVelocity * glm::normalize(vel[index]) : (vel[index]);
+      integration(dt, pos[index], vel[index]);
+    }
+	borderHandle(pos[index], vel[index], 200.0f, 200.0f, 50.0f);
+}
+
 
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
 __global__
-void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
+void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -280,8 +277,8 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
     {
         vbo[4*index+0] = pos[index].x*c_scale_w;
         vbo[4*index+1] = pos[index].y*c_scale_h;
-        vbo[4*index+2] = 0;
-        vbo[4*index+3] = 1;
+        vbo[4*index+2] = vel[index].x*c_scale_w;
+        vbo[4*index+3] = vel[index].y*c_scale_h;
     }
 }
 
@@ -299,14 +296,13 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     float c_scale_w = width / s_scale;
     float c_scale_h = height / s_scale;
 
-    if(x<width && y<height)
-    {
-        glm::vec3 color(0.05, 0.15, 0.3);
-		glm::vec3 acc = glm::vec3( 1.0, 1.0, 0.5 );
-        //glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
-        float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
-        // Each thread writes one pixel location in the texture (textel)
-        pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
+    glm::vec3 color(0.05, 0.15, 0.3);
+    glm::vec3 acc = glm::vec3(0.0f, 0.0f, 0.0f);
+	// glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+    if(x<width && y<height) {
+      float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
+      // Each thread writes one pixel location in the texture (textel)
+      pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
     }
 }
 
@@ -324,30 +320,39 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
+    cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
+    checkCUDAErrorWithLine("Kernel failed!"); 
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, boidMass);
     checkCUDAErrorWithLine("Kernel failed!");
-    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize();
 }
 
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
+    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    checkCUDAErrorWithLine("Kernel failed!");
+    cudaThreadSynchronize();
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, dev_vel, vbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
+    cudaThreadSynchronize(); 
 }
 
-void cudaUpdatePBO(float4 * pbodptr, int width, int height)
-{
+ void cudaUpdatePBO(float4 * pbodptr, int width, int height)
+ {
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
     sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
-}
+    sendToPBO<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    cudaThreadSynchronize();
+ } 
