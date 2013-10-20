@@ -7,8 +7,10 @@
 
 #if SHARED == 1
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
+	#define FLOCK(p,q,r,s,t) FlockShared(p,q,r,s,t)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
+	#define FLOCK(p,q,r,s,t) FlockGlobal(p,q,r,s,t)
 #endif
 
 //GLOBALS
@@ -120,11 +122,15 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //      m_us*r^2        r^2
 	glm::vec3 forceDir = glm::vec3 (them.x - us.x, them.y - us.y, them.z - us.z);
 	float dist = sqrt (glm::dot (forceDir, forceDir));
-	forceDir /= dist;	// Force direction is now normalized and we have distance between the two objects (r)!
+	
+	if (dist > 0)
+	{
+		forceDir /= dist;	// Force direction is now normalized and we have distance between the two objects (r)!
+		float accVal = (GravConst * them.w) / (dist*dist);
+		return forceDir * accVal;
+	}
 
-	float accVal = (GravConst * them.w) / (dist*dist);
-    
-    return forceDir * accVal;
+	return glm::vec3 (0);
 }
 
 //TODO: Done!
@@ -216,9 +222,8 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	return acc;
 }
 
-__device__ glm::vec3 Flock (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, glm::vec3 *vel)
+__device__ glm::vec3 FlockGlobal (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, glm::vec3 *vel)
 {
-//	int my_index = 0;
 	glm::vec3	acc = glm::vec3 (0);
 	glm::vec3 my_vel;
 
@@ -240,7 +245,7 @@ __device__ glm::vec3 Flock (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, g
 			glm::vec3 curVel = vel [i];
 		
 			float distance = glm::length (curPos - my_pos);
-			if (/*(distance > 0 ) &&*/ (distance <= 2.0))
+			if (distance <= 5.0)
 			{
 				sumVelocities += curVel;
 				sumPositions.x += curPos.x;
@@ -305,7 +310,7 @@ void updateFCustom (int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3
 
     if(index < N) my_pos = pos[index];
 
-    accel = 0.3f*Flock (N, dt, my_pos, pos, vel) + 0.7f*calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
+    accel = FLOCK (N, dt, my_pos, pos, vel) + calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
 
     if(index < N) acc[index] = accel;
 }
