@@ -24,13 +24,13 @@ const __device__ float g_velKv = 0.1f;
 const __device__ float g_maxSpeed = 1.0f;
 const __device__ float g_kSepNeighborhood = 15.0f;
 const __device__ float g_kCohNeighborhood = 30.0f;
-const __device__ float g_kAlgnNieghborhood = 20.0f;
+const __device__ float g_kAlgnNieghborhood = 10.0f;
 const __device__ float g_kAlignment = 1.0f;
 const __device__ float g_kSeparation = 10.0f;
-const __device__ float g_kCohesion = 0.1f;
-const __device__ float cseparation = 0.0f; // DISABLED
-const __device__ float ccohesion = 0.0f; // DISABLED
-const __device__ float calignment = 1.0f; 
+const __device__ float g_kCohesion = 0.5f;
+const __device__ float cseparation = 1.0f;
+const __device__ float ccohesion = 1.2f;
+const __device__ float calignment = 1.5f; 
 
 vec4 * dev_pos;
 vec3 * dev_vel;
@@ -261,7 +261,7 @@ vec3 arrival(vec4 my_pos, vec3 target)
 
 // calculate separate velocity: maintain constant distance between all boids within neighborhood
 __device__
-vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos)
+vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos, vec3 target)
 {
 	vec3 separateDirection = vec3(0,0,0);
 
@@ -277,8 +277,7 @@ vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos)
 			separateDirection += (g_kSeparation * toBoidI) / (toBoidILen * toBoidILen);
 		}
 	}
-
-	vec3 arrivalVelocity = arrival(my_pos, vec3(0,0,0)); // LOOK: Arrival velocity to fixed target
+	vec3 arrivalVelocity = arrival(my_pos, target); // LOOK: Arrival velocity to fixed target
 	return arrivalVelocity + separateDirection;
 }
 
@@ -316,7 +315,7 @@ vec3 naiveCohesion(int N, vec4 my_pos, vec4* boids_pos)
 
 // calculate alignment velocity: average velocity of all boids within neighborhood
 __device__
-vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
+vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 target)
 {
 	vec3 alignmentDirection = vec3(0,0,0);
 	int numBoids = 0;
@@ -339,11 +338,16 @@ vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
 	if (numBoids > 0)
 	{
 		alignmentDirection = alignmentDirection / (float)numBoids;
-		return g_kAlignment * alignmentDirection;
+		//return g_kAlignment * alignmentDirection;
+		float len = length(alignmentDirection);
+		if (len < (float)EPSILON)
+			return g_kAlignment * alignmentDirection * 2.f;
+		else
+			return g_kAlignment * alignmentDirection / len;
 	}
 	else
 	{
-		return arrival(my_pos, vec3(0,0,0)); // LOOK: seek to the origin if only 1 in neighborhood
+		return arrival(my_pos, target); // LOOK: seek to the origin if only 1 in neighborhood
 	}
 }
 
@@ -351,9 +355,12 @@ vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
 __device__
 vec3 flock(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
 {
-	vec3 desiredVelocity = cseparation * naiveSeparate(N, my_pos, boids_pos) +
+
+	vec3 target = vec3(0,0,120);
+
+	vec3 desiredVelocity = cseparation * naiveSeparate(N, my_pos, boids_pos, target) +
 						   ccohesion * naiveCohesion(N, my_pos, boids_pos) +
-						   calignment * naiveAlignment(N, my_pos, boids_pos, boids_vel);
+						   calignment * naiveAlignment(N, my_pos, boids_pos, boids_vel, target);
 
 	return desiredVelocity;
 }
@@ -368,20 +375,21 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel)
     {
         vec4 my_pos = pos[index];
 		vec3 my_vel = vel[index];
-        //vec3 acc = ACC(N, my_pos, pos); // old
 
 		vec3 flockVel = flock(N, my_pos, pos, vel);
 		float flockVelMag = length(flockVel);
 		float myVelMag = length(my_vel);
 		vec3 flockDirection = normalize(flockVel);
-		//vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;
-		vec3 acc = (g_velKv * (flockVelMag) / dt) * flockDirection;
+		
+		//vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
+		//vel[index] = integrateAcceleration(vel[index], acc, dt, N, my_pos, pos); // using accel
 
-		vel[index] = integrateAcceleration(vel[index], acc, dt, N, my_pos, pos);
+		//vel[index] = flockVel; // simply set velocity to flock velocity
 
+		// try taking initial velocity into account
+		float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
+		vel[index] = finalVelMag * flockDirection;
 
-		// consider just setting the velocity to flock velocity
-		vel[index] = flockVel;
     }
 }
 
@@ -396,10 +404,6 @@ void updatePosition(int N, float dt, vec4 *pos, vec3 *vel)
 		pos[index].x = nextPosition.x;
 		pos[index].y = nextPosition.y;
 		pos[index].z = nextPosition.z;
-
-		//pos[index].x += vel[index].x * dt;
-		//pos[index].y += vel[index].y * dt;
-		//pos[index].z += vel[index].z * dt;
 	}
 }
 
@@ -412,12 +416,14 @@ void sendToVBO(int N, vec4 * pos, float * vbo, int width, int height, float s_sc
 
     float c_scale_w = -2.0f / s_scale;
     float c_scale_h = -2.0f / s_scale;
+	float c_scale_d = 2.0f / s_scale;
 
     if(index<N)
     {
         vbo[4*index+0] = pos[index].x*c_scale_w;
         vbo[4*index+1] = pos[index].y*c_scale_h;
-        vbo[4*index+2] = 0;
+        //vbo[4*index+2] = 0;
+		vbo[4*index+2] = pos[index].z*c_scale_d;
         vbo[4*index+3] = 1;
     }
 }
