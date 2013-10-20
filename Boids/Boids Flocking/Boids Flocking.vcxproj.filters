@@ -48,19 +48,13 @@
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\planetVS.glsl">
+    <None Include="shaders\boidFS.glsl">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="shaders\heightFS.glsl">
+    <None Include="shaders\boidGS.glsl">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="shaders\heightVS.glsl">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\planetFS.glsl">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="shaders\planetGS.glsl">
+    <None Include="shaders\boidVS.glsl">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
