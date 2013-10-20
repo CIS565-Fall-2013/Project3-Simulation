@@ -82,6 +82,7 @@ int main(int argc, char** argv);
 //-------------------------------
 //---------RUNTIME STUFF---------
 //-------------------------------
+bool isPaused = true;
 
 void runCuda();
 

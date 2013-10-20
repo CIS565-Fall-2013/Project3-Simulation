@@ -108,7 +108,8 @@ void display()
     }
 
 	// call functions defined in kernel.cu
-    runCuda();
+	if (!isPaused)
+		runCuda();
 
     char title[100];
     sprintf( title, "565 NBody sim [%0.2f fps]", fps );
@@ -177,6 +178,9 @@ void keyboard(unsigned char key, int x, int y)
         case(27):
             exit(1);
             break;
+		case 'p':
+		case 'P':
+			isPaused = !isPaused;
     }
 }
 
