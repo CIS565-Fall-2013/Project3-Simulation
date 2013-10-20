@@ -13,7 +13,6 @@
 #endif
 
 #define blockSize 128
-#define tileSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 0
 
