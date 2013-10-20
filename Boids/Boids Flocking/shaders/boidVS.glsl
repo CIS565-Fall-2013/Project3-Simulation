@@ -1,5 +1,8 @@
 #version 330
 
+uniform mat4 u_projMatrix;
+uniform vec3 u_lightPos;
+
 in vec4 vs_position;
 in vec4 vs_norm;
 in vec4 vs_vel;
@@ -19,7 +22,10 @@ void main(void)
 {
 	gl_Position = vs_position;
 	vertexData.norm = vs_norm;
-	vertexData.vel = vs_vel;
+	if(length(vs_vel) == 0)
+		vertexData.vel = vec4(1,0,0,0);
+	else
+		vertexData.vel = vs_vel;
 	vertexData.color = vs_color;
 	vertexData.shape = vs_shape;
 }

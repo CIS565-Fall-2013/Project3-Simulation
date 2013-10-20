@@ -1,5 +1,8 @@
 #version 330
 
+uniform mat4 u_projMatrix;
+uniform vec3 u_lightPos;
+
 in vec3 Normal;
 in vec3 Color;
 in vec2 TexCoord;
@@ -8,20 +11,6 @@ out vec4 FragColor;
 void main()
 {
 
-	vec2 coord = 2.01 * (TexCoord - vec2(0.5));
-    float r = length(coord);
-    if (r >= 1.0) { discard; }
-	
-	 float dist = length(WorldCoord);
-    if(dist <= 0.01)
-    {
-        FragColor = vec4(1.0);
-        return;
-    }
-
-	vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
-    vec3 L = normalize(-WorldCoord);
-    float light = 0.1 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
-    vec3 color = vec3(0.4, 0.1, 0.6);
-    FragColor = vec4(color*light,1.0);
+	//TODO: More diffuse shading
+    FragColor = vec4(color,1.0);
 }
