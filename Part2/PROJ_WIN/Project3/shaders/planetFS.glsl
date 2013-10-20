@@ -19,7 +19,7 @@ void main()
 	float dist = length(WorldCoord);
     if(dist <= 0.01)
     {
-        FragColor = vec4(1.0);
+        FragColor = vec4(1.0, 1.0, 1.0, 1.0) * (1-100*dist);
         return;
     }
 

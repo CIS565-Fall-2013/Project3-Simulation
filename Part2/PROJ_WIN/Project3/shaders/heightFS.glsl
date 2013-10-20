@@ -6,6 +6,7 @@ void main(void)
 	float shade = (0.8-2.0*sqrt(f_height));
 	float alpha = float(mod(v_Texcoords.x+0.025, 0.05) > 0.046 ||
                     mod(v_Texcoords.y+0.025, 0.05) > 0.046);
-	vec4 color = mix(vec4(0.05,0.15,0.3,1.0), vec4(0.05, 0.3, 0.4, 1.0), alpha);
+//	vec4 color = mix(vec4(0.05,0.15,0.3,1.0), vec4(0.05, 0.3, 0.4, 1.0), alpha);
+	vec4 color = mix(vec4(0,0, 0, 1.0), vec4(0.49,1,0.3,0), alpha);
 	gl_FragColor = shade * color;
 }

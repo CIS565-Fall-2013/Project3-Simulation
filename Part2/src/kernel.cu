@@ -20,13 +20,13 @@ const __device__ float starMass = 5e10;
 const __device__ int integrateMode = (int)EULER;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
-const __device__ float g_velKv = 0.1f;
+const __device__ float g_velKv = 0.5f;
 const __device__ float g_maxSpeed = 1.0f;
-const __device__ float g_kSepNeighborhood = 15.0f;
+const __device__ float g_kSepNeighborhood = 60.0f;
 const __device__ float g_kCohNeighborhood = 30.0f;
 const __device__ float g_kAlgnNieghborhood = 10.0f;
 const __device__ float g_kAlignment = 1.0f;
-const __device__ float g_kSeparation = 15.0f;
+const __device__ float g_kSeparation = 50.0f;
 const __device__ float g_kCohesion = 0.5f;
 const __device__ float cseparation = 1.0f;
 const __device__ float ccohesion = 2.0f;
@@ -338,7 +338,7 @@ vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 t
 	if (numBoids > 0)
 	{
 		alignmentDirection = alignmentDirection / (float)numBoids;
-		//return g_kAlignment * alignmentDirection;
+
 		float len = length(alignmentDirection);
 		if (len < (float)EPSILON)
 			return g_kAlignment * alignmentDirection * 2.f;
@@ -353,11 +353,8 @@ vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 t
 
 // calculate flocking velocity
 __device__
-vec3 flock(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
+vec3 flock(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 target)
 {
-
-	vec3 target = vec3(0,0,120);
-
 	vec3 desiredVelocity = cseparation * naiveSeparate(N, my_pos, boids_pos, target) +
 						   ccohesion * naiveCohesion(N, my_pos, boids_pos) +
 						   calignment * naiveAlignment(N, my_pos, boids_pos, boids_vel, target);
@@ -368,7 +365,7 @@ vec3 flock(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
 
 //Simple Euler integration scheme
 __global__
-void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel)
+void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
@@ -376,7 +373,7 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel)
         vec4 my_pos = pos[index];
 		vec3 my_vel = vel[index];
 
-		vec3 flockVel = flock(N, my_pos, pos, vel);
+		vec3 flockVel = flock(N, my_pos, pos, vel, target);
 		float flockVelMag = length(flockVel);
 		float myVelMag = length(my_vel);
 		vec3 flockDirection = normalize(flockVel);
@@ -384,12 +381,10 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel)
 		//vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
 		//vel[index] = integrateAcceleration(vel[index], acc, dt, N, my_pos, pos); // using accel
 
-		//vel[index] = flockVel; // simply set velocity to flock velocity
-
 		// try taking initial velocity into account
 		float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
-		vel[index] = finalVelMag * flockDirection;
 
+		vel[index] = finalVelMag * flockDirection;
     }
 }
 
@@ -476,10 +471,10 @@ void initCuda(int N)
 	cudaThreadSynchronize();
 }
 
-void cudaNBodyUpdateWrapper(float dt)
+void cudaNBodyUpdateWrapper(float dt, vec3 target)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    updateVelocity<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    updateVelocity<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, target);
 	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();

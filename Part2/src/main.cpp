@@ -74,7 +74,7 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+    cudaNBodyUpdateWrapper(DT, target);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
@@ -173,6 +173,9 @@ void display()
 void keyboard(unsigned char key, int x, int y)
 {
     std::cout << key << std::endl;
+
+	float targetSpeed = 10.0f;
+
     switch (key) 
     {
         case(27):
@@ -181,6 +184,37 @@ void keyboard(unsigned char key, int x, int y)
 		case 'p':
 		case 'P':
 			isPaused = !isPaused;
+			break;
+		// move target in +z
+		case 'w':
+		case 'W':
+			target = vec3(target.x, target.y, target.z+targetSpeed);
+			break;
+		// move target in -x
+		case 'a':
+		case 'A':
+			target = vec3(target.x-targetSpeed, target.y, target.z);
+			break;
+		// move target in -z
+		case 's':
+		case 'S':
+			target = vec3(target.x, target.y, target.z-targetSpeed);
+			break;
+		// move target in +x
+		case 'd':
+		case 'D':
+			target = vec3(target.x+targetSpeed, target.y, target.z);
+			break;
+		// move target in -y
+		case 'q':
+		case 'Q':
+			target = vec3(target.x, target.y-targetSpeed, target.z);
+			break;
+		// move target in +y
+		case 'e':
+		case 'E':
+			target = vec3(target.x, target.y+targetSpeed, target.z);
+			break;
     }
 }
 
@@ -269,10 +303,12 @@ void initVAO(void)
     glm::vec4 ul(-1.0,-1.0,1.0,1.0);
     glm::vec4 lr(1.0,1.0,0.0,0.0);
 
-	// changing the size of the plane. However, the height fields will also need to be adjusted for this to work properly
+	// changing the size of the plane.
 	//float scale = 2.0f;
-	//ul = scale * ul;
-	//lr = scale * lr;
+	//ul.x = scale * ul.x;
+	//ul.y = scale * ul.y;
+	//lr.x = scale * lr.x;
+	//lr.y = scale * lr.y;
 
 	// linearly interpolate between the the start of the plane and the max resolution of the plane
 	// assuming the upper left corner of the plane is positioned at ul and lower right corner is positioned at lr.
