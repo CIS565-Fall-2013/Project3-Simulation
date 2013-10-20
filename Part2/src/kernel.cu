@@ -23,14 +23,14 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 const __device__ float g_velKv = 0.1f;
 const __device__ float g_maxSpeed = 1.0f;
 const __device__ float g_kSepNeighborhood = 10.0f;
-const __device__ float g_kCohNeighborhood = 10.0f;
+const __device__ float g_kCohNeighborhood = 30.0f;
 const __device__ float g_kAlgnNieghborhood = 10.0f;
 const __device__ float g_kAlignment = 1.0f;
 const __device__ float g_kSeparation = 10.0f;
-const __device__ float g_kCohesion = 1.0f;
-const __device__ float cseparation = 1.0f;
+const __device__ float g_kCohesion = 0.1f;
+const __device__ float cseparation = 0.0f; // DISABLED
 const __device__ float ccohesion = 0.0f; // DISABLED
-const __device__ float calignment = 0.0f; // DISABLED
+const __device__ float calignment = 0.0f; 
 
 vec4 * dev_pos;
 vec3 * dev_vel;
@@ -308,9 +308,9 @@ vec3 naiveCohesion(int N, vec4 my_pos, vec4* boids_pos)
 	if (numBoids > 0)
 	{
 		com = com / (float)numBoids;
+		cohesionDirection = com - vec3(my_pos.x, my_pos.y, my_pos.z);
 	}
 
-	cohesionDirection = com - vec3(my_pos.x, my_pos.y, my_pos.z);
 	return g_kCohesion * cohesionDirection;
 }
 
