@@ -21,6 +21,8 @@
 
 using glm::vec3;
 using glm::vec4;
+using glm::length;
+using glm::normalize;
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);

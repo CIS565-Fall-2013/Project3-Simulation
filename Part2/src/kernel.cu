@@ -20,6 +20,17 @@ const __device__ float starMass = 5e10;
 const __device__ int integrateMode = (int)EULER;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
+const __device__ float g_maxSpeed = 6.0f;
+const __device__ float g_kSepNeighborhood = 10.0f;
+const __device__ float g_kCohNeighborhood = 10.0f;
+const __device__ float g_kAlgnNieghborhood = 10.0f;
+const __device__ float g_kAlignment = 1.0f;
+const __device__ float g_kSeparation = 1.0f;
+const __device__ float g_kCohesion = 1.0f;
+const __device__ float cseparation = 2.0f;
+const __device__ float ccohesion = 1.2f;
+const __device__ float calignment = 1.5f;
+
 vec4 * dev_pos;
 vec3 * dev_vel;
 
@@ -230,6 +241,104 @@ vec3 integrateVelocity(vec3 position, vec3 velocity, float dt)
 
 	return nextPosition;
 }
+
+
+// calculate separate velocity
+__device__
+vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos)
+{
+	vec3 separateDirection = vec3(0,0,0);
+
+	for (int i = 0 ; i < N ; ++i)
+	{
+		if (my_pos == boids_pos[i])
+			continue;
+
+		vec3 toBoidI = vec3(my_pos) - vec3(boids_pos[i]);
+		float toBoidILen = length(toBoidI);
+		if (toBoidILen < g_kSepNeighborhood && toBoidILen > 0)
+		{
+			separateDirection += (g_kSeparation * toBoidI) / (toBoidILen * toBoidILen);
+		}
+	}
+
+	// TODO: define target. 
+	return normalize(separateDirection) * (g_maxSpeed / 2.0f);
+}
+
+// calculate cohesion velocity
+__device__
+vec3 naiveCohesion(int N, vec4 my_pos, vec4* boids_pos)
+{
+	vec3 cohesionDirection = vec3(0,0,0);
+	vec3 com = vec3(0,0,0);
+	int numBoids = 0;
+
+	for (int i = 0 ; i < N ; ++i)
+	{
+		if (my_pos == boids_pos[i])
+			continue;
+
+		vec3 toBoidI = vec3(my_pos) - vec3(boids_pos[i]);
+		float toBoidILen = length(toBoidI);
+
+		if (toBoidILen < g_kCohNeighborhood && toBoidILen > 0)
+		{
+			com += boids_pos[i];
+			numBoids++;
+		}
+	}
+
+	if (numBoids > 0)
+	{
+		com = com / (float)numBoids;
+	}
+
+	cohesionDirection = com - vec3(my_pos);
+	return g_kCohesion * cohesionDirection;
+}
+
+// calculate alignment velocity
+__device__
+vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
+{
+	vec3 alignmentDirection = vec3(0,0,0);
+	int numBoids = 0;
+
+	for (int i = 0 ; i < N ; ++i)
+	{
+		if (my_pos == boids_pos[i])
+			continue;
+
+		vec3 toBoidI = vec3(my_pos) - vec3(boids_pos[i]);
+		float toBoidILen = length(toBoidI);
+
+		if (toBoidILen < g_kAlgnNieghborhood && toBoidILen > 0)
+		{
+			alignmentDirection += boids_vel[i];
+			numBoids++;
+		}
+	}
+
+	if (numBoids > 0)
+	{
+		alignmentDirection = alignmentDirection / numBoids;
+	}
+
+	return g_kAlignment * alignmentDirection;
+}
+
+// calculate flocking velocity
+__device__
+vec3 flock(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
+{
+	vec3 desiredVelocity = cseparation * naiveSeparate(N, my_pos, boids_pos) +
+						   ccohesion * naiveCohesion(N, my_pos, boids_pos) +
+						   calignment * naiveAlignment(N, my_pos, boids_pos, boids_vel);
+
+	return desiredVelocity;
+}
+
 
 //Simple Euler integration scheme
 __global__
