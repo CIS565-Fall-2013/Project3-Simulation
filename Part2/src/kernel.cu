@@ -69,8 +69,7 @@ glm::vec3 generateRandomNumberFromThread(float time, int index)
     return glm::vec3((float) u01(rng), (float) u01(rng), (float) u01(rng));
 }
 
-//Generate randomized starting positions for the planets in the XY plane
-//Also initialized the masses
+
 __global__
 void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float mass)
 {
@@ -85,26 +84,8 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
     }
 }
 
-//Determine velocity from the distance from the center star. Not super physically accurate because 
-//the mass ratio is too close, but it makes for an interesting looking scene
-__global__
-void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
-{
-    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if(index < N)
-    {
-       /* glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
-        float r = glm::length(R) + EPSILON;
-        float s = sqrt(G*starMass/r);
-        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));*/		
-		glm::vec3 rand = (generateRandomNumberFromThread(time, index*2 + 1) - 0.5f);
-        arr[index].x = rand.x;
-        arr[index].y = rand.y;
-        arr[index].z = rand.z;
-    }
-}
 
-//Generate randomized starting velocities in the XY plane
+//Generate randomized starting velocities in the XYZ plane
 __global__
 void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
 {
@@ -179,90 +160,6 @@ glm::vec3 navieFlocking(int N, glm::vec4 my_pos, glm::vec4* their_pos, glm::vec3
 	//	return glm::vec3(10,0,0);
 
 	return (float)ALIGNMENT * align + (float)SEPARATION * separa + (float)COHESION * cohes;
-}
-
-
-
-//TODO: Determine force between two bodies
-__device__
-glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
-{
-    //    G*m_us*m_them
-    //F = -------------
-    //         r^2
-    //
-    //    G*m_us*m_them   G*m_them
-    //a = ------------- = --------
-    //      m_us*r^2        r^2
-    
-	glm::vec3 r;
-	r.x = us.x - them.x;
-	r.y = us.y - them.y;
-	r.z = us.z - them.z;
-	//faster in this way
-	float dis = sqrtf(r.x*r.x + r.y*r.y + r.z*r.z);
-	if(dis > EPSILON){
-		return (float(G * them.w) * r)  / (dis*dis*dis);
-	}
-	else
-		return glm::vec3(0.0f);	
-}
-
-//TODO: Core force calc kernel global memory
-__device__ 
-glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
-{
-	glm::vec3 acc;// = glm::vec3(0.0f);
-	for(int i = 0; i < N; i++)
-	{
-		acc += calculateAcceleration(my_pos, their_pos[i]);		
-	}
-	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-	return acc;
-}
-
-
-
-//TODO: Core force calc kernel shared memory
-__device__ 
-glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
-{
-	//int index = threadIdx.x + (blockIdx.x * blockDim.x);
-	glm::vec3 acc;
-	__shared__ glm::vec4 shPos[blockSize]; 
-
-	/*__shared__ int num;
-	num = (int)ceil(float(N)/float(blockSize));
-
-	for (int i = 0; i < num; i++)
-    {		
-		int index = i * blockDim.x + threadIdx.x;
-		if(index < N)
-			shPos[threadIdx.x] = their_pos[index];
-		__syncthreads();
-
-		for(int j = 0; j < blockDim.x; j++)
-		{
-			acc += calculateAcceleration(my_pos, shPos[j]);		
-		}
-
-		acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
-		__syncthreads();
-	}*/
-
-	if(threadIdx.x < N)
-	{
-		shPos[threadIdx.x] = their_pos[threadIdx.x];		
-	}
-	__syncthreads();
-	
-	for(int i = 0; i < N; i++)
-	{
-		acc += calculateAcceleration(my_pos, shPos[i]);		
-	}
-	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
-	
-    return acc;
 }
 
 

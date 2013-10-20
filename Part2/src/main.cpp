@@ -37,9 +37,6 @@ int main(int argc, char** argv)
     GLuint passthroughProgram;
     initShaders(program);
 
-    glUseProgram(program[DROID]);
-    //glActiveTexture(GL_TEXTURE0);
-
     glEnable(GL_DEPTH_TEST);
 
 
@@ -109,7 +106,7 @@ void display()
     runCuda();
 
     char title[100];
-    sprintf( title, "565 NBody sim [%0.2f fps]", fps );
+    sprintf( title, "Flocking [%0.2f fps]", fps );
     glutSetWindowTitle(title);
 
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
@@ -348,17 +345,7 @@ void initPBO(GLuint* pbo)
         cudaGLRegisterBufferObject( *pbo );
     }
 }
-//
-//void initTextures()
-//{
-//    glGenTextures(1,&displayImage);
-//    glBindTexture(GL_TEXTURE_2D, displayImage);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-//    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, field_width, field_height, 0, GL_RGBA, GL_FLOAT, NULL);
-//}
+
 
 void initDroid()
 {
