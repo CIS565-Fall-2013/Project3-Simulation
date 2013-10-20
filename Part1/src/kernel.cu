@@ -152,15 +152,21 @@ __device__
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	extern __shared__ glm::vec4 sharedPos[];
-	int sharedIdx = threadIdx.x;
-	sharedPos[sharedIdx] = their_pos[sharedIdx]; //read into shared memory
+	int tx = threadIdx.x;
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec3 acc;
+	acc = acc + calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 
-	__syncthreads(); //everything must be in shared before we can proceed
-
-    glm::vec3 acc;
-	acc = acc + calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
-	for(int i = 0; i < N; i++){
-		 acc = acc + calculateAcceleration(my_pos, sharedPos[i]);
+	for(int j = 0; j < N/TILE_SIZE - 1; j++){
+		//read tile into shared memory
+		for(int i = 0; i < TILE_SIZE; i++){
+			sharedPos[i] = their_pos[i + j*TILE_SIZE]; 
+		}
+		__syncthreads(); //everything must be in shared before we can proceed
+		for(int i = 0; i < N; i++){
+			 acc = acc + calculateAcceleration(my_pos, sharedPos[i]);
+		}
+		__syncthreads(); 
 	}
     return acc;
 }
