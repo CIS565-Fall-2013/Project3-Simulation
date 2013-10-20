@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 64
+#define N_FOR_VIS 1024
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -150,7 +150,8 @@ void keyboard(unsigned char key, int x, int y)
     switch (key) 
     {
         case(27):
-            exit(1);
+			cleanupCuda();
+            exit(0);
             break;
     }
 }
