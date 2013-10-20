@@ -123,6 +123,10 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     glm::vec3 us3(us);
 	glm::vec3 them3(them);
 	float rSquared = glm::distance2(us3, them3);
+
+	if(rSquared < RSQUARED_CUTOFF)
+		return glm::vec3(0, 0, 0);
+
 	float m_them = them.w;
 	glm::vec3 dir = them3 - us3;
 	float mag = (G*(m_them / rSquared));

@@ -19,7 +19,7 @@
 
 //0 is symplectic Euler
 //1 is forward Euler
-#define INTEGRATION_TYPE 1
+#define INTEGRATION_TYPE 0
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);

@@ -25,6 +25,7 @@
 #define EPSILON                     .000000001
 #define ZERO_ABSORPTION_EPSILON     0.00001
 #define PHYS_EPSILON				0.0001
+#define RSQUARED_CUTOFF				100 //force cuts off when radius is closer than the square root of this number
 
 namespace utilityCore {
     extern float clamp(float f, float min, float max);
