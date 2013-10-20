@@ -32,15 +32,33 @@ SHARED MEMORY IMPLEMENTATION
 
 Before I go into the shared memory approach, I would like to quickly state the naive way to do this,
 
-1. Launch a thread on the GPU for each body bi
-2.      In each thread
-
+    Launch a thread on the GPU for each body bi
+        (In each thread)
         totalInteractionForce = 0
-
         for all N bodies
             calculate force fij from body bj on bi
             totalInteractionForce += fij
 
+An important point to note is that at each time step, the calculation of all the forces is done based on the snapshot of the state from previous frame.
+Hence, we can do the calculations in parallel,  where each body's calculation is independent of others.
+
+Though the above approach is massively parallel, the memory access on the GPU is all over the place.
+If we can access memory in a "good" manner, we can hope to get better performance.
+One such technique is to use shared memory.
+
+    Launch a thread on the GPU for each body bi
+    Based on a pre-determined tile size, determine the number of tiles needed to cover the global memory array
+    (in each block)
+      Foreach tile in tiles
+       load a tile from global memory into shared memory
+       __syncthreads
+       Foreach thread in the block
+        Accumulate the forces on body bi from the current tile
+       __syncthreads
+       
+      return accumulatedForce
+        
+The most important part is to remember to sync the threads, once after loading a tile into shared memory and once after the current tile has been utilized by all the threads in the block.
 
 
 PART 2: Your CUDA Simulation
