@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 100
+#define N_FOR_VIS 250
 #define DT 0.5
 #define VISUALIZE 1
 //-------------------------------
@@ -100,6 +100,8 @@ void display()
             GL_RGBA, GL_FLOAT, NULL);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
+	glAccum(GL_RETURN, 0.95f);
+	glClear(GL_ACCUM_BUFFER_BIT);
 #if VISUALIZE == 1
     // VAO, shader program, and texture already bound
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -142,6 +144,7 @@ void display()
 #endif
     glutPostRedisplay();
     glutSwapBuffers();
+	glAccum(GL_ACCUM, 0.5f);
 }
 
 void keyboard(unsigned char key, int x, int y)

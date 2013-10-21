@@ -53,13 +53,13 @@ const unsigned int PASS_THROUGH = 1;
 const int field_width  = 800;
 const int field_height = 800;
 
-float fovy = 60.0f;
+float fovy = 100.0f;
 float zNear = 0.10;
-float zFar = 5.0;
+float zFar = 7.0;
 
 glm::mat4 projection;
 glm::mat4 view;
-glm::vec3 cameraPosition(1.75,1.75,1.35);
+glm::vec3 cameraPosition(2.2,2.5,1.5);
 //-------------------------------
 //----------CUDA STUFF-----------
 //-------------------------------
@@ -75,6 +75,8 @@ int main(int argc, char** argv);
 //-------------------------------
 //---------RUNTIME STUFF---------
 //-------------------------------
+
+bool contourOn = false;
 
 void runCuda();
 

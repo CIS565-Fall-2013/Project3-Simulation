@@ -22,10 +22,9 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
-const __device__ float starMass = 5e10;
+__device__ int timeStep = 0;
 
-const float scene_scale = 2e2; //size of the height map in simulation space
+const float scene_scale = WALL_DEPTH; //size of the height map in simulation space
 
 boid* dev_boids;
 glm::vec3 * dev_acc;
@@ -73,8 +72,9 @@ void generateRandomPosArray(int time, int N, boid * arr, float scale)
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
+        glm::vec3 rand = (scale - BUFFER)*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].pos = rand;
+		arr[index].r = 7.0f;
     }
 }
 
@@ -86,11 +86,14 @@ void generateCircularVelArray(int time, int N, boid * boids)
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 R = boids[index].pos;
-        float r = glm::length(R) + EPSILON;
-        float s = sqrt(G*starMass/r);
-        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
-		boids[index].vel = s*D;
+		thrust::default_random_engine rng(hash((time + index) * N * index));
+		thrust::uniform_real_distribution<float> u01(MIN_VELOCITY, MAX_VELOCITY);
+		thrust::uniform_real_distribution<float> u02(-PI, PI);
+
+		float theta = (float)u02(rng);
+		float phi = (float)u02(rng);
+
+		boids[index].vel = (float)u01(rng)*glm::vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
     }
 }
 
@@ -101,7 +104,7 @@ void generateRandomVelArray(int time, int N, boid * boids, float scale)
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
+        glm::vec3 rand = (scale - BUFFER)*(generateRandomNumberFromThread(time, index) - 0.5f);
         boids[index].vel = rand;
     }
 }
@@ -112,6 +115,7 @@ __device__ glm::vec3 calcAlign(int N, boid my_boid, boid* them_boids){
 
 	int numBlocks = (int)ceil((float)N/blockSize);
 	int index;
+	float d, theta;
 
 	__shared__ boid s[blockSize];
 	for(int i = 0; i < numBlocks; i++){
@@ -120,18 +124,19 @@ __device__ glm::vec3 calcAlign(int N, boid my_boid, boid* them_boids){
 		__syncthreads();
 
 		for(int j = 0; j < blockSize && j + i * blockSize < N; j++){
-			float d = glm::length(my_boid.pos - s[j].pos);
-			if(d < my_boid.r){
+			d = glm::length(my_boid.pos - s[j].pos);
+			theta = glm::dot(glm::normalize(-my_boid.vel), glm::normalize(s[j].pos - my_boid.pos));
+			if(d < my_boid.r && (abs(theta) < abs(cos(BLIND_ANGLE)))){
 				v += s[j].vel;
 				++numNeighbors;
 			}
 		}
 	}
 
-	return glm::normalize(1.0f / numNeighbors * v);
+	return 1.0f * ((1.0f / numNeighbors * v) - my_boid.vel);
 }
 
-__global__ void alignment(int N, boid* boids, glm::vec3* vel){
+__device__ void alignment(int N, boid* boids, glm::vec3* vel){
 	int index = (blockIdx.x * blockDim.x) + threadIdx.x;
 	if(index < N){
 		boid my_boid = boids[index];
@@ -146,6 +151,7 @@ __device__ glm::vec3 calcCohesion(int N, boid my_boid, boid* them_boids){
 	int numBlocks = (int)ceil((float)N/blockSize);
 
 	int index;
+	float d, theta;
 
 	__shared__ boid s[blockSize];
 
@@ -156,8 +162,9 @@ __device__ glm::vec3 calcCohesion(int N, boid my_boid, boid* them_boids){
 		__syncthreads();
 
 		for(int j = 0; j < blockSize && i * blockSize + j < N; j++){
-			float d = glm::length(my_boid.pos - s[j].pos);
-			if(d < my_boid.r && my_boid.groupIdx == s[j].groupIdx){
+			d = glm::length(my_boid.pos - s[j].pos);
+			theta = glm::dot(glm::normalize(-my_boid.vel), glm::normalize(s[j].pos - my_boid.pos));
+			if(d < my_boid.r && (abs(theta) < abs(cos(BLIND_ANGLE)))){
 				center += s[j].pos;
 				++numNeighbors;
 			}
@@ -165,10 +172,10 @@ __device__ glm::vec3 calcCohesion(int N, boid my_boid, boid* them_boids){
 	}
 
 	center = 1.0f / numNeighbors * center;
-	return glm::normalize(center - my_boid.pos);
+	return 1.0f * (center - my_boid.pos);
 }
 
-__global__ void cohesion(int N, boid* boids, glm::vec3* vel){
+__device__ void cohesion(int N, boid* boids, glm::vec3* vel){
 	int index = (blockIdx.x * blockDim.x) + threadIdx.x;
 	if(index < N){
 		boid my_boid = boids[index];
@@ -182,7 +189,7 @@ __device__ glm::vec3 calcSeparation(int N, boid my_boid, boid* them_boids){
 	int numNeighbors = 0;
 	int numBlocks = (int)ceil((float)N/blockSize);
 	int index;
-	float d;
+	float d, theta;
 
 	__shared__ boid s[blockSize];
 
@@ -193,17 +200,18 @@ __device__ glm::vec3 calcSeparation(int N, boid my_boid, boid* them_boids){
 
 		for(int j = 0; j < blockSize && j + i * blockSize < N; j++){
 			d = glm::length(my_boid.pos - s[j].pos);
-			if(d < my_boid.r){
+			theta = glm::dot(glm::normalize(-my_boid.vel), glm::normalize(s[j].pos - my_boid.pos));
+			if(d < my_boid.r && (abs(theta) < abs(cos(BLIND_ANGLE)))){
 				v += s[j].pos - my_boid.pos;
 				++numNeighbors;
 			}
 		}
 	}
 	v = 1.0f / numNeighbors * v;
-	return glm::normalize(-1.0f * v);
+	return -1.02f * v;
 }
 
-__global__ void separation(int N, boid* boids, glm::vec3* vel){
+__device__ void separation(int N, boid* boids, glm::vec3* vel){
 	int index= (blockIdx.x * blockDim.x) + threadIdx.x;
 	if(index < N){
 		boid my_boid = boids[index];
@@ -212,25 +220,87 @@ __global__ void separation(int N, boid* boids, glm::vec3* vel){
 	}
 }
 
+__device__ glm::vec3 wander(int N, float dt, boid my_boid){
+	int index = threadIdx.x + (blockDim.x * blockIdx.x);
+
+	if(index < N){
+		glm::vec3 new_center = my_boid.pos + my_boid.vel * dt;
+		glm::vec3 displacement;
+
+	    thrust::default_random_engine rng(hash(index * (timeStep + 1) * new_center.x));
+		thrust::uniform_real_distribution<float> u01(-PI, PI);
+		thrust::uniform_real_distribution<float> r(MIN_WANDER, MAX_WANDER);
+
+		float d = (float) r(rng);
+
+		// x-y axis circle
+		displacement = glm::vec3(d * cos((float)u01(rng)), d * sin((float)u01(rng)), 0.0f);
+
+		// x-z axis circle
+		displacement += glm::vec3(d * cos((float)u01(rng)), 0.0f, d * sin((float)u01(rng)));
+		//float theta = (float)u01(rng);
+		//float phi = (float)u01(rng);
+
+		//displacement = d * glm::vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+
+		displacement = glm::dot(displacement, my_boid.vel) < .001 ? -1.0f * displacement : displacement;
+
+		return displacement;
+	}
+}
+
+__device__ void avoidWalls(int N, float dt, boid my_boid, glm::vec3* acc){
+	glm::vec3 a = glm::vec3(0.0f);
+	int numBlocks = (int)ceil((float)N/blockSize);
+	int index = threadIdx.x + (blockDim.x * blockIdx.x);
+	float axis, d;
+	glm::vec3 wall_intersect;
+	thrust::default_random_engine rng(hash(N * index * my_boid.vel.y));
+	thrust::uniform_real_distribution<float> u01(MIN_VELOCITY, MAX_VELOCITY);
+
+	for(int i = 0; i < 3; i++){
+		axis = my_boid.pos[i];
+
+		if(abs(axis) > (WALL_DEPTH - BUFFER) && abs(axis) < WALL_DEPTH){
+			glm::vec3 wall_pos = my_boid.pos;
+			wall_pos[i] = axis < -(WALL_DEPTH - BUFFER) ? -WALL_DEPTH : WALL_DEPTH;
+			acc[index] += my_boid.pos - wall_pos - my_boid.vel;
+		}
+
+		if(abs(axis) >= WALL_DEPTH){
+			glm::vec3 wall_pos = my_boid.pos;
+			wall_pos[i] = axis < -WALL_DEPTH ? -WALL_DEPTH : WALL_DEPTH;
+			acc[index] += 2.0f * wall_pos - my_boid.pos;
+		}
+	}
+}
+
 //Simple Euler integration scheme
 __global__
-void updateF(int N, float dt, boid * boids, glm::vec3 * acc)
+void updateF(int N, float dt, boid * boids, glm::vec3* acc)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     boid my_pos;
     glm::vec3 accel;
 
-    if(index < N) my_pos = boids[index];
-
-	accel = glm::vec3(0,.1,.1);
-
-    if(index < N) acc[index] = accel;
+    if(index < N){
+		my_pos = boids[index];
+		acc[index] = wander(N, dt, my_pos);
+		avoidWalls(N, dt, my_pos, acc);
+	}
+	
+	alignment(N, boids, acc);
+	cohesion(N, boids, acc);
+	separation(N, boids, acc);
 }
 
 __device__
 void eulerIntegrate(float dt, boid* boids, glm::vec3* acc){
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    boids[index].vel   += acc[index]   * dt;
+	thrust::default_random_engine rng(hash(index * boids[index].vel.y));
+	thrust::uniform_real_distribution<float> u01(MIN_VELOCITY, MAX_VELOCITY);
+
+    boids[index].vel   = glm::clamp(boids[index].vel + (acc[index]   * dt), -MAX_VELOCITY, MAX_VELOCITY);
     boids[index].pos += boids[index].vel * dt;
 }
 
@@ -257,7 +327,7 @@ void sendToVBO(int N, boid * boids, float * vbo, float* vbo_n, int width, int he
 
     float c_scale_w = -2.0f / s_scale;
     float c_scale_h = -2.0f / s_scale;
-	float c_scale_d = 2.0f / s_scale;
+	float c_scale_d = -2.0f / s_scale;
 
     if(index<N)
     {
@@ -269,9 +339,9 @@ void sendToVBO(int N, boid * boids, float * vbo, float* vbo_n, int width, int he
         vbo[4*index+2] = pos.z*c_scale_d;
         vbo[4*index+3] = 1;
 
-		vbo_n[4*index+0] = vel.x;
-        vbo_n[4*index+1] = vel.y;
-        vbo_n[4*index+2] = vel.z;
+		vbo_n[4*index+0] = vel.x*c_scale_w;
+        vbo_n[4*index+1] = vel.y*c_scale_h;
+        vbo_n[4*index+2] = vel.z*c_scale_d;
         vbo_n[4*index+3] = 1;
     }
 }
@@ -312,6 +382,7 @@ void cudaUpdateVBO(float * vbodptr, float* vbodptrn, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_boids, vbodptr, vbodptrn, width, height, scene_scale);
+	timeStep++;
     cudaThreadSynchronize();
 }
 

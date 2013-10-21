@@ -16,6 +16,13 @@
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 1
 #define EULER 1
+#define MIN_WANDER .1
+#define MAX_WANDER .5
+#define MIN_VELOCITY .1
+#define MAX_VELOCITY 3.0
+#define BLIND_ANGLE 5/180 * PI
+#define WALL_DEPTH 50
+#define BUFFER 10
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);

@@ -4,8 +4,8 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 100
-#define DT 0.2
+#define N_FOR_VIS 2500
+#define DT 0.07
 #define VISUALIZE 1
 //-------------------------------
 //-------------MAIN--------------
@@ -99,7 +99,13 @@ void display()
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, field_width, field_height, 
             GL_RGBA, GL_FLOAT, NULL);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+	if(contourOn){
+		glAccum(GL_RETURN, 0.95f);
+		glClear(GL_ACCUM_BUFFER_BIT);
+	}
+
 #if VISUALIZE == 1
     // VAO, shader program, and texture already bound
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -107,7 +113,7 @@ void display()
 
     //glUseProgram(program[HEIGHT_FIELD]);
 
-    glEnableVertexAttribArray(positionLocation);
+    /*glEnableVertexAttribArray(positionLocation);
     glEnableVertexAttribArray(texcoordsLocation);
     
     glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
@@ -121,7 +127,7 @@ void display()
     glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
     glDisableVertexAttribArray(positionLocation);
-    glDisableVertexAttribArray(texcoordsLocation);
+    glDisableVertexAttribArray(texcoordsLocation);*/
 
     glUseProgram(program[PASS_THROUGH]);
 
@@ -146,6 +152,7 @@ void display()
 #endif
     glutPostRedisplay();
     glutSwapBuffers();
+	if(contourOn) glAccum(GL_ACCUM, 0.8f);
 }
 
 void keyboard(unsigned char key, int x, int y)
@@ -153,6 +160,9 @@ void keyboard(unsigned char key, int x, int y)
     std::cout << key << std::endl;
     switch (key) 
     {
+		case 't':
+			contourOn = !contourOn;
+			break;
         case(27):
             exit(1);
             break;
@@ -292,7 +302,7 @@ void initVAO(void)
 	glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), velocities, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS+1)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
