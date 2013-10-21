@@ -1,31 +1,40 @@
 #version 330
 
 uniform mat4 u_projMatrix;
+uniform mat4 u_viewMatrix;
 uniform vec3 u_lightPos;
 
 in vec4 vs_position;
-in vec4 vs_norm;
-in vec4 vs_vel;
+in vec3 vs_norm;
+in vec3 vs_forward;
 in vec3 vs_color;
 in vec4 vs_shape; //Length, Wingspan, Delta, Deflection Angle
 
 out VertexData{
-	vec4 norm;
-	vec4 vel;
-	vec3 color;
-	vec4 shape;//Length, Wingspan, Delta, Deflection Angle
+	vec3 EyeNormal;
+	vec3 EyeForward;
+	vec3 Color;
+	float Length;
+	float HalfWingSpan;
+	float DeltaSweep;
+	float WingDeflection;
 }vertexData;
 
-//Pass through to geometry shader for now. 
-//Might do some transforms here later, but geom shader makes more sense
+//Transform each vertex to eye space
 void main(void)
 {
-	gl_Position = vs_position;
-	vertexData.norm = vs_norm;
-	if(length(vs_vel) == 0)
-		vertexData.vel = vec4(1,0,0,0);
-	else
-		vertexData.vel = vs_vel;
-	vertexData.color = vs_color;
-	vertexData.shape = vs_shape;
+	gl_Position = u_viewMatrix*vs_position;
+
+	//Warning, Will only work for view matricies with uniform scaling
+	//Use Normal matrix otherwise (inverse(transpose(u_viewMatrix)
+	vertexData.EyeNormal = vec3(u_viewMatrix*vec4(vs_norm,0.0));
+	vertexData.EyeForward = vec3(u_viewMatrix*vec4(vs_forward,0.0));
+
+
+	vertexdata.Color = vs_color;
+	vertexData.Length         = vs_shape.x;
+	vertexData.HalfWingSpan   = vs_shape.y/2;
+	vertexData.DeltaSweep     = vs_shape.z;
+	vertexData.WingDeflection = vs_shape.w;
+
 }
