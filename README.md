@@ -46,11 +46,11 @@ invisible for our purposes) sphere located at the origin, and introduced a simpl
 force into the scene. This video represents the results of dropping the cloth
 onto the sphere.
 
-![High-Res Cloth Video] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/Project3%202013-10-20%2019-50-54-450.avi)
+[![High-Res Cloth Video](https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/video_shot_1.bmp)] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/Project3%202013-10-20%2019-50-54-450.avi)
 
 Here is the same simulation run at a lower cloth resolution.
 
-![Low-Res Cloth Video] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/Project3%202013-10-20%2020-05-10-283.avi)
+[![Low-Res Cloth Video](https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/video_shot_1.bmp)] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/Project3%202013-10-20%2020-05-10-283.avi)
 
 And here are some screenshots of the simulation in higher quality. Note in these, the
 cloth is not as offset as it was in the video simulation, so it wraps around the
