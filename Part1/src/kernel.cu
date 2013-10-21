@@ -264,7 +264,7 @@ __device__ glm::vec3 resolveCollisions(int N, glm::vec4 my_pos, glm::vec4 * thei
 {
 	glm::vec3 my_pos3(my_pos);
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
-	glm::vec3 reflectV;
+	glm::vec3 reflectV = my_vel; //keep the same velocity, if no collision
 	for(int i = 0; i < N; i++){
 		if( i != index ){ //don't collide with yourself!
 			glm::vec3 their_pos3(their_pos[i]);
@@ -300,6 +300,7 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 
     if(index < N){
 		acc[index] = accel;
+		vel[index] = newVel;
 	}
 }
 
