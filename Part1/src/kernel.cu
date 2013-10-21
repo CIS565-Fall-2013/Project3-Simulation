@@ -255,6 +255,29 @@ glm::vec3 unrolledAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
     return acc;
 }
 
+__device__ glm::vec3 calculateReflectionDirection(glm::vec3 normal, glm::vec3 incident) {
+  const float cosI = -glm::dot( normal, incident );
+  return glm::normalize(incident + 2 * cosI * normal);
+}
+
+__device__ glm::vec3 resolveCollisions(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm::vec3 my_vel)
+{
+	glm::vec3 my_pos3(my_pos);
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec3 reflectV;
+	for(int i = 0; i < N; i++){
+		if( i != index ){ //don't collide with yourself!
+			glm::vec3 their_pos3(their_pos[i]);
+			float dist = glm::distance(my_pos3, their_pos3);
+			if( dist < COLLISION_RAD ){ //collision!
+				glm::vec3 normal = glm::normalize(my_pos3 - their_pos3); //normal is pointing away from "them", towards us.
+				reflectV = calculateReflectionDirection(normal, my_vel);
+			}
+		}
+	}
+	return reflectV;
+}
+
 //Simple Euler integration scheme
 __global__
 void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
