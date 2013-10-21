@@ -6,7 +6,7 @@
 
 //#define N_FOR_VIS 64
 
-#define blockSize 256
+#define blockSize 32
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
