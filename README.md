@@ -67,7 +67,7 @@ SCREENSHOTS
 25 planets orbiting around the center
 An interesting aspect of the render is that these planets are billboards and have been shaded to simulate spheres
 
-![colors](Part1/resources/colored_planets.png)
+![alt tag](https://raw.github.com/vimanyu/Project3-Simulation/master/Part1/resources/colored_planets.png)
 
 PART 2: Your CUDA Simulation
 ===
