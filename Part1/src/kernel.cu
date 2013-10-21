@@ -276,7 +276,7 @@ __device__ glm::vec3 resolveCollisions(int N, glm::vec4 my_pos, glm::vec4 * thei
 				their_pos[index].x = newPos.x;
 				their_pos[index].y = newPos.y;
 				their_pos[index].z = newPos.z;
-				reflectV = calculateReflectionDirection(my_vel, normal);
+				reflectV = glm::length(my_vel)*glm::normalize(calculateReflectionDirection(my_vel, normal));
 			}
 		}
 	}
