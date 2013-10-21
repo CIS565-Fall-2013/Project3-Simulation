@@ -17,7 +17,6 @@
 #include "kernel.h"
 #include "utilities.h"
 
-
 #if CUDA_VERSION >= 5000
     #include <helper_cuda.h>
     #include <helper_cuda_gl.h>
@@ -41,7 +40,6 @@ GLuint pbo = (GLuint)NULL;
 GLuint planeVBO = (GLuint)NULL;
 GLuint planeTBO = (GLuint)NULL;
 GLuint planeIBO = (GLuint)NULL;
-
 GLuint planetVBO = (GLuint)NULL;
 GLuint planetIBO = (GLuint)NULL;
 GLuint displayImage;

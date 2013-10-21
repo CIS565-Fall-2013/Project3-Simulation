@@ -7,11 +7,10 @@
 #define N_FOR_VIS 25
 #define DT 0.2
 #define VISUALIZE 1
-#define PART2 1
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
-bool pause = false;
+
 int main(int argc, char** argv)
 {
     // Launch CUDA/GL
@@ -45,7 +44,6 @@ int main(int argc, char** argv)
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
 
-	glClearColor(0.8f, 0.8f, 0.8f, 0.0f);
     glutMainLoop();
 
     return 0;
@@ -54,8 +52,7 @@ int main(int argc, char** argv)
 //-------------------------------
 //---------RUNTIME STUFF---------
 //-------------------------------
-int timebase = 0;
-int frame = 0;
+
 void runCuda()
 {
     // Map OpenGL buffer object for writing from CUDA on a single GPU
@@ -67,7 +64,7 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT,frame);
+    cudaNBodyUpdateWrapper(DT);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
@@ -77,83 +74,74 @@ void runCuda()
     cudaGLUnmapBufferObject(pbo);
 }
 
-
+int timebase = 0;
+int frame = 0;
 
 void display()
 {
+    static float fps = 0;
+    frame++;
+    int time=glutGet(GLUT_ELAPSED_TIME);
 
-		static float fps = 0;
-		frame++;
-		int time=glutGet(GLUT_ELAPSED_TIME);
+    if (time - timebase > 1000) {
+        fps = frame*1000.0f/(time-timebase);
+        timebase = time;
+        frame = 0;
+    }
+    runCuda();
 
-		if (time - timebase > 1000) {
-			fps = frame*1000.0f/(time-timebase);
-			timebase = time;
-			frame = 0;
-		}
-		if(!pause)
-			runCuda();
+    char title[100];
+    sprintf( title, "565 NBody sim [%0.2f fps]", fps );
+    glutSetWindowTitle(title);
 
-		char title[100];
-		sprintf( title, "565 NBody sim [%0.2f fps]", fps );
-		glutSetWindowTitle(title);
+    glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
+    glBindTexture(GL_TEXTURE_2D, displayImage);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, field_width, field_height, 
+            GL_RGBA, GL_FLOAT, NULL);
 
-		glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
-		glBindTexture(GL_TEXTURE_2D, displayImage);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, field_width, field_height, 
-			GL_RGBA, GL_FLOAT, NULL);
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
 #if VISUALIZE == 1
-		// VAO, shader program, and texture already bound
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		//glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
+    // VAO, shader program, and texture already bound
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
-		glUseProgram(program[HEIGHT_FIELD]);
+    glUseProgram(program[HEIGHT_FIELD]);
 
-		glEnableVertexAttribArray(positionLocation);
-		glEnableVertexAttribArray(texcoordsLocation);
-#if PART2 == 0  
-		glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-		glVertexAttribPointer((GLuint)positionLocation, 2, GL_FLOAT, GL_FALSE, 0, 0); 
+    glEnableVertexAttribArray(positionLocation);
+    glEnableVertexAttribArray(texcoordsLocation);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glVertexAttribPointer((GLuint)positionLocation, 2, GL_FLOAT, GL_FALSE, 0, 0); 
 
-		glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
-		glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
+    glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
 
-		glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
-#endif
-		glDisableVertexAttribArray(positionLocation);
-		glDisableVertexAttribArray(texcoordsLocation);
+    glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
-		glUseProgram(program[PASS_THROUGH]);
+    glDisableVertexAttribArray(positionLocation);
+    glDisableVertexAttribArray(texcoordsLocation);
 
-		glEnableVertexAttribArray(positionLocation);
+    glUseProgram(program[PASS_THROUGH]);
 
-		glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
-		glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
+    glEnableVertexAttribArray(positionLocation);
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
+    glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
+    glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
 
-		glPointSize(4.0f); 
-
-#if PART2 == 0
-		glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
-#else
-		glDrawElements(GL_POINTS, N_FOR_VIS, GL_UNSIGNED_INT, 0);
-#endif
-
-		glPointSize(1.0f);
-
-		glDisableVertexAttribArray(positionLocation);
-
-#endif
-		
-			glutPostRedisplay();
-			glutSwapBuffers();
-		
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
    
+    glPointSize(4.0f); 
+    glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
+
+    glPointSize(1.0f);
+
+    glDisableVertexAttribArray(positionLocation);
+
+#endif
+    glutPostRedisplay();
+    glutSwapBuffers();
 }
 
 void keyboard(unsigned char key, int x, int y)
@@ -164,9 +152,6 @@ void keyboard(unsigned char key, int x, int y)
         case(27):
             exit(1);
             break;
-		case('p'):
-			pause = !pause;
-			break;
     }
 }
 
@@ -236,20 +221,10 @@ void initVAO(void)
     int num_faces = fw_1*fh_1;
 
     GLfloat *vertices  = new GLfloat[2*num_verts];
-    GLfloat *texcoords = new GLfloat[2*num_verts];
-
-#if PART2 == 0
+    GLfloat *texcoords = new GLfloat[2*num_verts]; 
     GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS+1)];
-#else
-	GLfloat *bodies    = new GLfloat[4*N_FOR_VIS];
-#endif
     GLuint *indices    = new GLuint[6*num_faces];
-
-#if PART2 == 0
     GLuint *bindices   = new GLuint[N_FOR_VIS+1];
-#else
-	GLuint *bindices   = new GLuint[N_FOR_VIS];
-#endif
 
     glm::vec4 ul(-1.0,-1.0,1.0,1.0);
     glm::vec4 lr(1.0,1.0,0.0,0.0);
@@ -279,7 +254,7 @@ void initVAO(void)
             indices[6*(i+(j*fw_1)) + 5] = field_width*j + i + 1;
         }
     }
-#if PART2 == 0
+
     for(int i = 0; i < N_FOR_VIS+1; i++)
     {
         bodies[4*i+0] = 0.0f;
@@ -288,16 +263,6 @@ void initVAO(void)
         bodies[4*i+3] = 1.0f;
         bindices[i] = i;
     }
-#else
-	for(int i = 0; i < N_FOR_VIS; i++)
-	{
-		bodies[4*i+0] = 0.0f;
-		bodies[4*i+1] = 0.0f;
-		bodies[4*i+2] = 0.0f;
-		bodies[4*i+3] = 1.0f;
-		bindices[i] = i;
-	}
-#endif
 
     glGenBuffers(1, &planeVBO);
     glGenBuffers(1, &planeTBO);
@@ -315,17 +280,11 @@ void initVAO(void)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6*num_faces*sizeof(GLuint), indices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
-#if PART2 == 0
     glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
-#else
-	glBufferData(GL_ARRAY_BUFFER, 4*N_FOR_VIS*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
-#endif
+    
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
-#if PART2 == 0
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS+1)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
-#else
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, N_FOR_VIS*sizeof(GLuint), bindices, GL_STATIC_DRAW);
-#endif
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
@@ -355,17 +314,17 @@ void initShaders(GLuint * program)
         glUniform1i(location, 0);
     }
     
-	program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", attributeLocations, 1);
-	glUseProgram(program[1]);
-
-	if ((location = glGetUniformLocation(program[1], "u_projMatrix")) != -1)
-	{
-		glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
-	}
-	if ((location = glGetUniformLocation(program[1], "u_cameraPos")) != -1)
-	{
-		glUniform3fv(location, 1, &cameraPosition[0]);
-	}
+    program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", attributeLocations, 1);
+    glUseProgram(program[1]);
+    
+    if ((location = glGetUniformLocation(program[1], "u_projMatrix")) != -1)
+    {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
+    }
+    if ((location = glGetUniformLocation(program[1], "u_cameraPos")) != -1)
+    {
+        glUniform3fv(location, 1, &cameraPosition[0]);
+    }
 }
 
 //-------------------------------

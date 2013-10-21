@@ -1,0 +1,59 @@
+//this is for part2
+#version 330
+
+in vec3 col;
+
+
+in vec3 WorldCoord;
+in vec3 ToCam;
+in vec3 Up;
+in vec3 Right;
+in vec2 TexCoord;
+
+out vec4 FragColor;
+
+void main(void)
+{
+	vec2 coord = 2.01 * (TexCoord - vec2(0.5));
+	float dist = length(WorldCoord);
+    if(dist <= 0.01)
+    {
+        FragColor = vec4(1.0);
+        return;
+    }
+	vec3 N = Right*-coord.x + Up*coord.y;// + ToCam*sqrt(1-r*r);
+    vec3 L = normalize(-WorldCoord);
+    float light = 0.5 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
+
+	vec3 Color =  abs(col);
+	Color = clamp(Color,0.0,1.0);//,1.0);
+	FragColor =  vec4(clamp(Color*light,0.0,1.0),1.0);
+}
+
+//this is for part1
+//#version 330
+//
+//in vec3 WorldCoord;
+//in vec3 ToCam;
+//in vec3 Up;
+//in vec3 Right;
+//in vec2 TexCoord;
+//out vec4 FragColor;
+//
+//void main()
+//{
+//	vec2 coord = 2.01 * (TexCoord - vec2(0.5));
+//    float r = length(coord);
+//    if (r >= 1.0) { discard; }
+//	float dist = length(WorldCoord);
+//    if(dist <= 0.01)
+//    {
+//        FragColor = vec4(1.0);
+//        return;
+//    }
+//	vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
+//    vec3 L = normalize(-WorldCoord);
+//    float light = 0.1 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
+//    vec3 color = vec3(0.4, 0.1, 0.6);
+//    FragColor = vec4(color*light,1.0);
+//} 
