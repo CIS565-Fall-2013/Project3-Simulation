@@ -86,7 +86,7 @@
     <CudaCompile>
       <Include>$(CudaToolkitIncludeDir);$(NVCUDASAMPLES_ROOT)\common\inc;../shared/glew/includes;../shared/freeglut/includes</Include>
       <CompileOut>$(ProjectDir)$(Platform)/$(Configuration)/%(Filename)%(Extension).obj</CompileOut>
-      <CodeGeneration>compute_20,sm_20</CodeGeneration>
+      <CodeGeneration>compute_10,sm_10</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

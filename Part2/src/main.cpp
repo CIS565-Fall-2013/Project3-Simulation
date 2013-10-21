@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 6000
+#define N_FOR_VIS 9600
 #define N_FOR_PREDATOR 10
 #define DT 0.3
 #define VISUALIZE 1
@@ -184,10 +184,6 @@ void mouse(int button, int state, int x, int y)
 	if(button ==  GLUT_LEFT_BUTTON)
 	{
 		glutMotionFunc(mouseLeft);
-	}
-	else if(button == GLUT_MIDDLE_BUTTON)
-	{
-		glutMotionFunc(mouseMiddle);
 	}
 	else if(button == GLUT_RIGHT_BUTTON)
 	{

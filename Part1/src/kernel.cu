@@ -147,34 +147,27 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-	//int index = threadIdx.x + (blockIdx.x * blockDim.x);
 	glm::vec3 acc;
 	__shared__ glm::vec4 shPos[blockSize]; 
 
-	for (int i = 0, title = 0; i < N; i += blockDim.x, title++)
+	for (int i = 0, title = 0; i < N; i += blockSize, title++)
     {		
 		int index = title * blockDim.x + threadIdx.x;
-		if(index < N)
+		if(index < N){
 			shPos[threadIdx.x] = their_pos[index];
+		}
 		__syncthreads();
 		
 		for(int j = 0; j < blockDim.x; j++)
 		{
-			acc += calculateAcceleration(my_pos, shPos[j]);		
+			if(title * blockDim.x + j < N)
+				acc += calculateAcceleration(my_pos, shPos[j]);
+			else
+				break;
 		}		
+		__syncthreads();
 	}
 
-	/*if(threadIdx.x < N)
-	{
-		shPos[threadIdx.x] = their_pos[threadIdx.x];		
-	}
-	__syncthreads();
-	
-	for(int i = 0; i < N; i++)
-	{
-		acc += calculateAcceleration(my_pos, shPos[i]);		
-	}
-	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));*/	
 	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
     return acc;
 }
