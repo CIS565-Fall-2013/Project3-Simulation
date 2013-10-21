@@ -67,7 +67,7 @@ In this project, you are given code for:
 
 You will need to implement the following features:
  *  Calculating forces between all interacting bodies
- *  The same, but with shared memory
+ *  The same, but with shared memory (In main.cpp there is a compile flag #define VISUALIZE that can be set to 0 in order to only run the simulation portion of the code and not the costly visualizer)
  *  Vertex shader code to render a height field
  *  Fragment shader code to light that height field
  *  Geometry shader code to create screen facing billboards from rendered points
