@@ -33,7 +33,7 @@ through [index*NUM_NEIGHBORS + 11] (index, of course, being the index of the par
 from [0,N^2). The 12 springs represent the 3 sets of cloth-particle relationships
 illustrated in the picture below.
 
-![Relationship of each cloth particle with its 12 neighbors] ()
+![Relationship of each cloth particle with its 12 neighbors] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/cloth_springs.bmp)
 
 Each spring vector thus contained 3 elements: the index of the opposite particle, the
 spring constant "k" as defined by Hooke's law, which was used to calculate forces
