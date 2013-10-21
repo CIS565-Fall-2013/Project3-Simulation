@@ -269,5 +269,6 @@ void deleteTexture(GLuint* tex)
 
 void shut_down(int return_code)
 {
+	system("pause");
 	exit(return_code);
 }

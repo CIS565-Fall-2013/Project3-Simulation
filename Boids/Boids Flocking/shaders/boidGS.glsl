@@ -68,6 +68,8 @@ void main()
 	fs_TexCoord = vec2(1.0,0.0);
 	EmitVertex();
 
+
+
 	//=====Compute front point======
 	Pos = Position + vertexData[0].Length*Forward;
 	gl_Position = u_projMatrix*vec4(Pos,1.0);
@@ -76,6 +78,8 @@ void main()
 	fs_TexCoord = vec2(0.5,1.0);
     EmitVertex();
 
+
+
 	//====Compute back center point====
 	Pos = Position;
 	gl_Position = u_projMatrix*vec4(Pos,1.0);
@@ -83,6 +87,8 @@ void main()
 	fs_EyeLightVector =  EyeLightPos - Pos;
 	fs_TexCoord = vec2(0.5,0.0);
 	EmitVertex();
+
+
 
 
 	//====Compute left wingtip====
