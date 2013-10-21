@@ -152,7 +152,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 
 	for (int i = 0, title = 0; i < N; i += blockSize, title++)
     {		
-		int index = title * blockDim.x + threadIdx.x;
+		int index = title * blockSize + threadIdx.x;
 		if(index < N){
 			shPos[threadIdx.x] = their_pos[index];
 		}
