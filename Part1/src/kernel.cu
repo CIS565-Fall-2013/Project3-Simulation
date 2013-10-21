@@ -272,6 +272,10 @@ __device__ glm::vec3 resolveCollisions(int N, glm::vec4 my_pos, glm::vec4 * thei
 			float dist = glm::distance(my_pos3, their_pos3);
 			if( dist < COLLISION_RAD ){ //collision!
 				glm::vec3 normal = glm::normalize(my_pos3 - their_pos3); //normal is pointing away from "them", towards us.
+				glm::vec3 newPos = COLLISION_RAD*0.5f*normal + 0.5f*(their_pos3 + my_pos3);
+				their_pos[index].x = newPos.x;
+				their_pos[index].y = newPos.y;
+				their_pos[index].z = newPos.z;
 				reflectV = calculateReflectionDirection(my_vel, normal);
 			}
 		}
