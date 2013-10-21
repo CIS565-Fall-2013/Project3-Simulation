@@ -136,9 +136,6 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-	// current thread index
-	int index = threadIdx.x + (blockIdx.x * blockDim.x);
-
 	// acceleration due to star
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 

@@ -90,16 +90,18 @@ sphere more uniformly when it lands.
 PERFORMANCE EVALUATION
 ===
 
-For this Project, one of these experiments should be a comparison between the 
+For my performance analysis, I conducted a comparison between the 
 global and shared memory versions of the acceleration calculation function at
 varying block sizes.
 
-A good metric to track would be number of frames per second, 
-or number of objects displayable at 60fps.
+Some information: I am running my program on an NVidia GEForce 730m Graphics Card with
+4000 MB of RAM.
 
-We encourage you to get creative with your tweaks. Consider places in your code
-that could be considered bottlenecks and try to improve them. 
+These results indicate that there is actually not much performance increase in the
+shared memory implementation. The difference in Frame Rate shown below between the two
+versions is almost nonexistent.
 
-Each student should provide no more than a one page summary of their
-optimizations along with tables and or graphs to visually explain any
-performance differences.
+![Frame Rates 1] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/peformance_chart.bmp)
+![Frame Rates 2] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/performance_graph.bmp)
+
+

@@ -12,9 +12,9 @@
     #include <cutil_math.h>
 #endif
 
-#define blockSize 526
+#define blockSize 32
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
-#define SHARED 1
+#define SHARED 0
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);
