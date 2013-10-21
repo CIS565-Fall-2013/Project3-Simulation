@@ -162,7 +162,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	int numberOfTiles =  fractionTiles -(int)fractionTiles>0?(int)fractionTiles+1:(int)fractionTiles;
 	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 	
-	__shared__ glm::vec4 sharedPos[blockSize];
+	extern __shared__ glm::vec4 sharedPos[];
 	for(int tile=0; tile<numberOfTiles; ++tile)
 	{
 		int index = tile*tileSize+threadIdx.x;
