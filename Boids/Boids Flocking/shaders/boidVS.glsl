@@ -17,6 +17,7 @@ out VertexData{
 	float Length;
 	float HalfWingSpan;
 	float DeltaSweep;
+	float HalfBodyHeight;
 	float WingDeflection;
 }vertexData;
 
@@ -35,6 +36,7 @@ void main(void)
 	vertexData.Length         = 0.03;//vs_shape.x;
 	vertexData.HalfWingSpan   = 0.05;//vs_shape.y/2;
 	vertexData.DeltaSweep     = 0.025;//vs_shape.z;
-	vertexData.WingDeflection = radians(-15.0);//vs_shape.w;
+	vertexData.HalfBodyHeight = vertexData.HalfWingSpan*0.25;	  
+	vertexData.WingDeflection = radians(0.0);//vs_shape.w;
 
 }
