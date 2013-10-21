@@ -84,14 +84,14 @@ VIDEOS OF IMPLEMENTATION
 
 Here is the video of the working star system.
 
-[![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/videoScreenShot1.PNG)](http://www.youtube.com/watch?v=GcbRUaLgz5A)
+[![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/VideoScreenShot1.PNG)](http://www.youtube.com/watch?v=CIzqrhkuMrI)
 
 
 This is the video of the flocking process of small pyramids.
 
-[![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/videoScreenShot2.PNG)](http://www.youtube.com/watch?v=GcbRUaLgz5A)
+[![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/VideoScreenShot2.PNG)](http://www.youtube.com/watch?v=b5fV_K9yWqA)
 
-The youtube links are here if you cannot open the video in the markdown file: http://www.youtube.com/watch?v=GcbRUaLgz5A and http://www.youtube.com/watch?v=GcbRUaLgz5A.
+The youtube links are here if you cannot open the video in the markdown file: http://www.youtube.com/watch?v=CIzqrhkuMrI and http://www.youtube.com/watch?v=b5fV_K9yWqA.
 
 
 -------------------------------------------------------------------------------
