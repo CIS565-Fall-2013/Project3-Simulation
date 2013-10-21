@@ -264,14 +264,15 @@ __device__ glm::vec3 resolveCollisions(int N, glm::vec4 my_pos, glm::vec4 * thei
 {
 	glm::vec3 my_pos3(my_pos);
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
-	glm::vec3 reflectV = glm::vec3(0);//my_vel; //keep the same velocity, if no collision
+	//glm::vec3 reflectV = glm::vec3(0);//my_vel; //keep the same velocity, if no collision
+	glm::vec3 reflectV = my_vel;
 	for(int i = 0; i < N; i++){
 		if( i != index ){ //don't collide with yourself!
 			glm::vec3 their_pos3(their_pos[i]);
 			float dist = glm::distance(my_pos3, their_pos3);
 			if( dist < COLLISION_RAD ){ //collision!
 				glm::vec3 normal = glm::normalize(my_pos3 - their_pos3); //normal is pointing away from "them", towards us.
-				reflectV = normal;
+				reflectV = calculateReflectionDirection(my_vel, normal);
 			}
 		}
 	}
@@ -299,8 +300,9 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 	newVel = resolveCollisions(N, my_pos, pos, my_vel);
 
     if(index < N){
-		acc[index] = accel + newVel;
-		//vel[index] = newVel;
+		//acc[index] = accel + newVel;
+		acc[index] = accel;
+		vel[index] = newVel;
 	}
 }
 
