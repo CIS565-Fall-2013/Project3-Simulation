@@ -325,9 +325,12 @@ void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 				pos[index].y += vel[index].y * dt;
 				pos[index].z += vel[index].z * dt;
 				vel[index]   += acc[index]   * dt;
-		} else if ( INTEGRATION_TYPE == 2){ //RK4
-
-		}
+		} 
+		//else if ( INTEGRATION_TYPE == 2){ //RK4
+		//	glm::vec3 k1 = vel[index];
+		//	glm::vec3 l1 = acc[index];
+		//	glm::vec3 k2 = vel[index] + 0.5f * dt * l1;
+		//}
 	}
 }
 
