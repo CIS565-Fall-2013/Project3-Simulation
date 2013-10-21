@@ -146,7 +146,8 @@ vec3 naiveAcc(int N, vec4 my_pos, vec4 * their_pos)
 __device__ 
 vec3 sharedMemAcc(int N, vec4 my_pos, vec4 * their_pos)
 {
-	__shared__ vec4 sharedPositions[blockSize];
+	// the exact size of the shared memory is determined during the kernel launch. See the third parameter!
+	extern __shared__ vec4 sharedPositions[];
 
 	vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
 	for (int i = 0, int tileNum = 0 ; i < N ; i = i + (int)blockSize, ++tileNum)
@@ -333,7 +334,7 @@ void initCuda(int N)
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    updateVelocity<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    updateVelocity<<<fullBlocksPerGrid, blockSize, blockSize * sizeof(vec4)>>>(numObjects, dt, dev_pos, dev_vel);
 	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
@@ -350,7 +351,7 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    sendToPBO<<<fullBlocksPerGrid, blockSize, blockSize * sizeof(vec4)>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
 }
