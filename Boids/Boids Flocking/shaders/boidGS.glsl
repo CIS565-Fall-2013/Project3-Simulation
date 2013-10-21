@@ -51,7 +51,7 @@ void main()
 	vec3 Forward = normalize(vertexData[0].EyeForward.xyz);
 	vec3 Right   = normalize(cross(Forward, Up));
 
-	mat4 Rotate = rotationMatrix(Forward, -vertexData[0].WingDeflection);
+	mat4 Rotate = rotationMatrix(Forward, vertexData[0].WingDeflection);
 	mat4 Rotate_T = transpose(Rotate);
 
 	//Passthrough color

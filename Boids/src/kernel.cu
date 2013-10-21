@@ -257,7 +257,7 @@ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, 
 		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 0.075f;//Length
 		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 0.1f;//Wingspan
 		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.025f;//Delta
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 0.0f;//Wing Deflection
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = -45.0f;//Wing Deflection
     }
 }
 
