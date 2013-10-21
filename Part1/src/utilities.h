@@ -25,6 +25,12 @@
 #define EPSILON                     .000000001
 #define ZERO_ABSORPTION_EPSILON     0.00001
 
+#define BASICSIM 0
+#define CLOTHSIM 1
+#define FLOCKSIM 2
+#define SIMMODE FLOCKSIM
+
+
 namespace utilityCore {
     extern float clamp(float f, float min, float max);
     extern bool replaceString(std::string& str, const std::string& from, const std::string& to);

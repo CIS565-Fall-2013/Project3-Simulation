@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 
+
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
@@ -11,6 +12,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <time.h>
 #include "glslUtility.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -48,16 +50,26 @@ GLuint program[2];
 const unsigned int HEIGHT_FIELD = 0;
 const unsigned int PASS_THROUGH = 1;
 
-const int field_width  = 800;
-const int field_height = 800;
+const int field_width  = 200;
+const int field_height = 200;
+
+const int cloth_width=200;
+const int cloth_height=200;
+
 
 float fovy = 60.0f;
 float zNear = 0.10;
-float zFar = 5.0;
+float zFar = 25.0;
 
+glm::mat4 c_perspective;
 glm::mat4 projection;
 glm::mat4 view;
+glm::vec3 cameraDir;
+glm::vec3 realup;
+
+
 glm::vec3 cameraPosition(1.75,1.75,1.35);
+glm::vec3 targetPosition(0,0,0);
 //-------------------------------
 //----------CUDA STUFF-----------
 //-------------------------------
@@ -87,6 +99,8 @@ void init(int argc, char* argv[]);
 
 
 void initPBO(GLuint* pbo);
+void initCudaCloth();
+void initCudaFlock();
 void initCuda();
 void initTextures();
 void initVAO();
@@ -101,4 +115,10 @@ void deletePBO(GLuint* pbo);
 void deleteTexture(GLuint* tex);
 void shut_down(int return_code);
 
+//------------------------------
+//-----------MOUSE OPERATION----
+//-----------------------------
+
+void mouseAction(int button, int dir, int x, int y);
+void getmousePos(int x, int y);
 #endif
