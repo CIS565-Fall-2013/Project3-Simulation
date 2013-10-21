@@ -15,6 +15,31 @@ simulation of choice.
 ---
 PART 1: CUDA NBody Simulation
 ===
+For this part of the simulation, I implemented the height field and planet shaders
+to convert the simple point and plane rendering to a physical system that
+included a simple light model for the planets and a demonstration of the gravitational
+field within the texture mapped plane. Here is a shot of the program running.
+
+![NBody Simulation] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/NBody.bmp)
+
+In order to correctly update the motion of the planets, I implemented an
+acceleration computation. This function took in a planet's own position
+and another planet's position and calculated the gravitational force in the
+direction of the other planet, using the universal planetMass to then
+derive the acceleration along that vector. You can see from the above image
+that this calculation was correct for each planet, as demonstrated by the consistent
+motion and gravitational fields in the plane.
+
+Furthermore, this iterative acceleration integration was done both naively,
+wherein each thread loaded and computed the force from each other planet, and
+more efficiently using shared memory. In the shared memory approach, the
+planets were split up into blocks, and in each block a single thread
+would load its own data into shared memory on the device. From there, all
+threads in the block would calculate the force accumulated from each planet
+in this tile, and continue on to the next until accumulating force from
+all planets. Then the velocities and positions for the timestep would
+be updated.
+
 
 PART 2: Your CUDA Simulation
 ===
@@ -50,7 +75,7 @@ onto the sphere.
 
 Here is the same simulation run at a lower cloth resolution.
 
-[![Low-Res Cloth Video](https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/video_shot_1.bmp)] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/Project3%202013-10-20%2020-05-10-283.avi)
+[![Low-Res Cloth Video](https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/video_shot_2.bmp)] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/Project3%202013-10-20%2020-05-10-283.avi)
 
 And here are some screenshots of the simulation in higher quality. Note in these, the
 cloth is not as offset as it was in the video simulation, so it wraps around the

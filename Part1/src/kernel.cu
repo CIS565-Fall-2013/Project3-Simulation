@@ -143,14 +143,8 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 
 	// acceleration due to other planets
-	for (int i = 0; i < N; i++) {
-
-		// ignore the planets influence on itself
-		if (i == index) continue;
-
-		// other planet i
+	for (int i = 0; i < N; i++)
 		acc += calculateAcceleration(my_pos, their_pos[i]);
-	}
 
 	// return the total acceleration
 	return acc;
@@ -162,28 +156,24 @@ __device__
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	
-	const int TILE_WIDTH = blockSize;
 	__shared__ glm::vec4 them_shared[blockSize];
 
-	int bx = blockIdx.x;
 	int tx = threadIdx.x;
 	
 	// acceleration due to star
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 	
 	// acceleration due to other planets
-	for (int m = 0; m < ceil((double)N/TILE_WIDTH); ++m) {
+	for (int m = 0; m < ceil((double)N/blockSize); ++m) {
 
 		// copy block of planets into shared memory
-		if (m*TILE_WIDTH + tx < N)
-			them_shared[tx] = their_pos[m*TILE_WIDTH + tx];
+		if (m*blockSize + tx < N)
+			them_shared[tx] = their_pos[m*blockSize + tx];
 		__syncthreads();
 
 		// compute acceleration contributions from block
-		for (int k = 0; k < TILE_WIDTH; ++k) {
-			if (m*TILE_WIDTH + k > N) break;
-			acc += calculateAcceleration(my_pos, them_shared[k]);
-		}
+		for (int k = 0; k < blockSize; ++k)
+			if (m*blockSize + k < N) { acc += calculateAcceleration(my_pos, them_shared[k]); }
 		__syncthreads();
 	}
 	
