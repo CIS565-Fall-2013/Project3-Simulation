@@ -250,11 +250,11 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 		//Color
 		vbo[boidVBO_ColorOffset + boidVBOStride*index + 0] = 1.0f;
 		vbo[boidVBO_ColorOffset + boidVBOStride*index + 1] = 1.0f;
-		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 1.0f;
+		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 0.0f;
 
 		//Shape
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 10.0f;//Length
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 10.0f;//Wingspan
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 1.0f;//Length
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 1.0f;//Wingspan
 		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.0f;//Delta
 		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 0.0f;//Wing Deflection
     }
