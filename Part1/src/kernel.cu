@@ -11,12 +11,18 @@
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
 
+#if EULER == 1
+	#define INTEGRATE(x,y,z,w) eulerIntegrate(x,y,z,w)
+#else 
+	#define INTEGRATE(x,y,z,w) RK4Integrate(x,y,z,w)
+#endif
+
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
 const float planetMass = 3e8;
-const __device__ float starMass = 5e10;
+const __device__ float starMass = 2e12;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 
@@ -70,7 +76,7 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0f;//rand.z;
+        arr[index].z = 0.0f; //rand.z;
         arr[index].w = mass;
     }
 }
@@ -103,7 +109,7 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0;//rand.z;
+        arr[index].z = 0.0;
     }
 }
 
@@ -122,7 +128,7 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 	glm::vec3 us_pos = glm::vec3(us.x, us.y, us.z);
 	float r = glm::length(them_pos - us_pos);
 	if(r < .001) return glm::vec3(0.0f);
-	float F = (us.w > them.w ? -1.0f : 1.0f) * G * them.w / (r * r);
+	float F =  G * them.w / (r * r);
 	glm::vec3 r_hat = glm::normalize(them_pos - us_pos);
 	return F * r_hat;
 }
@@ -145,12 +151,13 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 
-	int index = threadIdx.x + (blockDim.x * blockIdx.x);
 	int numBlocks = (int)ceil((float)N/blockSize);
+	int index;
 	
 	__shared__ glm::vec4 pos[blockSize];
 
 	for(int i = 0; i < numBlocks; i++){
+		index = i * blockSize + threadIdx.x;
 		if(index < N){
 			pos[threadIdx.x] = their_pos[index];
 		}
@@ -179,16 +186,26 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
     if(index < N) acc[index] = accel;
 }
 
+__device__
+void eulerIntegrate(float dt, glm::vec4* pos, glm::vec3* vel, glm::vec3* acc){
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	vel[index]   += acc[index]   * dt;
+    pos[index].x += vel[index].x * dt;
+    pos[index].y += vel[index].y * dt;
+    pos[index].z += vel[index].z * dt;
+}
+
+__device__
+void RK4Integrate(float dt, glm::vec4* pos, glm::vec3* vel, glm::vec3* acc){
+}
+
 __global__
 void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-        vel[index]   += acc[index]   * dt;
-        pos[index].x += vel[index].x * dt;
-        pos[index].y += vel[index].y * dt;
-        pos[index].z += vel[index].z * dt;
+		INTEGRATE(dt, pos, vel, acc);
     }
 }
 
@@ -201,12 +218,13 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 
     float c_scale_w = -2.0f / s_scale;
     float c_scale_h = -2.0f / s_scale;
+	//float c_scale_d = -2.0f / s_scale;
 
     if(index<N)
     {
         vbo[4*index+0] = pos[index].x*c_scale_w;
         vbo[4*index+1] = pos[index].y*c_scale_h;
-        vbo[4*index+2] = 0;
+        vbo[4*index+2] = 0.0f; //pos[index].z*c_scale_d;
         vbo[4*index+3] = 1;
     }
 }
