@@ -16,7 +16,7 @@
 //int blockSize = 128;
 #define TILE_SIZE 8
 //#define NUM_TILES 1 //N_FOR_VIS/TILE_SIZE
-#define N_FOR_VIS 64
+#define N_FOR_VIS 32
 #define COLLISION_RAD 5
 #define NUM_TILES N_FOR_VIS/TILE_SIZE
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)

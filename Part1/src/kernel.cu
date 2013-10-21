@@ -18,9 +18,9 @@
 //dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e10;
+const float planetMass = 3e8;
 //const __device__ float starMass = 5e10;
-const __device__ float starMass = 0;
+const __device__ float starMass = 5e10;
 float totalTime = 0;
 int timeCount = 0;
 
@@ -126,7 +126,7 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //      m_us*r^2        r^2
     glm::vec3 us3(us);
 	glm::vec3 them3(them);
-	float rSquared = glm::distance2(us3, them3) + 1;
+	float rSquared = glm::distance2(us3, them3) /* + 1*/;
 
 	/*if(rSquared < RSQUARED_CUTOFF)
 		return glm::vec3(0, 0, 0);*/
