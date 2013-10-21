@@ -134,8 +134,12 @@ __device__
 glm::vec3 naiveFlockVelocity(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm::vec3 my_vel,glm::vec3 * their_vel)
 {
 	glm::vec4 flock(0.0f,0.0f,0.0f,0.0f) ;
-	glm::vec3 m_pos(my_pos.x,my_pos.y,my_pos.z);
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	if(index < N)
+	{
+	
+	glm::vec3 m_pos(my_pos.x,my_pos.y,my_pos.z);
+	
 	float dist = 0.0f;
 	int c=1;
 	
@@ -148,6 +152,7 @@ glm::vec3 naiveFlockVelocity(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm
     coh.x = my_pos.x;
 	coh.y = my_pos.y;
 	coh.z = my_pos.z;
+
 	for(int i=0; i<N ; i++)
 	{
 		glm::vec3 t_pos(their_pos[i].x,their_pos[i].y,their_pos[i].z);
@@ -179,8 +184,9 @@ glm::vec3 naiveFlockVelocity(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm
 	ali  = KAllign   * glm::normalize((ali)/c);
 	ariv = KArrival  * (glm::vec4(0,0,0,0) - glm::vec4(my_pos.x,my_pos.y,my_pos.z,0));
 	vsp  = 0.0005f * ariv  + 1.0f * KSeperate * vsp ; 
+	// Different ratios contribute to the final flocking velocity 
 	flock = 0.2f * vsp  + 0.4f * coh + 0.6f * ali ;
-	//flock = KAllign*ali/c;
+	}
     return glm::vec3(flock.x,flock.y,flock.z);
 }
 
@@ -256,7 +262,7 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     {
         glm::vec3 color(0.05, 0.15, 0.3);
         glm::vec3 acc =glm::vec3(1,1,1);// ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
-        float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
+        float mag = 0.02f;//sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)
         pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
     }

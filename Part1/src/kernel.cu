@@ -120,6 +120,8 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //      m_us*r^2        r^2
 	
 	float r = sqrt((them.x-us.x)*(them.x-us.x) + (them.y-us.y)*(them.y -us.y )+ (them.z-us.z)*(them.z-us.z));
+	if(r < 0.01f)
+		 return glm::vec3(0,0,0);
 	glm::vec4 a = ((G * them.w * (them-us))/(pow(r,3)));//planetMass
     return glm::vec3(a.x,a.y,a.z);
 }
@@ -155,15 +157,19 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 			{
      
 				sh_their_pos[threadIdx.x] = their_pos[index];
-				__syncthreads();
-
-				for(int i=j; i<j*tileSize ; i++)
-				{
-					if(i != index && (i < index) )
-						acc += calculateAcceleration(my_pos, sh_their_pos[i]);
-				}
-				//__syncthreads();
+				
 			}
+			__syncthreads();
+				for(int i=0; i<tileSize ; i++)
+				{
+					
+						if(j == (int)floor((float)N/ (float)tileSize) && i < N%blockDim.x)
+							acc += calculateAcceleration(my_pos, sh_their_pos[i]);
+						else if(j != (int)floor((float)N/ (float)tileSize))
+							acc += calculateAcceleration(my_pos, sh_their_pos[i]);
+					
+				}
+				__syncthreads();
 	 }
 	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
     return acc;
