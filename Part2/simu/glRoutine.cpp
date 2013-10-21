@@ -43,8 +43,12 @@ int nCol = 10;
 int vertexNum = 0;
 unsigned int* pVertexIdxData = 0;
 int vertexIdxNum = 0;
+float2 restLength;
+float meshDim = 1.0f;
 
-glm::vec3 camera( 3.0f, 3.0f, 3.0f );
+float dt = 0.01f;
+
+glm::vec3 camera( 2.0f, 2.0f, 2.0f );
 glm::vec3 center( 0.0f, 0.0f, 0.0f );
 glm::vec3 up( 0.0f, 1.0f, 0.0f );
 glm::mat4 projection;
@@ -69,9 +73,12 @@ GLuint ibo = 0;  //handle to index buffer
 GLuint vao = 0;  //handle to vertex array object
 GLuint texID = 0;
 
+
+
 void glut_display()
 {
-    clothSimKernelWrapper( vboResource, nCol+1, nRow+1 );
+    updateVelWrapper( vboResource, restLength, nCol+1, nRow+1 );
+    updatePosWrapper( vboResource, dt, nCol+1, nRow+1 );
 
     glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     glClearColor( 0, 0, 0, 0 );
@@ -118,7 +125,7 @@ void glut_reshape( int w, int h )
 
     //re-calculate the dimensions of grids
     glViewport( 0, 0, w, h );
-    projection = glm::perspective( 60.0f, (float)win_width/(float)win_height, 0.5f, 10.0f ); 
+    projection = glm::perspective( 60.0f, (float)win_width/(float)win_height, 0.1f, 10.0f ); 
 
     glUniformMatrix4fv( projectionMatLoc, 1, GL_FALSE, &projection[0][0] );
 }
@@ -168,6 +175,8 @@ int initPBO()
 int initVertexData()
 {
     createGridMesh( nCol, nRow );
+    restLength.x = meshDim / nCol;
+    restLength.y = meshDim / nRow;
 
     if( vbo )
     {
@@ -205,8 +214,8 @@ int initVertexData()
 int createGridMesh( unsigned int nCol, unsigned int nRow )
 {
     size_t elmSize= 4;
-    float xoffset = 1.0f / nCol;
-    float yoffset = 1.0f / nRow;
+    float xoffset = meshDim / nCol;
+    float yoffset = meshDim / nRow;
 
     vertexNum = (nCol+1)*(nRow+1);
     vertexIdxNum = 6 * nCol * nRow;
@@ -214,16 +223,16 @@ int createGridMesh( unsigned int nCol, unsigned int nRow )
     pVertexData = new float[vertexNum*elmSize*sizeof(float)];
     pVertexIdxData = new unsigned int[ vertexIdxNum ];
 
-    for( int h = 0; h <= nRow; ++h )
+    for( int h = 0; h <= nRow ; ++h )
         for( int w = 0; w <= nCol; ++w )
         {
             pVertexData[ ( h*(nCol+1) + w )*elmSize     ] = xoffset*w;
-            pVertexData[ ( h*(nCol+1) + w )*elmSize + 1 ] = yoffset*h;
-            pVertexData[ ( h*(nCol+1) + w )*elmSize + 2 ] = 0;
+            pVertexData[ ( h*(nCol+1) + w )*elmSize + 1 ] = 0.0f;
+            pVertexData[ ( h*(nCol+1) + w )*elmSize + 2 ] = yoffset*(nRow-h);
             pVertexData[ ( h*(nCol+1) + w )*elmSize + 3 ] = 1.0f;
         }
 
-    for( int h = 0; h < nRow; ++h )
+    for( int h = 0; h < nRow;  ++h )
     {
         for( int w = 0; w < nCol; ++w )
         {
@@ -411,5 +420,5 @@ void cleanUpGL()
         delete [] pVertexIdxData;
     pVertexIdxData = 0;
 
-    cleanupCuda();
+    cleanupCUDA();
 }

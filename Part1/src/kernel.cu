@@ -23,6 +23,7 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
+glm::vec3 * dev_acc;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -119,7 +120,7 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4* them)
     //a = ------------- = --------
     //      m_us*r^2        r^2
     glm::vec3 d_v = glm::vec3( *them - us );
-    float accel = glm::dot(d_v,d_v) + 0.000001f;
+    float accel = glm::dot(d_v,d_v) + 0.01f;
     accel = accel * accel * accel;
     accel = 1.0f / sqrtf( accel );
 
@@ -175,29 +176,31 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 
 //Simple Euler integration scheme
 __global__
-void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
+void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     glm::vec4 my_pos;
-    glm::vec3 acc;
+    glm::vec3 accel;
 
+    if(index < N) my_pos = pos[index];
+
+    accel = ACC(N, my_pos, pos);
+
+    if(index < N) acc[index] = accel;
+}
+
+__global__
+void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-        my_pos = pos[index];
-    }
-   
-    acc = ACC(N, my_pos, pos);
-
-
-    if( index < N )
-    {
-        vel[index] += acc * dt;
+        vel[index]   += acc[index]   * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;
     }
 }
-
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
 __global__
@@ -255,6 +258,9 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
+    cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
+    checkCUDAErrorWithLine("Kernel failed!");
+
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
@@ -267,18 +273,26 @@ void cudaNBodyUpdateWrapper(float dt)
     GpuTimer timer;
     int sharedNum = numObjects > blockSize ? blockSize: numObjects;
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+    //timer.Start();
+    //update<<<fullBlocksPerGrid, blockSize, sizeof( glm::vec4 ) * sharedNum >>>(numObjects, dt, dev_pos, dev_vel);
+    //timer.Stop();
+    //printf( "UPDATE time: %f\n", timer.Elapsed() );
+
     timer.Start();
-    update<<<fullBlocksPerGrid, blockSize, sizeof( glm::vec4 ) * sharedNum >>>(numObjects, dt, dev_pos, dev_vel);
+    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    checkCUDAErrorWithLine("Kernel failed!");
+    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    checkCUDAErrorWithLine("Kernel failed!");
+    cudaDeviceSynchronize();
     timer.Stop();
     printf( "UPDATE time: %f\n", timer.Elapsed() );
-
-    checkCUDAErrorWithLine("Kernel failed!");
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     sendToVBO<<<fullBlocksPerGrid, blockSize >>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    cudaDeviceSynchronize();
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
@@ -288,5 +302,6 @@ void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 
     dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
     sendToPBO<<<fullBlocksPerGrid, blockSize,sizeof(glm::vec4)*sharedNum>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    cudaDeviceSynchronize();
     checkCUDAErrorWithLine("Kernel failed!");
 }
