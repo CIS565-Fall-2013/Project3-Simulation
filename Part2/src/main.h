@@ -82,7 +82,8 @@ int main(int argc, char** argv);
 //-------------------------------
 //---------RUNTIME STUFF---------
 //-------------------------------
-bool isPaused = true;
+bool isPaused = false;
+bool recall = false;
 vec3 target = vec3(0,0,0);
 
 void runCuda();

@@ -25,7 +25,7 @@ using glm::length;
 using glm::normalize;
 
 void checkCUDAError(const char *msg, int line);
-void cudaNBodyUpdateWrapper(float dt, vec3 target);
+void cudaNBodyUpdateWrapper(float dt, vec3 target, bool recall);
 void initCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height);

@@ -74,7 +74,7 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT, target);
+    cudaNBodyUpdateWrapper(DT, target, recall);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
@@ -215,6 +215,10 @@ void keyboard(unsigned char key, int x, int y)
 		case 'E':
 			target = vec3(target.x, target.y+targetSpeed, target.z);
 			break;
+		case 'r':
+		case 'R':
+			recall = !recall;
+
     }
 }
 

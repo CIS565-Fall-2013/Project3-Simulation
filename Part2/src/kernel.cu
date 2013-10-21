@@ -20,6 +20,22 @@ const __device__ float starMass = 5e10;
 const __device__ int integrateMode = (int)EULER;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
+// constants for testing with acceleration
+//const __device__ float g_accKa = 0.15f;
+//const __device__ float g_velKv = 0.05f;
+//const __device__ float g_maxSpeed = 1.0f;
+//const __device__ float g_kSepNeighborhood = 10.0f;
+//const __device__ float g_kCohNeighborhood = 30.0f;
+//const __device__ float g_kAlgnNieghborhood = 10.0f;
+//const __device__ float g_kAlignment = 1.0f;
+//const __device__ float g_kSeparation = 0.5f;
+//const __device__ float g_kCohesion = 0.5f;
+//const __device__ float cseparation = 0.5f; // 0.5
+//const __device__ float ccohesion = 1.0f;
+//const __device__ float calignment = 0.7f; 
+
+// works with setting velocity directly
+const __device__ float g_accKa = 0.05f;
 const __device__ float g_velKv = 0.5f;
 const __device__ float g_maxSpeed = 1.0f;
 const __device__ float g_kSepNeighborhood = 60.0f;
@@ -101,6 +117,9 @@ void generateCircularVelArray(int time, int N, vec3 * arr, vec4 * pos)
         arr[index].x = s*D.x;
         arr[index].y = s*D.y;
         arr[index].z = s*D.z;
+
+		// LOOK: Temporarily got rid of initial velocity
+		arr[index] = vec3(0,0,0);
     }
 }
 
@@ -159,6 +178,7 @@ __device__
 vec3 sharedMemAcc(int N, vec4 my_pos, vec4 * their_pos)
 {
 	__shared__ vec4 sharedPositions[blockSize];
+	//extern __shared__ vec4 sharedPositions[];
 
 	vec3 acc = calculateAcceleration(my_pos, vec4(0,0,0,starMass));
 	int i, tileNum;
@@ -249,7 +269,7 @@ vec3 arrival(vec4 my_pos, vec3 target)
 {
 	vec3 arrivalDirection = target - vec3(my_pos);
 	float distToTarget = length(arrivalDirection);
-	float threshold = 10.0f; // TODO: Adjust how close the boids would go near the target before stopping
+	float threshold = 10.0; // TODO: Adjust how close the boids would go near the target before stopping
 
 	if (distToTarget < threshold) 
 		return vec3(0,0,0);
@@ -277,7 +297,13 @@ vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos, vec3 target)
 			separateDirection += (g_kSeparation * toBoidI) / (toBoidILen * toBoidILen);
 		}
 	}
-	vec3 arrivalVelocity = arrival(my_pos, target); // LOOK: Arrival velocity to fixed target
+
+	vec3 arrivalVelocity = arrival(my_pos, target);
+	float arrivalVelocityLen = length(arrivalVelocity);
+	
+	if (arrivalVelocityLen > (float)EPSILON)
+		arrivalVelocity = arrivalVelocity / arrivalVelocityLen * g_maxSpeed;
+
 	return arrivalVelocity + separateDirection;
 }
 
@@ -365,7 +391,7 @@ vec3 flock(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 target)
 
 //Simple Euler integration scheme
 __global__
-void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target)
+void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool recall)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
@@ -373,18 +399,30 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target)
         vec4 my_pos = pos[index];
 		vec3 my_vel = vel[index];
 
-		vec3 flockVel = flock(N, my_pos, pos, vel, target);
-		float flockVelMag = length(flockVel);
-		float myVelMag = length(my_vel);
-		vec3 flockDirection = normalize(flockVel);
+		if (!recall)
+		{
+			// compute flocking behavior
+			vec3 flockVel = flock(N, my_pos, pos, vel, target);
+			float flockVelMag = length(flockVel);
+			float myVelMag = length(my_vel);
+			vec3 flockDirection = normalize(flockVel);
 		
-		//vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
-		//vel[index] = integrateAcceleration(vel[index], acc, dt, N, my_pos, pos); // using accel
+			//vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
+			vec3 acc = (g_velKv * (flockVelMag) / dt) * flockDirection;   // using accel
+			vel[index] = integrateAcceleration(vel[index], g_accKa * acc, dt, N, my_pos, pos); // using accel
 
-		// try taking initial velocity into account
-		float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
+			// try taking initial velocity into account
+			float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
+			vel[index] = finalVelMag * flockDirection;
+		}
+		else
+		{
+			// use velocity directly
+			vel[index] = arrival(my_pos, target);
 
-		vel[index] = finalVelMag * flockDirection;
+			// use arrival acceleration to get boids back
+			//vel[index] = integrateAcceleration(vel[index], g_accKa * (arrival(my_pos, target)-my_vel)/dt, dt, N, my_pos, pos);
+		}
     }
 }
 
@@ -417,7 +455,6 @@ void sendToVBO(int N, vec4 * pos, float * vbo, int width, int height, float s_sc
     {
         vbo[4*index+0] = pos[index].x*c_scale_w;
         vbo[4*index+1] = pos[index].y*c_scale_h;
-        //vbo[4*index+2] = 0;
 		vbo[4*index+2] = pos[index].z*c_scale_d;
         vbo[4*index+3] = 1;
     }
@@ -433,7 +470,6 @@ void sendToPBO(int N, vec4 * pos, float4 * pbo, int width, int height, float s_s
     int y = index / width;
     float w2 = width / 2.0;
     float h2 = height / 2.0;
-
     float c_scale_w = width / s_scale;
     float c_scale_h = height / s_scale;
 
@@ -471,10 +507,10 @@ void initCuda(int N)
 	cudaThreadSynchronize();
 }
 
-void cudaNBodyUpdateWrapper(float dt, vec3 target)
+void cudaNBodyUpdateWrapper(float dt, vec3 target, bool recall)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    updateVelocity<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, target);
+    updateVelocity<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, target, recall);
 	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
