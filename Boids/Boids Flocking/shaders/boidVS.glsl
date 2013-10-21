@@ -8,7 +8,7 @@ in vec4 vs_position;
 in vec3 vs_up;
 in vec3 vs_forward;
 in vec3 vs_color;
-in vec4 vs_shape; //Length, Wingspan, Delta, Deflection Angle
+in vec4 vs_shape; //Length, Wingspan, Delta, Deflection Angle (radians)
 
 out VertexData{
 	vec3 EyeNormal;
