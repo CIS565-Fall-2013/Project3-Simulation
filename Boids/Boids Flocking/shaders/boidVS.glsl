@@ -5,7 +5,7 @@ uniform mat4 u_viewMatrix;
 uniform vec3 u_lightPos;
 
 in vec4 vs_position;
-in vec3 vs_norm;
+in vec3 vs_up;
 in vec3 vs_forward;
 in vec3 vs_color;
 in vec4 vs_shape; //Length, Wingspan, Delta, Deflection Angle
@@ -27,11 +27,11 @@ void main(void)
 
 	//Warning, Will only work for view matricies with uniform scaling
 	//Use Normal matrix otherwise (inverse(transpose(u_viewMatrix)
-	vertexData.EyeNormal = vec3(u_viewMatrix*vec4(vs_norm,0.0));
+	vertexData.EyeNormal = vec3(u_viewMatrix*vec4(vs_up,0.0));
 	vertexData.EyeForward = vec3(u_viewMatrix*vec4(vs_forward,0.0));
 
 
-	vertexdata.Color = vs_color;
+	vertexData.Color = vs_color;
 	vertexData.Length         = vs_shape.x;
 	vertexData.HalfWingSpan   = vs_shape.y/2;
 	vertexData.DeltaSweep     = vs_shape.z;

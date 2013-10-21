@@ -12,12 +12,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\cudaMat4.h" />
+    <ClInclude Include="..\src\glFields.h" />
     <ClInclude Include="..\src\glslUtility.h" />
     <ClInclude Include="..\src\kernel.h" />
     <ClInclude Include="..\src\main.h" />
     <ClInclude Include="..\src\utilities.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\glFields.cpp" />
     <ClCompile Include="..\src\glslUtility.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\utilities.cpp" />

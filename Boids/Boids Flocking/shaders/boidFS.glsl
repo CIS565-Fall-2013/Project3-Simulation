@@ -5,10 +5,10 @@ uniform mat4 u_viewMatrix;
 uniform vec3 u_lightPos;
 
 
-varrying vec3 fs_EyeNormal;
-varrying vec3 fs_Color;
-varrying vec3 fs_EyeLightVector;
-varrying vec2 fs_TexCoord;
+in vec3 fs_EyeNormal;
+in vec3 fs_Color;
+in vec3 fs_EyeLightVector;
+in vec2 fs_TexCoord;
 
 
 out vec4 FragColor;

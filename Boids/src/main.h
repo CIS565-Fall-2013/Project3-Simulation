@@ -16,6 +16,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "kernel.h"
 #include "utilities.h"
+#include "glFields.h"
 
 #if CUDA_VERSION >= 5000
     #include <helper_cuda.h>
@@ -29,35 +30,7 @@
 
 using namespace std;
 
-//-------------------------------
-//------------GL STUFF-----------
-//-------------------------------
 
-GLuint positionLocation = 0;
-GLuint texcoordsLocation = 1;
-const char *attributeLocations[] = { "Position", "Texcoords" };
-GLuint pbo = (GLuint)NULL;
-GLuint planeVBO = (GLuint)NULL;
-GLuint planeTBO = (GLuint)NULL;
-GLuint planeIBO = (GLuint)NULL;
-GLuint planetVBO = (GLuint)NULL;
-GLuint planetIBO = (GLuint)NULL;
-GLuint displayImage;
-GLuint program[2];
-
-const unsigned int HEIGHT_FIELD = 0;
-const unsigned int PASS_THROUGH = 1;
-
-const int field_width  = 200;
-const int field_height = 200;
-
-float fovy = 60.0f;
-float zNear = 0.10;
-float zFar = 5.0;
-
-glm::mat4 projection;
-glm::mat4 view;
-glm::vec3 cameraPosition(1.75,1.75,1.35);
 //-------------------------------
 //----------CUDA STUFF-----------
 //-------------------------------
@@ -86,7 +59,6 @@ void keyboard(unsigned char key, int x, int y);
 void init(int argc, char* argv[]);
 
 
-void initPBO(GLuint* pbo);
 void initCuda();
 void initTextures();
 void initVAO();

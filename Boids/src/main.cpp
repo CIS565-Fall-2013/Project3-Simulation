@@ -7,6 +7,7 @@
 #define N_FOR_VIS 25
 #define DT 0.2
 #define VISUALIZE 1
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -18,8 +19,7 @@ int main(int argc, char** argv)
 	init(argc, argv);
 
 	cudaGLSetGLDevice( compat_getMaxGflopsDeviceId() );
-	initPBO(&pbo);
-	cudaGLRegisterBufferObject( planetVBO );
+	cudaGLRegisterBufferObject( boidVBO );
 
 #if VISUALIZE == 1 
 	initCuda(N_FOR_VIS);
@@ -30,14 +30,12 @@ int main(int argc, char** argv)
 	projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
 	view = glm::lookAt(cameraPosition, glm::vec3(0), glm::vec3(0,0,1));
 
-	projection = projection * view;
 
 	GLuint passthroughProgram;
 	initShaders(program);
 
-	glUseProgram(program[HEIGHT_FIELD]);
+	glUseProgram(program[BOIDS]);
 	glActiveTexture(GL_TEXTURE0);
-
 	glEnable(GL_DEPTH_TEST);
 
 
@@ -60,18 +58,15 @@ void runCuda()
 
 	float4 *dptr=NULL;
 	float *dptrvert=NULL;
-	cudaGLMapBufferObject((void**)&dptr, pbo);
-	cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
+	cudaGLMapBufferObject((void**)&dptrvert, boidVBO);
 
 	// execute the kernel
 	cudaNBodyUpdateWrapper(DT);
 #if VISUALIZE == 1
-	cudaUpdatePBO(dptr, field_width, field_height);
 	cudaUpdateVBO(dptrvert, field_width, field_height);
 #endif
 	// unmap buffer object
-	cudaGLUnmapBufferObject(planetVBO);
-	cudaGLUnmapBufferObject(pbo);
+	cudaGLUnmapBufferObject(boidVBO);
 }
 
 int timebase = 0;
@@ -94,50 +89,38 @@ void display()
 	sprintf( title, "565 NBody sim [%0.2f fps]", fps );
 	glutSetWindowTitle(title);
 
-	glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
-	glBindTexture(GL_TEXTURE_2D, displayImage);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, field_width, field_height, 
-		GL_RGBA, GL_FLOAT, NULL);
-
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
 #if VISUALIZE == 1
 	// VAO, shader program, and texture already bound
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	//glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
-	glUseProgram(program[HEIGHT_FIELD]);
+	//Draw BOIDS
+	glUseProgram(program[BOIDS]);
 
 	glEnableVertexAttribArray(positionLocation);
-	glEnableVertexAttribArray(texcoordsLocation);
+	glEnableVertexAttribArray(upLocation);
+	glEnableVertexAttribArray(forwardLocation);
+	glEnableVertexAttribArray(colorLocation);
+	glEnableVertexAttribArray(shapeLocation);
 
-	glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-	glVertexAttribPointer((GLuint)positionLocation, 2, GL_FLOAT, GL_FALSE, 0, 0); 
+	glBindBuffer(GL_ARRAY_BUFFER, boidVBO);
+	//Setup interleaved buffer
+	glVertexAttribPointer(positionLocation, 4, GL_FLOAT, GL_FALSE, boidVBOStride, (void*)boidVBO_PositionOffset); 
+	glVertexAttribPointer(upLocation,       3, GL_FLOAT, GL_FALSE, boidVBOStride, (void*)boidVBO_UpOffset); 
+	glVertexAttribPointer(forwardLocation,  3, GL_FLOAT, GL_FALSE, boidVBOStride, (void*)boidVBO_ForwardOffset); 
+	glVertexAttribPointer(colorLocation,    3, GL_FLOAT, GL_FALSE, boidVBOStride, (void*)boidVBO_ColorOffset); 
+	glVertexAttribPointer(shapeLocation,    4, GL_FLOAT, GL_FALSE, boidVBOStride, (void*)boidVBO_ShapeOffset); 
 
-	glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
-	glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
-
-	glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
-
-	glDisableVertexAttribArray(positionLocation);
-	glDisableVertexAttribArray(texcoordsLocation);
-
-	glUseProgram(program[PASS_THROUGH]);
-
-	glEnableVertexAttribArray(positionLocation);
-
-	glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
-	glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
-
-	glPointSize(4.0f); 
-	glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
-
-	glPointSize(1.0f);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, boidIBO);
+	
+	glDrawElements(GL_POINTS, N_FOR_VIS, GL_UNSIGNED_INT, 0);
 
 	glDisableVertexAttribArray(positionLocation);
+	glDisableVertexAttribArray(upLocation);
+	glDisableVertexAttribArray(forwardLocation);
+	glDisableVertexAttribArray(colorLocation);
+	glDisableVertexAttribArray(shapeLocation);
 
 #endif
 	glutPostRedisplay();
@@ -168,7 +151,7 @@ void init(int argc, char* argv[])
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowSize(width, height);
-	glutCreateWindow("565 NBody sim");
+	glutCreateWindow("565 Flocking Sim");
 
 	// Init GLEW
 	glewInit();
@@ -181,151 +164,82 @@ void init(int argc, char* argv[])
 	}
 
 	initVAO();
-	initTextures();
 }
 
-void initPBO(GLuint* pbo)
-{
-	if (pbo) 
-	{
-		// set up vertex data parameter
-		int num_texels = field_width*field_height;
-		int num_values = num_texels * 4;
-		int size_tex_data = sizeof(GLfloat) * num_values;
 
-		// Generate a buffer ID called a PBO (Pixel Buffer Object)
-		glGenBuffers(1,pbo);
-		// Make this the current UNPACK buffer (OpenGL is state-based)
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, *pbo);
-		// Allocate data for the buffer. 4-channel 8-bit image
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, size_tex_data, NULL, GL_DYNAMIC_COPY);
-		cudaGLRegisterBufferObject( *pbo );
-	}
-}
-
-void initTextures()
-{
-	glGenTextures(1,&displayImage);
-	glBindTexture(GL_TEXTURE_2D, displayImage);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, field_width, field_height, 0, GL_RGBA, GL_FLOAT, NULL);
-}
-
+//Setup Interleaved VBO for boids
 void initVAO(void)
 {
-	const int fw_1 = field_width-1;
-	const int fh_1 = field_height-1;
 
-	int num_verts = field_width*field_height;
-	int num_faces = fw_1*fh_1;
+	GLfloat *bodies    = new GLfloat[boidVBOStride*(N_FOR_VIS)];
+	GLuint *bindices   = new GLuint[N_FOR_VIS];
 
-	GLfloat *vertices  = new GLfloat[2*num_verts];
-	GLfloat *texcoords = new GLfloat[2*num_verts]; 
-	GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS+1)];
-	GLuint *indices    = new GLuint[6*num_faces];
-	GLuint *bindices   = new GLuint[N_FOR_VIS+1];
-
-	glm::vec4 ul(-1.0,-1.0,1.0,1.0);
-	glm::vec4 lr(1.0,1.0,0.0,0.0);
-
-	for(int i = 0; i < field_width; ++i)
+	//Initialize boids.
+	for(int i = 0; i < N_FOR_VIS; i++)
 	{
-		for(int j = 0; j < field_height; ++j)
-		{
-			float alpha = float(i) / float(fw_1);
-			float beta = float(j) / float(fh_1);
-			vertices[(j*field_width + i)*2  ] = alpha*lr.x + (1-alpha)*ul.x;
-			vertices[(j*field_width + i)*2+1] = beta*lr.y + (1-beta)*ul.y;
-			texcoords[(j*field_width + i)*2  ] = alpha*lr.z + (1-alpha)*ul.z;
-			texcoords[(j*field_width + i)*2+1] = beta*lr.w + (1-beta)*ul.w;
-		}
-	}
+		//Position
+		bodies[boidVBO_PositionOffset + boidVBOStride*i + 0] = 0.0f;
+		bodies[boidVBO_PositionOffset + boidVBOStride*i + 1] = 0.0f;
+		bodies[boidVBO_PositionOffset + boidVBOStride*i + 2] = 0.0f;
+		bodies[boidVBO_PositionOffset + boidVBOStride*i + 3] = 1.0f;
 
-	for(int i = 0; i < fw_1; ++i)
-	{
-		for(int j = 0; j < fh_1; ++j)
-		{
-			indices[6*(i+(j*fw_1))    ] = field_width*j + i;
-			indices[6*(i+(j*fw_1)) + 1] = field_width*j + i + 1;
-			indices[6*(i+(j*fw_1)) + 2] = field_width*(j+1) + i;
-			indices[6*(i+(j*fw_1)) + 3] = field_width*(j+1) + i;
-			indices[6*(i+(j*fw_1)) + 4] = field_width*(j+1) + i + 1;
-			indices[6*(i+(j*fw_1)) + 5] = field_width*j + i + 1;
-		}
-	}
+		//Up
+		bodies[boidVBO_UpOffset + boidVBOStride*i + 0] = 0.0f;
+		bodies[boidVBO_UpOffset + boidVBOStride*i + 1] = 0.0f;
+		bodies[boidVBO_UpOffset + boidVBOStride*i + 2] = 1.0f;
 
-	for(int i = 0; i < N_FOR_VIS+1; i++)
-	{
-		bodies[4*i+0] = 0.0f;
-		bodies[4*i+1] = 0.0f;
-		bodies[4*i+2] = 0.0f;
-		bodies[4*i+3] = 1.0f;
+		//Forward
+		bodies[boidVBO_ForwardOffset + boidVBOStride*i + 0] = 1.0f;
+		bodies[boidVBO_ForwardOffset + boidVBOStride*i + 1] = 0.0f;
+		bodies[boidVBO_ForwardOffset + boidVBOStride*i + 2] = 0.0f;
+
+		//Color
+		bodies[boidVBO_ColorOffset + boidVBOStride*i + 0] = 1.0f;
+		bodies[boidVBO_ColorOffset + boidVBOStride*i + 1] = 1.0f;
+		bodies[boidVBO_ColorOffset + boidVBOStride*i + 2] = 1.0f;
+
+		//Shape
+		bodies[boidVBO_ShapeOffset + boidVBOStride*i + 0] = 1.0f;
+		bodies[boidVBO_ShapeOffset + boidVBOStride*i + 1] = 1.0f;
+		bodies[boidVBO_ShapeOffset + boidVBOStride*i + 2] = 0.0f;
+		bodies[boidVBO_ShapeOffset + boidVBOStride*i + 3] = 0.0f;
 		bindices[i] = i;
 	}
 
-	glGenBuffers(1, &planeVBO);
-	glGenBuffers(1, &planeTBO);
-	glGenBuffers(1, &planeIBO);
-	glGenBuffers(1, &planetVBO);
-	glGenBuffers(1, &planetIBO);
+	glGenBuffers(1, &boidVBO);
+	glGenBuffers(1, &boidIBO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-	glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, boidVBO);
+	glBufferData(GL_ARRAY_BUFFER, boidVBOStride*(N_FOR_VIS)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
-	glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), texcoords, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6*num_faces*sizeof(GLuint), indices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
-	glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS+1)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, boidIBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-	delete[] vertices;
-	delete[] texcoords;
-	delete[] bodies;
-	delete[] indices;
+	delete[] bodies;	
 	delete[] bindices;
 }
 
 void initShaders(GLuint * program)
 {
 	GLint location;
-	program[0] = glslUtility::createProgram("shaders/heightVS.glsl", "shaders/heightFS.glsl", attributeLocations, 2);
-	glUseProgram(program[0]);
+	program[BOIDS] = glslUtility::createProgram("shaders/boidVS.glsl", "shaders/boidGS.glsl", "shaders/boidFS.glsl", attributeLocations, 1);
+	glUseProgram(program[BOIDS]);
 
-	if ((location = glGetUniformLocation(program[0], "u_image")) != -1)
-	{
-		glUniform1i(location, 0);
-	}
-	if ((location = glGetUniformLocation(program[0], "u_projMatrix")) != -1)
+	//Initalize uniforms
+	if ((location = glGetUniformLocation(program[BOIDS], "u_projMatrix")) != -1)
 	{
 		glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
 	}
-	if ((location = glGetUniformLocation(program[0], "u_height")) != -1)
+	if ((location = glGetUniformLocation(program[BOIDS], "u_viewMatrix")) != -1)
 	{
-		glUniform1i(location, 0);
+		glUniformMatrix4fv(location, 1, GL_FALSE, &view[0][0]);
 	}
-
-	program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", attributeLocations, 1);
-	glUseProgram(program[1]);
-
-	if ((location = glGetUniformLocation(program[1], "u_projMatrix")) != -1)
+	if ((location = glGetUniformLocation(program[BOIDS], "u_lightPos")) != -1)
 	{
-		glUniformMatrix4fv(location, 1, GL_FALSE, &projection[0][0]);
-	}
-	if ((location = glGetUniformLocation(program[1], "u_cameraPos")) != -1)
-	{
-		glUniform3fv(location, 1, &cameraPosition[0]);
+		glUniform3fv(location, 1, &lightPosition[BOIDS]);
 	}
 }
 

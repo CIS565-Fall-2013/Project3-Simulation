@@ -230,37 +230,35 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 
     if(index<N)
     {
-        vbo[4*index+0] = pos[index].x*c_scale_w;
-        vbo[4*index+1] = pos[index].y*c_scale_h;
-        vbo[4*index+2] = 0;
-        vbo[4*index+3] = 1;
+        //Position
+		vbo[boidVBO_PositionOffset + boidVBOStride*index + 0] =  pos[index].x*c_scale_w;
+		vbo[boidVBO_PositionOffset + boidVBOStride*index + 1] =  pos[index].y*c_scale_h;
+		vbo[boidVBO_PositionOffset + boidVBOStride*index + 2] = 0.0f;
+		vbo[boidVBO_PositionOffset + boidVBOStride*index + 3] = 1.0f;
+
+		//Up
+		vbo[boidVBO_UpOffset + boidVBOStride*index + 0] = 0.0f;
+		vbo[boidVBO_UpOffset + boidVBOStride*index + 1] = 0.0f;
+		vbo[boidVBO_UpOffset + boidVBOStride*index + 2] = 1.0f;
+
+		//Forward
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 0] = 1.0f;
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 1] = 0.0f;
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 2] = 0.0f;
+
+		//Color
+		vbo[boidVBO_ColorOffset + boidVBOStride*index + 0] = 1.0f;
+		vbo[boidVBO_ColorOffset + boidVBOStride*index + 1] = 1.0f;
+		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 1.0f;
+
+		//Shape
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 1.0f;//Length
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 1.0f;//Wingspan
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.0f;//Delta
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 0.0f;//Wing Deflection
     }
 }
 
-//Update the texture pixel buffer object
-//(This texture is where openGL pulls the data for the height map)
-__global__
-void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, float s_scale)
-{
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    int x = index % width;
-    int y = index / width;
-    float w2 = width / 2.0;
-    float h2 = height / 2.0;
-
-    float c_scale_w = width / s_scale;
-    float c_scale_h = height / s_scale;
-
-    glm::vec3 color(0.05, 0.15, 0.3);
-    glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
-
-    if(x<width && y<height)
-    {
-        float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
-        // Each thread writes one pixel location in the texture (textel)
-        pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
-    }
-}
 
 /*************************************
  * Wrappers for the __global__ calls *
@@ -300,13 +298,6 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
-    cudaThreadSynchronize();
-}
-
-void cudaUpdatePBO(float4 * pbodptr, int width, int height)
-{
-    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
 }
 
