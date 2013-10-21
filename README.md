@@ -8,7 +8,7 @@ Yuqin Shao
 ---
 Features
 ---
-I implemented the flocking in Part 2. Here is a youtube link of vedio demo http://youtu.be/RyLhyb3WIGc.
+Besides PART1, I implemented the flocking in Part 2. Here is a youtube link of vedio demo http://youtu.be/RyLhyb3WIGc.
 
 ---
 Screenshots of part2
