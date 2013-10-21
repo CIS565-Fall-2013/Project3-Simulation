@@ -82,8 +82,8 @@ void generateClothPosArray(int N, glm::vec3 * pos_arr)
 		int y_idx = index / clothWidth;
 
 		// get x- and y-position in real space
-		float x_pos = (x_idx + 0.5) * (SCENE_SCALE / clothWidth) - (SCENE_SCALE/2.0f);
-		float y_pos = (y_idx + 0.5) * (SCENE_SCALE / clothWidth) - (SCENE_SCALE/2.0f);
+		float x_pos = (x_idx + 2) * (SCENE_SCALE / clothWidth) - (SCENE_SCALE/2.0f);
+		float y_pos = (y_idx - 1) * (SCENE_SCALE / clothWidth) - (SCENE_SCALE/2.0f);
 
         pos_arr[index].x = x_pos;
         pos_arr[index].y = y_pos;
@@ -338,6 +338,8 @@ void updateS(int N, float dt, glm::vec3 * pos, glm::vec3 * vel, glm::vec3 * acc)
 		glm::vec3 normal = pos[index] - glm::vec3(0);
 		glm::vec3 surfacePoint = normal/distFromCenter * float(SPHERE_RADIUS);
 		pos[index] = surfacePoint;
+
+		vel[index] -= glm::dot(vel[index], surfacePoint) * surfacePoint * 0.001f;
 	}
 
 	__syncthreads();
@@ -409,7 +411,7 @@ void initCuda(int N)
 
     generateClothPosArray<<<fullBlocksPerGrid, blockSize>>>(numParticles, dev_pos);
     checkCUDAErrorWithLine("Kernel failed!");
-    generateSpringArray<<<fullBlocksPerGrid, blockSize>>>(numParticles, dev_spr, dev_pos, 100.0, 100.0, 100.0);
+    generateSpringArray<<<fullBlocksPerGrid, blockSize>>>(numParticles, dev_spr, dev_pos, 100.0, 100.0, 5.0);
     checkCUDAErrorWithLine("Kernel failed!");
     generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numParticles, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
