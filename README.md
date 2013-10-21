@@ -28,11 +28,11 @@ The flocking agent I implemented as a pyramid, so the user could easily figure o
 
 **Screen Shot:**
 
-![Alt text](ScreenShot/5.jpg "12500 agents 10 predator")
+![Alt text](ScreenShot/5.png "12500 agents 10 predator")
 
-![Alt text](ScreenShot/4.jpg "12500 agents 10 predator")
+![Alt text](ScreenShot/4.png "12500 agents 10 predator")
 
-![Alt text](ScreenShot/2.jpg "5000 agents")
+![Alt text](ScreenShot/2.png "5000 agents")
 
 **Video:**
 
