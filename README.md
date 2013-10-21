@@ -61,6 +61,13 @@ One such technique is to use shared memory.
 The most important part is to remember to sync the threads, once after loading a tile into shared memory and once after the current tile has been utilized by all the threads in the block.
 It is much faster to access data from shared memory than global memory, and since every thread walks down sequentially on a tile, we end up getting better performance.
 
+---
+SCREENSHOTS
+---
+25 planets orbiting around the center
+An interesting aspect of the render is that these planets are billboards and have been shaded to simulate spheres
+
+![colors](Part1/resources/colored_planets.png)
 
 PART 2: Your CUDA Simulation
 ===
