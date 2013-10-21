@@ -101,7 +101,7 @@ These results indicate that there is actually not much performance increase in t
 shared memory implementation. The difference in Frame Rate shown below between the two
 versions is almost nonexistent.
 
-![Frame Rates 1] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/peformance_chart.bmp)
+![Frame Rates 1] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/performance_chart.bmp)
 ![Frame Rates 2] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/performance_graph.bmp)
 
 
