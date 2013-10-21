@@ -2,22 +2,26 @@ CIS565: Project 3: CUDA Simulation and GLSL Visualization
 ===
 Fall 2013
 ---
-Due Sunday, 10/20/2013 by 11:59:59 pm
+Yuqin Shao
 ---
 
 ---
-NOTE:
+Features
 ---
-This project requires an NVIDIA graphics card with CUDA capability! Any card
-after the Geforce 8xxx series will work. If you do not have an NVIDIA graphics
-card in the machine you are working on, feel free to use any machine in the SIG
-Lab or in Moore100 labs. All machines in the SIG Lab and Moore100 are equipped
-with CUDA capable NVIDIA graphics cards. If this too proves to be a problem,
-please contact Patrick or Liam as soon as possible.
+I implemented the flocking in Part 2. Here is a youtube link of vedio demo http://youtu.be/RyLhyb3WIGc.
 
 ---
-INTRODUCTION:
+Screenshots of part2
 ---
+The number of birds in the picture is 500
+
+![Alt test](flocking3_500.JPG "")
+
+![Alt test](flocking3_500_2.JPG "")
+
+![Alt test](flocking3_500_3.JPG "")
+
+
 In this project you will be creating a 3D visualization of an N-Body system 
 simulated using CUDA and OpenGL shaders. You will also be creating your own 
 simulation of choice.
@@ -95,191 +99,7 @@ For the graphics, you'll see something that looks like this:
 ![Alt test](Part1/resources/000.png "")
 =======
 ![boring](Part1/resources/000.png)
->>>>>>> e029971478c4e7af392f073611a7fadfbb686317
 
-Pretty underwhelming if I do say so. Lets add some height and coloring in the height field so we can see what the potential field looks like.
-
-Since the starter code saves a very high resolution force field to texture memory we will use that to perturb the Z components of the height field. In addition we also multiply by the camera matrix to get everything in the right place. Add the following code to your heightVS.glsl file:
-
-```glsl
-uniform mat4 u_projMatrix;
-uniform sampler2D u_height;
-
-attribute vec4 Position;
-attribute vec2 Texcoords;
-
-varying vec2 v_Texcoords;
-varying float f_height;
-
-void main(void)
-{
-    v_Texcoords = Texcoords;
-    vec4 pos = Position;
-    f_height = texture2D(u_height, Texcoords).w;
-    pos.z = -0.01-clamp(f_height,0.0,2.0);
-    pos = u_projMatrix * pos;
-    gl_Position = pos;
-}
-```
-
-You can run the code as is right now, but you'll likely see very little difference in most cases. In order to really get the feel we want, without the added complexity of doing real lighting we'll just darken the fragment color based on the height map. Add the following to your heightFS.glsl file:
-
-```glsl
-varying float f_height;
-
-void main(void)
-{
-    float shade = (1.0-2.0*sqrt(f_height));
-    vec4 color = vec4(0.05,0.15,0.3,1.0); 
-    gl_FragColor = shade*color;
-}
-```
-
-Now your height field should look closer to this:
-
-<<<<<<< HEAD
-![Alt test](Part1/resources/001.png)
-=======
-![less boring](Part1/resources/001.png)
->>>>>>> e029971478c4e7af392f073611a7fadfbb686317
-
-Okay, that's a lot better, but now our planets need some attention. For this step we'll be using the geometry shader to create screen facing quads from the points that are currently being rendered. Essentially, what we want is to create a geometry shader that takes in points and emits triangle strips, so replace the version of planetGS.glsl with this:
-
-```glsl
-#version 330
-
-uniform mat4 u_projMatrix;
-uniform vec3 u_cameraPos;
-
-layout (points) in;
-layout (triangle_strip) out;
-layout (max_vertices = 4) out;
-
-out vec3 WorldCoord;
-out vec3 ToCam;
-out vec3 Up;
-out vec3 Right;
-out vec2 TexCoord;
-
-const float scale = 0.03;
-```
-
-Before we can produce the vertices for our quad we need to figure out where they go. This code takes the vector from the point to the camera and crosses it with the up vector (usually I conform to convention and use +Y, but here I used +Z and never got around to fixing it) to produce the right vector. Next we cross the right vector and the camera vector to produce a corrected up vector. 
-
-```glsl
-void main()
-{
-    vec3 Position = gl_in[0].gl_Position.xyz;
-    WorldCoord = Position;
-
-    ToCam = normalize(u_cameraPos - Position);
-    Up = vec3(0.0, 0.0, 1.0);
-    Right = cross(ToCam, Up);
-    Up = cross(Right, ToCam);
-```
-
-Now that we have the correct up and right vectors, we can emit our vertices and produce our screen facing quads:
-
-```glsl
-    vec3 Pos = Position + scale*Right - scale*Up;
-    gl_Position = u_projMatrix * vec4(Pos, 1.0);
-    TexCoord = vec2(0.0, 0.0);
-    EmitVertex();
-
-    Pos = Position + scale*Right + scale*Up;
-    gl_Position = u_projMatrix * vec4(Pos, 1.0);
-    TexCoord = vec2(0.0, 1.0);
-    EmitVertex();
-
-    Pos = Position - scale*Right - scale*Up;
-    gl_Position = u_projMatrix * vec4(Pos, 1.0);
-    TexCoord = vec2(1.0, 0.0);
-    EmitVertex();
-
-    Pos = Position - scale*Right + scale*Up;
-    gl_Position = u_projMatrix * vec4(Pos, 1.0);
-    TexCoord = vec2(1.0, 1.0);
-    EmitVertex();
-
-    EndPrimitive();
-}
-```
-
-<<<<<<< HEAD
-![Alt test](Part1/resources/002.png)
-=======
-![cool](Part1/resources/002.png)
->>>>>>> e029971478c4e7af392f073611a7fadfbb686317
-
-__NOTE:__ You'll notice here that the quads are not aligned to the screen, they merely face it. This is okay for our purposes because we are using them to render spheres.
-
-With our quads we can do some very fancy things in the fragment shader. Use the following snippets to replace the existing planetFS.glsl file:
-
-```glsl
-#version 330
-
-in vec3 WorldCoord;
-in vec3 ToCam;
-in vec3 Up;
-in vec3 Right;
-in vec2 TexCoord;
-out vec4 FragColor;
-
-void main()
-{
-```
-
-This section  takes the "texture" coordinates produces in the GS and uses them to decide where in the quad this fragment is. We discard any fragments outside of our desired radius in order to simulate the edge of the sphere.
-
-```glsl
-    vec2 coord = 2.01 * (TexCoord - vec2(0.5));
-    float r = length(coord);
-    if (r >= 1.0) { discard; }
-```
-
-Since I designed this project with the center object being a star I execute an early out here to simply color it white.
-
-```glsl
-    float dist = length(WorldCoord);
-    if(dist <= 0.01)
-    {
-        FragColor = vec4(1.0);
-        return;
-    }
-```
-
-This last segment takes care of calculating the fake intersection point and its lighting. I am using a simple diffuse + constant ambient with exponential attenuation.
-
-```glsl
-    vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
-    vec3 L = normalize(-WorldCoord);
-    float light = 0.1 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
-    vec3 color = vec3(0.4, 0.1, 0.6);
-    FragColor = vec4(color*light,1.0);
-} 
-```
-
-<<<<<<< HEAD
-![Alt test](Part1/resources/003.png)
-=======
-![almost there](Part1/resources/003.png)
->>>>>>> e029971478c4e7af392f073611a7fadfbb686317
-
-The last thing we add is a little bit of procedural coloring to give a nice grid effect. Replace the boring color code in heightFS.glsl with this:
-
-```glsl
-float alpha = float(mod(v_Texcoords.x+0.025, 0.05) > 0.046 ||
-                    mod(v_Texcoords.y+0.025, 0.05) > 0.046);
-vec4 color = mix(vec4(0.05,0.15,0.3,1.0), vec4(0.05, 0.3, 0.4, 1.0), alpha);
-```
-
-<<<<<<< HEAD
-![Alt test](Part1/resources/004.png)
-=======
-![awesome](Part1/resources/004.png)
->>>>>>> e029971478c4e7af392f073611a7fadfbb686317
-
-Now we have a beautiful looking (if simple) gravity sim!
 
 
 PART 2: Your CUDA Simulation
@@ -292,24 +112,7 @@ To complete this part of the assignment you must implement your own simulation. 
 
 Feel free to code your own unique simulation here, just ask on the Google group if your topic is acceptable and we'll probably say yes.
 
----
-NOTES ON GLM:
----
-This project uses GLM, the GL Math library, for linear algebra. You need to
-know two important points on how GLM is used in this project:
 
-* In this project, indices in GLM vectors (such as vec3, vec4), are accessed
-  via swizzling. So, instead of v[0], v.x is used, and instead of v[1], v.y is
-  used, and so on and so forth.
-* GLM Matrix operations work fine on NVIDIA Fermi cards and later, but
-  pre-Fermi cards do not play nice with GLM matrices. As such, in this project,
-  GLM matrices are replaced with a custom matrix struct, called a cudaMat4, found
-  in cudaMat4.h. A custom function for multiplying glm::vec4s and cudaMat4s is
-  provided as multiplyMV() in intersections.h.
-
----
-README
----
 All students must replace the contents of this Readme.md in a clear manner with 
 the following:
 
