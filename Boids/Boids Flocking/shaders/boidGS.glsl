@@ -6,7 +6,7 @@ uniform vec3 u_lightPos;
 
 
 layout (points) in;
-layout (triangle_strip, max_vertices = 16) out;
+layout (triangle_strip, max_vertices = 12) out;
 
 
 in VertexData{
@@ -51,7 +51,7 @@ void main()
 	vec3 Forward = normalize(vertexData[0].EyeForward.xyz);
 	vec3 Right   = normalize(cross(Forward, Up));
 
-	mat4 Rotate = rotationMatrix(Forward, vertexData[0].WingDeflection);
+	mat4 Rotate = rotationMatrix(Forward, -vertexData[0].WingDeflection);
 	mat4 Rotate_T = transpose(Rotate);
 
 	//Passthrough color
@@ -70,17 +70,17 @@ void main()
 	vec3 LeftTipDownNormal  = normalize(cross(FrontPos-LeftWingtipPos,       BackBottomPos-LeftWingtipPos));
 	vec3 TopNormal     = normalize((RightTipUpNormal  +LeftTipUpNormal  )/2.0);
 	vec3 BottomNormal  = normalize((RightTipDownNormal+LeftTipDownNormal)/2.0);
-	
+	vec3 BackLeftTipNormal  = normalize(cross(BackBottomPos-LeftWingtipPos,  BackTopPos-LeftWingtipPos));
+	vec3 BackRightTipNormal = normalize(cross(BackTopPos-RightWingtipPos,    BackBottomPos-RightWingtipPos));
+	vec3 BackNormal = normalize((BackRightTipNormal + BackLeftTipNormal)/2.0);
 
-
+	//************TOP Strip**************
 	//=====Compute right wingtip======
 	gl_Position = u_projMatrix*vec4(RightWingtipPos,1.0);
 	fs_EyeNormal = RightTipUpNormal;
 	fs_EyeLightVector =  EyeLightPos - RightWingtipPos;
 	fs_TexCoord = vec2(1.0,0.0);
 	EmitVertex();
-
-
 
 	//=====Compute front point======
 	gl_Position = u_projMatrix*vec4(FrontPos,1.0);
@@ -89,16 +89,12 @@ void main()
 	fs_TexCoord = vec2(0.5,0.5);
 	EmitVertex();
 
-
-
 	//====Compute back center top point====
 	gl_Position = u_projMatrix*vec4(BackTopPos,1.0);
 	fs_EyeNormal = TopNormal;
 	fs_EyeLightVector =  EyeLightPos - BackTopPos;
 	fs_TexCoord = vec2(0.5,0.0);
 	EmitVertex();
-
-
 
 	//====Compute left wingtip====
 	gl_Position = u_projMatrix*vec4(LeftWingtipPos,1.0);
@@ -107,6 +103,71 @@ void main()
 	fs_TexCoord = vec2(0.0,0.0);
 	EmitVertex();
 
+    EndPrimitive();
+
+	
+	//************BOTTOM Strip**************
+	//=====Compute right wingtip======
+	gl_Position = u_projMatrix*vec4(RightWingtipPos,1.0);
+	fs_EyeNormal = RightTipDownNormal;
+	fs_EyeLightVector =  EyeLightPos - RightWingtipPos;
+	fs_TexCoord = vec2(1.0,1.0);
+	EmitVertex();
+
+	//=====Compute back center bottom point======
+	gl_Position = u_projMatrix*vec4(BackBottomPos,1.0);
+	fs_EyeNormal = BottomNormal;
+	fs_EyeLightVector =  EyeLightPos - BackBottomPos;
+	fs_TexCoord = vec2(0.5,1.0);
+	EmitVertex();
+
+	//====Compute front point====
+	gl_Position = u_projMatrix*vec4(FrontPos,1.0);
+	fs_EyeNormal = BottomNormal;
+	fs_EyeLightVector =  EyeLightPos - FrontPos;
+	fs_TexCoord = vec2(0.5,0.5);
+	EmitVertex();
+
+	//====Compute left wingtip====
+	gl_Position = u_projMatrix*vec4(LeftWingtipPos,1.0);
+	fs_EyeNormal = LeftTipDownNormal;
+	fs_EyeLightVector =  EyeLightPos - LeftWingtipPos;
+	fs_TexCoord = vec2(0.0,1.0);
+	EmitVertex();
+
+    EndPrimitive();
+
+	
+
+	
+	//************BACK Strip**************
+	//=====Compute right wingtip======
+	gl_Position = u_projMatrix*vec4(RightWingtipPos,1.0);
+	fs_EyeNormal = BackRightTipNormal;
+	fs_EyeLightVector =  EyeLightPos - RightWingtipPos;
+	fs_TexCoord = vec2(0.0,0.0);
+	EmitVertex();
+
+	//=====Compute back center top point======
+	gl_Position = u_projMatrix*vec4(BackTopPos,1.0);
+	fs_EyeNormal = BackNormal;
+	fs_EyeLightVector =  EyeLightPos - BackTopPos;
+	fs_TexCoord = vec2(0.5,0.5);
+	EmitVertex();
+
+	//=====Compute back center bottom point======
+	gl_Position = u_projMatrix*vec4(BackBottomPos,1.0);
+	fs_EyeNormal = BackNormal;
+	fs_EyeLightVector =  EyeLightPos - BackBottomPos;
+	fs_TexCoord = vec2(0.0,0.5);
+	EmitVertex();
+
+	//====Compute left wingtip====
+	gl_Position = u_projMatrix*vec4(LeftWingtipPos,1.0);
+	fs_EyeNormal = BackLeftTipNormal;
+	fs_EyeLightVector =  EyeLightPos - LeftWingtipPos;
+	fs_TexCoord = vec2(0.0,1.0);
+	EmitVertex();
 
     EndPrimitive();
 }

@@ -33,10 +33,10 @@ void main(void)
 
 
 	vertexData.Color = vs_color;
-	vertexData.Length         = 0.03;//vs_shape.x;
-	vertexData.HalfWingSpan   = 0.05;//vs_shape.y/2;
-	vertexData.DeltaSweep     = 0.025;//vs_shape.z;
+	vertexData.Length         = vs_shape.x;
+	vertexData.HalfWingSpan   = vs_shape.y/2;
+	vertexData.DeltaSweep     = vs_shape.z;
 	vertexData.HalfBodyHeight = vertexData.HalfWingSpan*0.25;	  
-	vertexData.WingDeflection = radians(0.0);//vs_shape.w;
+	vertexData.WingDeflection = vs_shape.w;
 
 }

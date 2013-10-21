@@ -15,10 +15,10 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e9;
-const __device__ float starMass = 6e10;
+const float planetMass = 3e2;
+const __device__ float starMass = 6e4;
 
-const float scene_scale = 2e2; //size of the height map in simulation space
+const float scene_scale = 1; //size of the height map in simulation space
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
@@ -226,14 +226,12 @@ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, 
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
-    float c_scale_w = -2.0f / s_scale;
-    float c_scale_h = -2.0f / s_scale;
 
     if(index<N)
     {
         //Position
-		vbo[boidVBO_PositionOffset + boidVBOStride*index + 0] =  pos[index].x*c_scale_w;
-		vbo[boidVBO_PositionOffset + boidVBOStride*index + 1] =  pos[index].y*c_scale_h;
+		vbo[boidVBO_PositionOffset + boidVBOStride*index + 0] =  pos[index].x;
+		vbo[boidVBO_PositionOffset + boidVBOStride*index + 1] =  pos[index].y;
 		vbo[boidVBO_PositionOffset + boidVBOStride*index + 2] = 0.0f;
 		vbo[boidVBO_PositionOffset + boidVBOStride*index + 3] = 1.0f;
 
@@ -244,8 +242,6 @@ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, 
 
 		//Forward
 		glm::vec3 forward =  vel[index];
-		forward.x *= c_scale_w;
-		forward.y *= c_scale_h;
 		forward.z = 0;
 		forward = glm::normalize(forward);
 		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 0] = forward.x;
@@ -258,10 +254,10 @@ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, 
 		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 1.0f;
 
 		//Shape
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = abs(10.0f*c_scale_w);//Length
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = abs(10.0f*c_scale_h);//Wingspan
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = abs(5.0f*c_scale_w);//Delta
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 90.0f;//Wing Deflection
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 0.05f;//Length
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 0.1f;//Wingspan
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.05f;//Delta
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = -10.0f;//Wing Deflection
     }
 }
 
