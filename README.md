@@ -24,7 +24,7 @@ cloth as a uniform grid of particles. Therefore, my first adaptation from the gi
 code was to modify the planet position generation to instead generate a uniform grid
 of size N*N. Here is an example of that basic grid.
 
-![Uniform Grid of Particles] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/uniform_grid.bmp)
+![Uniform Grid of Particles] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/uniform_grid.bmp)
 
 After establishing the grid of particles, I had to implement a system of springs,
 which I stored as an array of glm::vec3 objects. Each particle indexed to NUM_NEIGHBORS=12
@@ -46,20 +46,20 @@ invisible for our purposes) sphere located at the origin, and introduced a simpl
 force into the scene. This video represents the results of dropping the cloth
 onto the sphere.
 
-![High-Res Cloth Video] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/Project3%202013-10-20%2019-50-54-450.avi)
+![High-Res Cloth Video] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/Project3%202013-10-20%2019-50-54-450.avi)
 
 Here is the same simulation run at a lower cloth resolution.
 
-![Low-Res Cloth Video] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/Project3%202013-10-20%2020-05-10-283.avi)
+![Low-Res Cloth Video] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/Project3%202013-10-20%2020-05-10-283.avi)
 
 And here are some screenshots of the simulation in higher quality. Note in these, the
 cloth is not as offset as it was in the video simulation, so it wraps around the
 sphere more uniformly when it lands.
 
-![Cloth on sphere 1] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/cloth_on_ball_1.bmp)
-![Cloth on sphere 2] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/cloth_on_ball_2.bmp)
+![Cloth on sphere 1] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/cloth_on_ball_1.bmp)
+![Cloth on sphere 2] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/cloth_on_ball_2.bmp)
 ![Cloth on sphere 3] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/cloth_on_ball_3.bmp)
-![Cloth on sphere 4] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/cloth_on_ball_4.bmp)
+![Cloth on sphere 4] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/cloth_on_ball_4.bmp)
 
 ---
 PERFORMANCE EVALUATION
