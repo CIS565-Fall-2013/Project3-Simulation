@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 200
+#define N_FOR_VIS 100
 #define DT 0.2
 #define VISUALIZE 1
 #define PART2 1 ////control run part 1 or 2 change it also in kernel.h file
