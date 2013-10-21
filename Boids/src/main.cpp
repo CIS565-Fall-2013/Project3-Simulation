@@ -106,11 +106,11 @@ void display()
 
 	glBindBuffer(GL_ARRAY_BUFFER, boidVBO);
 	//Setup interleaved buffer
-	glVertexAttribPointer(positionLocation, 4, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)boidVBO_PositionOffset); 
-	glVertexAttribPointer(upLocation,       3, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)boidVBO_UpOffset); 
-	glVertexAttribPointer(forwardLocation,  3, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)boidVBO_ForwardOffset); 
-	glVertexAttribPointer(colorLocation,    3, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)boidVBO_ColorOffset); 
-	glVertexAttribPointer(shapeLocation,    4, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)boidVBO_ShapeOffset); 
+	glVertexAttribPointer(positionLocation, 4, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)(boidVBO_PositionOffset*sizeof(GLfloat))); 
+	glVertexAttribPointer(upLocation,       3, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)(boidVBO_UpOffset*sizeof(GLfloat))); 
+	glVertexAttribPointer(forwardLocation,  3, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)(boidVBO_ForwardOffset*sizeof(GLfloat))); 
+	glVertexAttribPointer(colorLocation,    3, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)(boidVBO_ColorOffset*sizeof(GLfloat))); 
+	glVertexAttribPointer(shapeLocation,    4, GL_FLOAT, GL_FALSE, boidVBOStride*sizeof(GLfloat), (void*)(boidVBO_ShapeOffset*sizeof(GLfloat))); 
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, boidIBO);
 	

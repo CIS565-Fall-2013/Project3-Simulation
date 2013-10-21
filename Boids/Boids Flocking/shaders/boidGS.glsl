@@ -6,7 +6,7 @@ uniform vec3 u_lightPos;
 
 
 layout (points) in;
-layout (points, max_vertices = 4) out;
+layout (triangle_strip, max_vertices = 4) out;
 
 
 in VertexData{
@@ -56,13 +56,51 @@ void main()
 	vec3 EyeLightPos = vec3(u_viewMatrix*vec4(u_lightPos, 1.0));
 
 
-	//====Compute back center point====
-	vec3 Pos = Position;
+	//=====Compute right wingtip======
+	mat4 Rotate = rotationMatrix(Forward, vertexData[0].WingDeflection);
+	vec3 Pos = Position + vec3(Rotate*vec4(-vertexData[0].DeltaSweep*Forward + vertexData[0].HalfWingSpan*Right,0.0));
+
+	fs_EyeNormal = vec3(Rotate*vec4(Up,0.0));
 	gl_Position = u_projMatrix*vec4(Pos,1.0);
-	fs_EyeNormal = Up; //Same as above
+	fs_EyeLightVector =  EyeLightPos - Pos;
+
+	fs_TexCoord = vec2(1.0,0.0);
+	EmitVertex();
+
+
+
+	//=====Compute front point======
+	Pos = Position + vertexData[0].Length*Forward;
+	gl_Position = u_projMatrix*vec4(Pos,1.0);
+	fs_EyeNormal = Up;
+	fs_EyeLightVector =  EyeLightPos - Pos;
+	fs_TexCoord = vec2(0.5,1.0);
+    EmitVertex();
+
+
+
+	//====Compute back center point====
+	Pos = Position;
+	gl_Position = u_projMatrix*vec4(Pos,1.0);
+	//fs_EyeNormal = Up; //Same as above
 	fs_EyeLightVector =  EyeLightPos - Pos;
 	fs_TexCoord = vec2(0.5,0.0);
 	EmitVertex();
-    EndPrimitive();
 
+
+
+
+	//====Compute left wingtip====
+	Rotate = transpose(Rotate);//Inverse rotation for other wing
+	Pos = Position + vec3(Rotate*vec4(-vertexData[0].DeltaSweep*Forward - vertexData[0].HalfWingSpan*Right,0.0));
+	
+	fs_EyeNormal = vec3(Rotate*vec4(Up,0.0));
+	
+	gl_Position = u_projMatrix*vec4(Pos,1.0);
+	fs_EyeLightVector =  EyeLightPos - Pos;
+	fs_TexCoord = vec2(0.0,0.0);
+	EmitVertex();
+
+
+    EndPrimitive();
 }

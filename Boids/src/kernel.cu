@@ -222,7 +222,7 @@ void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
 __global__
-void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
+void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -243,20 +243,25 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 		vbo[boidVBO_UpOffset + boidVBOStride*index + 2] = 1.0f;
 
 		//Forward
-		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 0] = 1.0f;
-		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 1] = 0.0f;
-		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 2] = 0.0f;
+		glm::vec3 forward =  vel[index];
+		forward.x *= c_scale_w;
+		forward.y *= c_scale_h;
+		forward.z = 0;
+		forward = glm::normalize(forward);
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 0] = forward.x;
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 1] = forward.y;
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 2] = forward.z;
 
 		//Color
 		vbo[boidVBO_ColorOffset + boidVBOStride*index + 0] = 1.0f;
-		vbo[boidVBO_ColorOffset + boidVBOStride*index + 1] = 1.0f;
-		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 0.0f;
+		vbo[boidVBO_ColorOffset + boidVBOStride*index + 1] = 0.0f;
+		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 1.0f;
 
 		//Shape
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 1.0f;//Length
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 1.0f;//Wingspan
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.0f;//Delta
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 0.0f;//Wing Deflection
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = abs(10.0f*c_scale_w);//Length
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = abs(10.0f*c_scale_h);//Wingspan
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = abs(5.0f*c_scale_w);//Delta
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 90.0f;//Wing Deflection
     }
 }
 
@@ -298,7 +303,7 @@ void cudaNBodyUpdateWrapper(float dt)
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, dev_vel, vbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
 }
 

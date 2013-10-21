@@ -32,9 +32,9 @@ void main(void)
 
 
 	vertexData.Color = vs_color;
-	vertexData.Length         = vs_shape.x;
-	vertexData.HalfWingSpan   = vs_shape.y/2;
-	vertexData.DeltaSweep     = vs_shape.z;
-	vertexData.WingDeflection = vs_shape.w;
+	vertexData.Length         = 0.1;//vs_shape.x;
+	vertexData.HalfWingSpan   = 0.1;//vs_shape.y/2;
+	vertexData.DeltaSweep     = 0.01;//vs_shape.z;
+	vertexData.WingDeflection = radians(-85.0);//vs_shape.w;
 
 }
