@@ -286,13 +286,21 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     glm::vec4 my_pos;
+	glm::vec3 my_vel;
     glm::vec3 accel;
+	glm::vec3 newVel;
 
-    if(index < N) my_pos = pos[index];
+    if(index < N){
+		my_pos = pos[index];
+		my_vel = vel[index];
+	}
 
     accel = ACC(N, my_pos, pos);
+	newVel = resolveCollisions(N, my_pos, pos, my_vel);
 
-    if(index < N) acc[index] = accel;
+    if(index < N){
+		acc[index] = accel;
+	}
 }
 
 __global__
