@@ -58,7 +58,7 @@ sphere more uniformly when it lands.
 
 ![Cloth on sphere 1] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/cloth_on_ball_1.bmp)
 ![Cloth on sphere 2] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/cloth_on_ball_2.bmp)
-![Cloth on sphere 3] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/cloth_on_ball_3.bmp)
+![Cloth on sphere 3] (https://raw.github.com/rarietta/Project3-Simulation/master/readme_images/cloth_on_ball_3.bmp)
 ![Cloth on sphere 4] (https://raw.github.com/rarietta/Project3-Simulation/blob/master/readme_images/cloth_on_ball_4.bmp)
 
 ---
