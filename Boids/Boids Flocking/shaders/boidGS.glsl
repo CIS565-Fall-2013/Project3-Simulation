@@ -68,11 +68,11 @@ void main()
 	vec3 RightTipDownNormal = normalize(cross(BackBottomPos-RightWingtipPos, FrontPos-RightWingtipPos    ));
 	vec3 LeftTipUpNormal    = normalize(cross(BackTopPos-LeftWingtipPos,     FrontPos - LeftWingtipPos   ));
 	vec3 LeftTipDownNormal  = normalize(cross(FrontPos-LeftWingtipPos,       BackBottomPos-LeftWingtipPos));
-	vec3 TopNormal     = normalize((RightTipUpNormal  +LeftTipUpNormal  )/2.0);
-	vec3 BottomNormal  = normalize((RightTipDownNormal+LeftTipDownNormal)/2.0);
+	vec3 TopNormal     =      normalize((RightTipUpNormal  +LeftTipUpNormal  )/2.0);
+	vec3 BottomNormal  =      normalize((RightTipDownNormal+LeftTipDownNormal)/2.0);
 	vec3 BackLeftTipNormal  = normalize(cross(BackBottomPos-LeftWingtipPos,  BackTopPos-LeftWingtipPos));
 	vec3 BackRightTipNormal = normalize(cross(BackTopPos-RightWingtipPos,    BackBottomPos-RightWingtipPos));
-	vec3 BackNormal = normalize((BackRightTipNormal + BackLeftTipNormal)/2.0);
+	vec3 BackNormal =         normalize((BackRightTipNormal + BackLeftTipNormal)/2.0);
 
 	//************TOP Strip**************
 	//=====Compute right wingtip======

@@ -37,6 +37,6 @@ void main(void)
 	vertexData.HalfWingSpan   = vs_shape.y/2;
 	vertexData.DeltaSweep     = vs_shape.z;
 	vertexData.HalfBodyHeight = vertexData.HalfWingSpan*0.25;	  
-	vertexData.WingDeflection = vs_shape.w;
+	vertexData.WingDeflection = radians(5.0);
 
 }

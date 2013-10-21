@@ -16,7 +16,7 @@ dim3 threadsPerBlock(blockSize);
 
 int numObjects;
 const float planetMass = 3e2;
-const __device__ float starMass = 6e4;
+const __device__ float starMass = 6e5;
 
 const float scene_scale = 1; //size of the height map in simulation space
 
@@ -126,7 +126,7 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //         (||r||^2+eps^2)^3/2     
 	glm::vec4 r = them-us;
     float r_mag_2 = r.x*r.x+r.y*r.y+r.z*r.z;
-	float eps_2 = 0.1;
+	float eps_2 = 0.001;
 	float d = r_mag_2+eps_2;
 	float a = them.w*G/sqrtf(d*d*d);
     return a*glm::vec3(r);//use diff as direction;;
@@ -236,8 +236,8 @@ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, 
 		vbo[boidVBO_PositionOffset + boidVBOStride*index + 3] = 1.0f;
 
 		//Up
-		vbo[boidVBO_UpOffset + boidVBOStride*index + 0] = 0.0f;
-		vbo[boidVBO_UpOffset + boidVBOStride*index + 1] = 0.0f;
+		vbo[boidVBO_UpOffset + boidVBOStride*index + 0] = 0.0f;//-pos[index].x;
+		vbo[boidVBO_UpOffset + boidVBOStride*index + 1] = 0.0f;//-pos[index].y;
 		vbo[boidVBO_UpOffset + boidVBOStride*index + 2] = 1.0f;
 
 		//Forward
@@ -254,10 +254,10 @@ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 * vel, float * vbo, int width, 
 		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 1.0f;
 
 		//Shape
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 0.05f;//Length
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 0.075f;//Length
 		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 0.1f;//Wingspan
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.05f;//Delta
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = -10.0f;//Wing Deflection
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.025f;//Delta
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 0.0f;//Wing Deflection
     }
 }
 
