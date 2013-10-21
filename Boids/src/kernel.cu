@@ -180,7 +180,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 		{
 			int idx = tileOffset+i;
 			if(idx < N)
-				acc = acc + calculateAcceleration(my_pos, shPosition[idx]);
+				acc = acc + calculateAcceleration(my_pos, shPosition[i]);
 			else
 				break;
 		}
