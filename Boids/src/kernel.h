@@ -19,16 +19,19 @@
 //TODO: Add parameterized control for each boid having different rules.
 struct BoidProps{
 	glm::vec3 pos;
-	glm::vec3 vel;
+	glm::vec3 heading;//Direction and magnitude separated 
+	float speed;
 	float rollAngle;
 };
 
 struct WorldProps{
-	glm::vec3 InitialDims;
-	glm::vec3 WorldBounds;
+	glm::vec3 InitialDims;//Represents entire length
+	glm::vec3 WorldBounds;//Max distance from origin boids can travel in +/-x, +/-y, +z; Boids can't fly negative Z
 	float InitialMaxVel;
 	float GroundAvoidanceHeight;
-	float GroundAvoidanceForce;
+	float GroundAvoidanceForce;//N
+	float WallStiffness;//N/m
+	float MinSpeed;
 };
 
 

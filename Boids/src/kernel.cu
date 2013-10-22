@@ -65,15 +65,49 @@ __global__
 		boids[index].pos.z = randPos.z;
 
 		glm::vec3 velocity = properties.InitialMaxVel*generateRandomNumberFromThread(time+1, index);
-		boids[index].vel.x = velocity.x;
-		boids[index].vel.y = velocity.y;
-		boids[index].vel.z = velocity.z;
+		float speed = glm::length(velocity);
+		boids[index].speed = speed;
+		if(speed > properties.MinSpeed)
+		{
+			boids[index].heading = velocity/speed;
+		}else{
+			boids[index].heading = glm::vec3(1,0,0);
+			boids[index].speed = properties.MinSpeed;
+		}
 
 		boids[index].rollAngle = 0.0;
 	}
 }
 
 
+
+__device__ glm::vec4 ruleStayInBounds(const WorldProps world, const BoidProps me)
+{
+	//Normalize
+	glm::vec4 forceIntensity(0);
+	
+	//X Direction
+	if(me.pos.x < -world.WorldBounds.x)
+		forceIntensity.x = world.WallStiffness*(me.pos.x-world.WorldBounds.x);
+	else if(me.pos.x > world.WorldBounds.x)
+		forceIntensity.x = world.WallStiffness*(world.WorldBounds.x-me.pos.x);
+
+	//Y Direction
+	if(me.pos.y < -world.WorldBounds.y)
+		forceIntensity.y = world.WallStiffness*(me.pos.y-world.WorldBounds.y);
+	else if(me.pos.y > world.WorldBounds.y)
+		forceIntensity.y = world.WallStiffness*(world.WorldBounds.y-me.pos.y);
+
+	
+	//Z Direction
+	if(me.pos.z < 0)//Wall at Z == 0, not -WorldBounds.z
+		forceIntensity.z = world.WallStiffness*(me.pos.z-world.WorldBounds.z);
+	else if(me.pos.z > world.WorldBounds.z)
+		forceIntensity.z = world.WallStiffness*(world.WorldBounds.z-me.pos.z);
+
+	return forceIntensity;
+	
+}
 
 __device__ glm::vec4 ruleAvoidGround(const WorldProps world, const BoidProps me)
 {
@@ -95,7 +129,7 @@ __device__
 
 	//netForce += ruleMapBoundary(world, me);
 	netForce += ruleAvoidGround(world, me);
-
+	netForce += ruleStayInBounds(world, me);
 
 	return netForce;
 }
@@ -173,8 +207,20 @@ __global__
 		//TODO: Encorporate mass
 		//TODO: Include gravity component
 		//TODO: Include non-holonomic controller
-		boids[index].vel += glm::vec3(netForces[index])/1.0f*dt;//a = F/m
-		boids[index].pos += boids[index].vel*dt;
+		glm::vec3 delV = glm::vec3(netForces[index])/1.0f*dt;//a = F/m
+
+		glm::vec3 vel = glm::vec3(boids[index].heading)*boids[index].speed;
+		vel += delV;
+		float mag = glm::length(vel);
+		if(mag > world.MinSpeed){
+			boids[index].heading = vel/mag;//Only change direction if we are moving, otherwise maintain heading
+		}else{
+			mag = world.MinSpeed;
+		}
+		boids[index].speed = mag;
+		
+
+		boids[index].pos += boids[index].heading*boids[index].speed*dt;
 	}
 }
 
@@ -196,20 +242,28 @@ __global__
 		vbo[boidVBO_PositionOffset + boidVBOStride*index + 3] =  1.0f;
 
 		//TODO: Allow Roll
-		glm::vec3 Right = glm::normalize(glm::cross(me.vel, glm::vec3(0,0,1)));
+		
+		glm::vec3 Forward =  me.heading;
 
+		glm::vec3 Right = glm::cross(Forward, glm::vec3(0,0,1));
+
+		if(glm::length(Right) == 0)
+		{
+			Right = glm::vec3(1,0,0);//Pointing straight up. This rare edge case is okay to handle in odd ways.
+		}
 		//Up
-		glm::vec3 Up = glm::normalize(glm::cross(Right, me.vel));
+		glm::vec3 Up = glm::cross(Right, Forward);
+
+
 
 		vbo[boidVBO_UpOffset + boidVBOStride*index + 0] = Up.x;
 		vbo[boidVBO_UpOffset + boidVBOStride*index + 1] = Up.y;
 		vbo[boidVBO_UpOffset + boidVBOStride*index + 2] = Up.z;
 
 		//Forward
-		glm::vec3 forward =  glm::normalize(me.vel);
-		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 0] = forward.x;
-		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 1] = forward.y;
-		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 2] = forward.z;
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 0] = Forward.x;
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 1] = Forward.y;
+		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 2] = Forward.z;
 
 		//Color
 		vbo[boidVBO_ColorOffset + boidVBOStride*index + 0] = 1.0f;
@@ -217,10 +271,10 @@ __global__
 		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 1.0f;
 
 		//Shape
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 0.1f;//Length
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 0.1f;//Wingspan
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.05f;//Delta
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 0.0f;//Wing Deflection (degrees)
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 0.5f;//Length
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 0.5f;//Wingspan
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.25f;//Delta
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = -30.0f;//Wing Deflection (degrees)
 	}
 }
 

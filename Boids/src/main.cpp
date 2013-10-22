@@ -18,10 +18,12 @@ glm::vec3 cameraPosition(20.0,20.0,10.0);
 glm::vec3 lightPosition(15,0,10);
 WorldProps worldProps = {
 	glm::vec3(10,10,10), //Initial Random Flock Size
-	glm::vec3(20,20,20), //World map boundary
+	glm::vec3(15,15,15), //World map boundary
 	0.1, //Initial maximum BOID velocity
 	1.0, //Ground avoidance height
-	1.0, //Ground Avoidance Force
+	0.1, //Ground Avoidance Force
+	0.01, //Boundary stiffness
+	0.01, //Min Speed
 };
 						
 
