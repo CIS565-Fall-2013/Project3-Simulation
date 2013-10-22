@@ -121,7 +121,6 @@ __device__ glm::vec4 ruleAvoidGround(const WorldProps world, const BoidProps me)
 	
 }
 
-
 __device__ glm::vec4 ruleDoABarrelRoll(const WorldProps world, const BoidProps me)
 {	
 	return glm::vec4(0,0,0,world.BarrelRoll);	
@@ -133,7 +132,6 @@ __device__
 	//TODO: Apply rules
 	glm::vec4 netForce = glm::vec4(0);
 
-	//netForce += ruleMapBoundary(world, me);
 	netForce += ruleAvoidGround(world, me);
 	netForce += ruleStayInBounds(world, me);
 	netForce += ruleDoABarrelRoll(world, me);
@@ -141,11 +139,51 @@ __device__
 	return netForce;
 }
 
+__device__ glm::vec4 ruleAttraction(const WorldProps world, const BoidProps me, const BoidProps them, const float radius, const glm::vec3 towardsThem)
+{
+	//Constant force in zone
+	return glm::vec4(towardsThem*world.AttractionZone.z, 0.0f);
+}
+
+__device__ glm::vec4 ruleAlignment(const WorldProps world, const BoidProps me, const BoidProps them, const float radius, const glm::vec3 towardsThem)
+{
+	
+	return glm::vec4(world.AlignmentZone.z*(them.heading*them.speed-me.heading*me.speed), 0.0f);
+}
+
+
+__device__ glm::vec4 ruleRepulsion(const WorldProps world, const BoidProps me, const BoidProps them, const float radius, const glm::vec3 towardsThem)
+{
+	//Constant force in zone
+	return glm::vec4(-towardsThem*world.RepulsionZone.z, 0.0f);
+}
+
 __device__ 
 	glm::vec4 applyPairwiseRules(const WorldProps world, const BoidProps me, const BoidProps them)
 {
-	//TODO: Apply rules
-	return glm::vec4(0,0,0,0);
+	glm::vec4 netForce = glm::vec4(0);
+
+	glm::vec3 dist = them.pos - me.pos;
+
+	float radius = glm::length(dist);
+	glm::vec3 towardsThem = dist/radius;
+	float distDot = glm::dot(towardsThem,me.heading); 
+
+	if(distDot > world.ViewAngleCos)
+	{
+		//Only apply these rules if we can see them
+		
+		//Check ranges
+		if(/*min*/world.AttractionZone.x < radius && /*max*/radius < world.AttractionZone.y);
+			netForce += ruleAttraction(world, me, them, radius, towardsThem);
+			
+		if(/*min*/world.AlignmentZone.x < radius && /*max*/radius < world.AlignmentZone.y);
+			netForce += ruleAlignment(world, me, them, radius, towardsThem);
+			
+		if(/*min*/world.RepulsionZone.x < radius && /*max*/radius < world.RepulsionZone.y);
+			netForce += ruleRepulsion(world, me, them, radius, towardsThem);
+	}
+	return netForce;
 }
 
 

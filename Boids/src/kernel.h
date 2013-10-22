@@ -33,6 +33,10 @@ struct WorldProps{
 	float WallStiffness;//N/m
 	float MinSpeed;
 	float BarrelRoll;//Forced roll.
+	float ViewAngleCos;
+	glm::vec3 AttractionZone;//(minDist, maxDist, force);
+	glm::vec3 AlignmentZone;//(minDist, maxDist, force);
+	glm::vec3 RepulsionZone;//(minDist, maxDist, force);
 };
 
 

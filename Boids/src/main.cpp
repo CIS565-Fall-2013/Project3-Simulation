@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 1500
+#define N_FOR_VIS 400
 #define DT 0.2
 #define VISUALIZE 1
 
@@ -14,17 +14,21 @@ float zFar = 100.0;
 
 glm::mat4 projection = glm::mat4(1.0f);
 glm::mat4 view = glm::mat4(1.0f);
-glm::vec3 cameraPosition(20.0,20.0,10.0);
+glm::vec3 cameraPosition(20.0,20.0,20.0);
 glm::vec3 lightPosition(15,0,10);
 WorldProps worldProps = {
 	glm::vec3(10,10,10), //Initial Random Flock Size
-	glm::vec3(10,10,10), //World map boundary
+	glm::vec3(10,10,20), //World map boundary
 	0.5, //Initial maximum BOID velocity
 	1.0, //Ground avoidance height
 	0.05, //Ground Avoidance Force
-	0.01, //Boundary stiffness
+	0.05, //Boundary stiffness
 	0.01, //Min Speed
 	0.0, //Do a barrel roll!
+	glm::cos(glm::radians(125.0f)), //Cosine of View Angle 
+	glm::vec3(5,10,0.0011),//AttractionZone (minDist, maxDist, force);
+	glm::vec3(2,5,0.0001),//AlignmentZone (minDist, maxDist, force);
+	glm::vec3(0,2,0.001),//RepulsionZone (minDist, maxDist, force);
 };
 						
 
