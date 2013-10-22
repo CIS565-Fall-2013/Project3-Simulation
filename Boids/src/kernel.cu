@@ -88,20 +88,20 @@ __device__ glm::vec4 ruleStayInBounds(const WorldProps world, const BoidProps me
 	
 	//X Direction
 	if(me.pos.x < -world.WorldBounds.x)
-		forceIntensity.x = world.WallStiffness*(me.pos.x-world.WorldBounds.x);
+		forceIntensity.x = world.WallStiffness*(world.WorldBounds.x-me.pos.x);
 	else if(me.pos.x > world.WorldBounds.x)
 		forceIntensity.x = world.WallStiffness*(world.WorldBounds.x-me.pos.x);
 
 	//Y Direction
 	if(me.pos.y < -world.WorldBounds.y)
-		forceIntensity.y = world.WallStiffness*(me.pos.y-world.WorldBounds.y);
+		forceIntensity.y = world.WallStiffness*(world.WorldBounds.y-me.pos.y);
 	else if(me.pos.y > world.WorldBounds.y)
 		forceIntensity.y = world.WallStiffness*(world.WorldBounds.y-me.pos.y);
 
 	
 	//Z Direction
 	if(me.pos.z < 0)//Wall at Z == 0, not -WorldBounds.z
-		forceIntensity.z = world.WallStiffness*(me.pos.z-world.WorldBounds.z);
+		forceIntensity.z = world.WallStiffness*(world.WorldBounds.z-me.pos.z);
 	else if(me.pos.z > world.WorldBounds.z)
 		forceIntensity.z = world.WallStiffness*(world.WorldBounds.z-me.pos.z);
 
