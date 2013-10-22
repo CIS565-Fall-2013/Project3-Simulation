@@ -20,7 +20,7 @@
 int numObjects;
 const float planetMass = 3e8;
 //const __device__ float starMass = 5e10;
-const __device__ float starMass = 5e10;
+const __device__ float starMass = 0;
 float totalTime = 0;
 int timeCount = 0;
 
@@ -59,7 +59,7 @@ unsigned int hash(unsigned int a){
 __host__ __device__ 
 glm::vec3 generateRandomNumberFromThread(float time, int index)
 {
-    thrust::default_random_engine rng(hash(index*time));
+    thrust::default_random_engine rng(hash((index+1)*(time+1)));
     thrust::uniform_real_distribution<float> u01(0,1);
 
     return glm::vec3((float) u01(rng), (float) u01(rng), (float) u01(rng));
