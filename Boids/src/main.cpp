@@ -24,6 +24,7 @@ WorldProps worldProps = {
 	0.1, //Ground Avoidance Force
 	0.01, //Boundary stiffness
 	0.01, //Min Speed
+	0.0, //Do a barrel roll!
 };
 						
 
@@ -157,6 +158,13 @@ void keyboard(unsigned char key, int x, int y)
 		//Reset device to flush profiling data
 		cudaDeviceReset(); 
 		exit(0);
+		break;
+	case 'b':
+		//DO A BARREL ROLL!
+		if(worldProps.BarrelRoll  < 1.0f)
+			worldProps.BarrelRoll = 45.0f;
+		else
+			worldProps.BarrelRoll = 0.0f;
 		break;
 	}
 }

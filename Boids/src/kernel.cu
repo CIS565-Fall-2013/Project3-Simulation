@@ -121,6 +121,12 @@ __device__ glm::vec4 ruleAvoidGround(const WorldProps world, const BoidProps me)
 	
 }
 
+
+__device__ glm::vec4 ruleDoABarrelRoll(const WorldProps world, const BoidProps me)
+{	
+	return glm::vec4(0,0,0,world.BarrelRoll);	
+}
+
 __device__ 
 	glm::vec4 applyIndividualRules(const WorldProps world, const BoidProps me)
 {
@@ -130,6 +136,7 @@ __device__
 	//netForce += ruleMapBoundary(world, me);
 	netForce += ruleAvoidGround(world, me);
 	netForce += ruleStayInBounds(world, me);
+	netForce += ruleDoABarrelRoll(world, me);
 
 	return netForce;
 }
@@ -207,7 +214,8 @@ __global__
 		//TODO: Encorporate mass
 		//TODO: Include gravity component
 		//TODO: Include non-holonomic controller
-		glm::vec3 delV = glm::vec3(netForces[index])/1.0f*dt;//a = F/m
+		glm::vec4 netF = netForces[index];
+		glm::vec3 delV = glm::vec3(netF)/1.0f*dt;//a = F/m
 
 		glm::vec3 vel = glm::vec3(boids[index].heading)*boids[index].speed;
 		vel += delV;
@@ -219,6 +227,8 @@ __global__
 		}
 		boids[index].speed = mag;
 		
+		//Change roll 
+		boids[index].rollAngle += netF.w*dt;
 
 		boids[index].pos += boids[index].heading*boids[index].speed*dt;
 	}
@@ -254,11 +264,11 @@ __global__
 		//Up
 		glm::vec3 Up = glm::cross(Right, Forward);
 
+		glm::vec4 RollUp = glm::rotate(glm::mat4(1.0f), me.rollAngle, Forward)*glm::vec4(Up,0.0);
 
-
-		vbo[boidVBO_UpOffset + boidVBOStride*index + 0] = Up.x;
-		vbo[boidVBO_UpOffset + boidVBOStride*index + 1] = Up.y;
-		vbo[boidVBO_UpOffset + boidVBOStride*index + 2] = Up.z;
+		vbo[boidVBO_UpOffset + boidVBOStride*index + 0] = RollUp.x;
+		vbo[boidVBO_UpOffset + boidVBOStride*index + 1] = RollUp.y;
+		vbo[boidVBO_UpOffset + boidVBOStride*index + 2] = RollUp.z;
 
 		//Forward
 		vbo[boidVBO_ForwardOffset + boidVBOStride*index + 0] = Forward.x;

@@ -32,6 +32,7 @@ struct WorldProps{
 	float GroundAvoidanceForce;//N
 	float WallStiffness;//N/m
 	float MinSpeed;
+	float BarrelRoll;//Forced roll.
 };
 
 
