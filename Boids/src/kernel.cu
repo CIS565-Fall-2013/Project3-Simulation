@@ -53,18 +53,18 @@ __host__ __device__
 
 //Generate randomized flock (in range (-mapDims.x/2:mapDims.x/2, -mapDims.y/2:mapDims.y/2, 0:mapDims.z))
 __global__
-	void generateRandomFlock(int time, int N, BoidProps * boids, glm::vec3 mapDims)
+	void generateRandomFlock(int time, int N, BoidProps * boids, WorldProps properties)
 {
 	int index = (blockIdx.x * blockDim.x) + threadIdx.x;
 	if(index < N)
 	{
 		
-		glm::vec3 randPos = mapDims*(generateRandomNumberFromThread(time, index)-glm::vec3(0.5f,0.5f,0.0f));
+		glm::vec3 randPos = properties.InitialDims*(generateRandomNumberFromThread(time, index)-glm::vec3(0.5f,0.5f,0.0f));
 		boids[index].pos.x = randPos.x;
 		boids[index].pos.y = randPos.y;
 		boids[index].pos.z = randPos.z;
 
-		glm::vec3 velocity = 0.01f*generateRandomNumberFromThread(time+1, index);
+		glm::vec3 velocity = properties.InitialMaxVel*generateRandomNumberFromThread(time+1, index);
 		boids[index].vel.x = velocity.x;
 		boids[index].vel.y = velocity.y;
 		boids[index].vel.z = velocity.z;
@@ -75,14 +75,14 @@ __global__
 
 
 __device__ 
-	glm::vec4 applyIndividualRules(BoidProps me)
+	glm::vec4 applyIndividualRules(WorldProps world, BoidProps me)
 {
 	//TODO: Apply rules
 	return glm::vec4(0,0,0.01,0);
 }
 
 __device__ 
-	glm::vec4 applyPairwiseRules(BoidProps me, BoidProps them)
+	glm::vec4 applyPairwiseRules(WorldProps world, BoidProps me, BoidProps them)
 {
 	//TODO: Apply rules
 	return glm::vec4(0,0,0,0);
@@ -90,7 +90,7 @@ __device__
 
 
 __device__
-	glm::vec4 computeNetForce(int N, int myIndex, BoidProps me, BoidProps* boids)
+	glm::vec4 computeNetForce(int N, WorldProps world, int myIndex, BoidProps me, BoidProps* boids)
 {
 	extern __shared__ BoidProps shBoids[]; 
 	glm::vec4 netForce = glm::vec4(0,0,0,0);//Use 4th field for roll torque
@@ -118,7 +118,7 @@ __device__
 		{
 			int idx = tileOffset+i;
 			if(idx < N && idx != myIndex)//Don't process 
-				netForce += applyPairwiseRules(me, shBoids[i]);
+				netForce += applyPairwiseRules(world, me, shBoids[i]);
 			else
 				break;
 		}
@@ -127,25 +127,25 @@ __device__
 
 	}
 
-	netForce += applyIndividualRules(me);
+	netForce += applyIndividualRules(world, me);
 	return netForce;
 }
 
 //Simple Euler integration scheme. Update desired velocities
 __global__
-	void updateForces(int N, float dt, BoidProps* boids, glm::vec4* netForces)
+	void updateForces(int N, WorldProps world, float dt, BoidProps* boids, glm::vec4* netForces)
 { 
 
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
 	if(index < N) 
 	{
-		netForces[index] = computeNetForce(N, index, boids[index], boids);
+		netForces[index] = computeNetForce(N, world, index, boids[index], boids);
 	}
 }
 
 __global__
-	void updateS(int N, float dt, BoidProps* boids, glm::vec4 * netForces)
+	void updateS(int N, WorldProps world, float dt, BoidProps* boids, glm::vec4 * netForces)
 {
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
 	if( index < N )
@@ -198,9 +198,9 @@ __global__
 		vbo[boidVBO_ColorOffset + boidVBOStride*index + 2] = 1.0f;
 
 		//Shape
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 0.25f;//Length
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 0.5f;//Wingspan
-		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.125f;//Delta
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 0] = 0.1f;//Length
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 1] = 0.1f;//Wingspan
+		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 2] = 0.05f;//Delta
 		vbo[boidVBO_ShapeOffset + boidVBOStride*index + 3] = 0.0f;//Wing Deflection (degrees)
 	}
 }
@@ -211,7 +211,7 @@ __global__
 *************************************/
 
 //Initialize memory, update some globals
-void initCuda(int N, glm::vec3 mapDims)
+void initCuda(int N, WorldProps properties)
 {
 	numObjects = N;
 	dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
@@ -222,17 +222,17 @@ void initCuda(int N, glm::vec3 mapDims)
 	cudaMalloc((void**)&dev_netForces, N*sizeof(glm::vec4));
 	checkCUDAErrorWithLine("Kernel failed Init()!");
 
-	generateRandomFlock<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_boids, mapDims);
+	generateRandomFlock<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_boids, properties);
 	checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
 }
 
-void cudaNBodyUpdateWrapper(float dt)
+void cudaNBodyUpdateWrapper(float dt, WorldProps worldProps)
 {
 	dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-	updateForces<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(BoidProps)>>>(numObjects, dt, dev_boids, dev_netForces);
+	updateForces<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(BoidProps)>>>(numObjects, worldProps, dt, dev_boids, dev_netForces);
 	checkCUDAErrorWithLine("Kernel Update failed!");
-	updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_boids, dev_netForces);
+	updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, worldProps, dt, dev_boids, dev_netForces);
 	checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
 }

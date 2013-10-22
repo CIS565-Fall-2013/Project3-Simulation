@@ -8,6 +8,21 @@
 #define DT 0.2
 #define VISUALIZE 1
 
+float fovy = 60.0f;
+float zNear = 0.10;
+float zFar = 50.0;
+
+glm::mat4 projection = glm::mat4(1.0f);
+glm::mat4 view = glm::mat4(1.0f);
+glm::vec3 cameraPosition(20.0,20.0,10.0);
+glm::vec3 lightPosition(15,0,10);
+WorldProps worldProps = {
+	glm::vec3(10,10,10), //Initial Random Flock Size
+	glm::vec3(20,20,20), //World map boundary
+	0.1 //Initial maximum BOID velocity
+};
+						
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -22,13 +37,13 @@ int main(int argc, char** argv)
 	cudaGLRegisterBufferObject( boidVBO );
 
 #if VISUALIZE == 1 
-	initCuda(N_FOR_VIS, mapDims);
+	initCuda(N_FOR_VIS, worldProps);
 #else
 	initCuda(2*128);
 #endif
 
 	projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
-	view = glm::lookAt(cameraPosition, glm::vec3(0,0,mapDims.z/2), glm::vec3(0,0,1));
+	view = glm::lookAt(cameraPosition, glm::vec3(0,0,worldProps.WorldBounds.z/2), glm::vec3(0,0,1));
 
 
 	GLuint passthroughProgram;
@@ -61,7 +76,7 @@ void runCuda()
 	cudaGLMapBufferObject((void**)&dptrvert, boidVBO);
 
 	// execute the kernel
-	cudaNBodyUpdateWrapper(DT);
+	cudaNBodyUpdateWrapper(DT, worldProps);
 #if VISUALIZE == 1
 	cudaUpdateVBO(dptrvert);
 #endif

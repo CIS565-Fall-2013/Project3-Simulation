@@ -30,13 +30,3 @@ extern GLuint displayImage;
 extern GLuint program[];
 
 const unsigned int BOIDS = 0;
-
-extern float fovy;
-extern float zNear;
-extern float zFar;
-
-extern glm::mat4 projection;
-extern glm::mat4 view;
-extern glm::vec3 cameraPosition;
-extern glm::vec3 lightPosition;
-extern glm::vec3 mapDims;

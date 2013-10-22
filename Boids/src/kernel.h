@@ -13,7 +13,7 @@
     #include <cutil_math.h>
 #endif
 
-#define blockSize 32
+#define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 
 //TODO: Add parameterized control for each boid having different rules.
@@ -23,8 +23,15 @@ struct BoidProps{
 	float rollAngle;
 };
 
+struct WorldProps{
+	glm::vec3 InitialDims;
+	glm::vec3 WorldBounds;
+	float InitialMaxVel;
+};
+
+
 void checkCUDAError(const char *msg, int line);
-void cudaNBodyUpdateWrapper(float dt);
-void initCuda(int N, glm::vec3 mapDims);
+void cudaNBodyUpdateWrapper(float dt, WorldProps world);
+void initCuda(int N, WorldProps world);
 void cudaUpdateVBO(float * vbodptr);
 #endif
