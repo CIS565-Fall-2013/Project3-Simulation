@@ -11,22 +11,25 @@ void main()
 {
 	// takes the "texture" coordinates produces in the GS and uses them to decide where in the quad this fragment is. 
 	// We discard any fragments outside of our desired radius in order to simulate the edge of the sphere.
-	vec2 coord = 2.01 * (TexCoord - vec2(0.5));
-    float r = length(coord);
-    if (r >= 1.0) { discard; }
+	//vec2 coord = 2.01 * (TexCoord - vec2(0.5));
+ //   float r = length(coord);
+ //   if (r >= 1.0) { discard; }
 
-	//the center object is a star, so simply color it white
-	float dist = length(WorldCoord);
-    if(dist <= 0.01)
-    {
-        FragColor = vec4(1.0, 1.0, 1.0, 1.0) * (1-100*dist);
-        return;
-    }
+	////the center object is a star, so simply color it white
+	//float dist = length(WorldCoord);
+ //   if(dist <= 0.01)
+ //   {
+ //       FragColor = vec4(1.0, 1.0, 1.0, 1.0) * (1-100*dist);
+ //       return;
+ //   }
 
-	// calculating the fake intersection point and its lighting
-	vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
-    vec3 L = normalize(-WorldCoord);
-    float light = 0.3 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
-    vec3 color = vec3(0.4, 0.1, 0.6);
-    FragColor = vec4(color*light,1.0);
+	//// calculating the fake intersection point and its lighting
+	//vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
+ //   vec3 L = normalize(-WorldCoord);
+ //   float light = 0.3 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
+ //   vec3 color = vec3(0.4, 0.1, 0.6);
+ //   FragColor = vec4(color*light,1.0);
+
+
+	FragColor = vec4(1.0,0.0,0.0,1.0);
 }

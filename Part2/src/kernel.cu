@@ -379,7 +379,7 @@ vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 t
 
 // calculate flocking velocity
 __device__
-vec3 flock(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 target)
+vec3 flockToTarget(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 target)
 {
 	vec3 desiredVelocity = cseparation * naiveSeparate(N, my_pos, boids_pos, target) +
 						   ccohesion * naiveCohesion(N, my_pos, boids_pos) +
@@ -399,10 +399,11 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
         vec4 my_pos = pos[index];
 		vec3 my_vel = vel[index];
 
+		// recall is toggled by the 'r' button on the keyboard. This switches between flocking and arrival behavior.
 		if (!recall)
 		{
 			// compute flocking behavior
-			vec3 flockVel = flock(N, my_pos, pos, vel, target);
+			vec3 flockVel = flockToTarget(N, my_pos, pos, vel, target);
 			float flockVelMag = length(flockVel);
 			float myVelMag = length(my_vel);
 			vec3 flockDirection = normalize(flockVel);
@@ -410,7 +411,7 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 			vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
 			vel[index] = integrateAcceleration(vel[index], g_accKa * acc, dt, N, my_pos, pos); // using accel
 
-			// try taking initial velocity into account
+			// try taking initial velocity into account, but use velocity directly
 			//float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
 			//vel[index] = finalVelMag * flockDirection;
 		}
@@ -422,6 +423,10 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 			// use arrival acceleration to get boids back
 			vel[index] = integrateAcceleration(vel[index], g_accKa * (arrival(my_pos, target)-my_vel)/dt, dt, N, my_pos, pos);
 		}
+
+
+
+
     }
 }
 

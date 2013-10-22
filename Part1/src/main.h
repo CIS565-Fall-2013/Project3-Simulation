@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <time.h>
 #include "glslUtility.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -35,8 +36,10 @@ using namespace std;
 																// See glslUtility::createProgram for the glBindAttribute call...
 GLuint positionLocation = 0;									// use to access the Position attribute in vertex shaders 
 GLuint texcoordsLocation = 1;									// use to access Texcoords attribute in vertex shaders
+GLuint colorLocation = 1;
 
 const char *attributeLocations[] = { "Position", "Texcoords" };
+const char *planetAttributeLocations[] = {"Position", "Color" };
 
 GLuint pbo = (GLuint)NULL;										// texture pixel buffer object. PBO points to the buffer object with float4 with each w
 																// component containing the height at a particular texel
@@ -45,6 +48,8 @@ GLuint planeTBO = (GLuint)NULL;
 GLuint planeIBO = (GLuint)NULL;
 GLuint planetVBO = (GLuint)NULL;
 GLuint planetIBO = (GLuint)NULL;
+GLuint planetCBO = (GLuint)NULL;
+
 GLuint displayImage;											// texture map that will be sampled in heightVS. The values are stored in the PBO (float4) with each w
 																// component containing the height at a particular texel
 

@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 1000
+#define N_FOR_VIS 25
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -152,18 +152,24 @@ void display()
     glUseProgram(program[PASS_THROUGH]); // "shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl"
 
     glEnableVertexAttribArray(positionLocation);
+	glEnableVertexAttribArray(colorLocation);
 
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
     glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
 
+	glBindBuffer(GL_ARRAY_BUFFER, planetCBO);
+	glVertexAttribPointer((GLuint)colorLocation, 3, GL_FLOAT, GL_FALSE, 0, 0); 
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
-   
+	
+
     glPointSize(4.0f); 
     glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
 
     glPointSize(1.0f);
 
     glDisableVertexAttribArray(positionLocation);
+	glDisableVertexAttribArray(colorLocation);
 
 #endif
     glutPostRedisplay();
@@ -261,6 +267,7 @@ void initVAO(void)
     GLfloat *vertices  = new GLfloat[2*num_verts];
     GLfloat *texcoords = new GLfloat[2*num_verts]; 
     GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS+1)];
+	GLfloat *colors	   = new GLfloat[3*(N_FOR_VIS+1)];
     GLuint *indices    = new GLuint[6*num_faces];
     GLuint *bindices   = new GLuint[N_FOR_VIS+1];
 
@@ -305,14 +312,24 @@ void initVAO(void)
         }
     }
 
+	srand (time(NULL));
+
 	// initializing position and indices for each body.
     for(int i = 0; i < N_FOR_VIS+1; i++)
-    {
-        bodies[4*i+0] = 0.0f;
+    {       
+		bodies[4*i+0] = 0.0f;
         bodies[4*i+1] = 0.0f;
         bodies[4*i+2] = 0.0f;
         bodies[4*i+3] = 1.0f;
         bindices[i] = i;
+
+		int rr = rand() % 255 + 1;
+		int rg = rand() % 255 + 1;
+		int rb = rand() % 255 + 1;
+
+		colors[3*i+0] = (float)rr / 255.f;
+		colors[3*i+1] = (float)rg / 255.f;
+		colors[3*i+2] = (float)rb / 255.f;
     }
 
 	// generate buffer objects for planeVBO, TBO, IBO and planetVBO and IBO
@@ -321,6 +338,7 @@ void initVAO(void)
     glGenBuffers(1, &planeIBO);
     glGenBuffers(1, &planetVBO);
     glGenBuffers(1, &planetIBO);
+	glGenBuffers(1, &planetCBO);
     
     glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
     glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
@@ -341,6 +359,9 @@ void initVAO(void)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO); 
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS+1)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
 
+	glBindBuffer(GL_ARRAY_BUFFER, planetCBO);
+	glBufferData(GL_ARRAY_BUFFER, 3*(N_FOR_VIS+1)*sizeof(GLfloat), colors, GL_STATIC_DRAW);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
@@ -349,6 +370,7 @@ void initVAO(void)
     delete[] bodies;
     delete[] indices;
     delete[] bindices;
+	delete[] colors;
 }
 
 void initShaders(GLuint * program)
@@ -372,7 +394,7 @@ void initShaders(GLuint * program)
         glUniform1i(location, 0);
     }
     
-    program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", attributeLocations, 1);
+    program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", planetAttributeLocations, 2);
     glUseProgram(program[1]);
     
     if ((location = glGetUniformLocation(program[1], "u_projMatrix")) != -1)

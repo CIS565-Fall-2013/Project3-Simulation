@@ -309,6 +309,7 @@ void sendToPBO(int N, vec4 * pos, float4 * pbo, int width, int height, float s_s
     }
 }
 
+
 /*************************************
  * Wrappers for the __global__ calls *
  *************************************/
@@ -355,3 +356,4 @@ void cudaUpdatePBO(float4 * pbodptr, int width, int height)
     checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
 }
+
