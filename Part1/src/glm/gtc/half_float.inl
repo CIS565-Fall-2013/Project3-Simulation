@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 /// OpenGL Mathematics (glm.g-truc.net)
 ///
-/// Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+/// Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
 /// in the Software without restriction, including without limitation the rights
@@ -22,7 +22,7 @@
 ///
 /// @ref gtc_half_float
 /// @file glm/gtc/half_float.inl
-/// @date 2009-04-29 / 2012-11-06
+/// @date 2009-04-29 / 2011-06-05
 /// @author Christophe Riccio
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -1006,45 +1006,4 @@ namespace detail
 #endif//(GLM_COMPONENT == GLM_COMPONENT_CXX98)
 
 }//namespace detail
-
-	GLM_FUNC_QUALIFIER half abs(half const & x)
-	{
-		return float(x) >= float(0) ? x : -x;
-	}
-
-	GLM_FUNC_QUALIFIER hvec2 abs(hvec2 const & v)
-	{
-		return hvec2(
-			float(v.x) >= float(0) ? v.x : -v.x, 
-			float(v.y) >= float(0) ? v.y : -v.y);
-	}
-
-	GLM_FUNC_QUALIFIER hvec3 abs(hvec3 const & v)
-	{
-		return hvec3(
-			float(v.x) >= float(0) ? v.x : -v.x, 
-			float(v.y) >= float(0) ? v.y : -v.y, 
-			float(v.z) >= float(0) ? v.z : -v.z);
-	}
-
-	GLM_FUNC_QUALIFIER hvec4 abs(hvec4 const & v)
-	{
-		return hvec4(
-			float(v.x) >= float(0) ? v.x : -v.x, 
-			float(v.y) >= float(0) ? v.y : -v.y, 
-			float(v.z) >= float(0) ? v.z : -v.z, 
-			float(v.w) >= float(0) ? v.w : -v.w);
-	}
-
-	template <>
-	GLM_FUNC_QUALIFIER glm::half mix
-	(
-		glm::half const & x, 
-		glm::half const & y, 
-		bool const & a
-	)
-	{
-		return a ? y : x;
-	}
-
 }//namespace glm

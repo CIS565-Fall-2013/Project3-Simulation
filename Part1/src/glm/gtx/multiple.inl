@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// OpenGL Mathematics Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+// OpenGL Mathematics Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Created : 2009-10-26
 // Updated : 2011-06-07
@@ -9,6 +9,8 @@
 // Dependency:
 // - GLM core
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "../core/_vectorize.hpp"
 
 namespace glm
 {
@@ -22,13 +24,8 @@ namespace glm
 		genType const & Multiple
 	)
 	{
-		if (Source > 0)
-		{
-			genType Tmp = Source - 1;
-			return Tmp + (Multiple - (Tmp % Multiple));
-		}
-		else
-			return Source + (-Source % Multiple);
+		genType Tmp = Source % Multiple;
+		return Tmp ? Source + Multiple - Tmp : Source;
 	}
 
 	template <> 
@@ -79,13 +76,8 @@ namespace glm
 		genType const & Multiple
 	)
 	{
-		if (Source >= 0)
-			return Source - Source % Multiple;
-		else
-		{
-			genType Tmp = Source + 1;
-			return Tmp - Tmp % Multiple - Multiple;
-		}
+		genType Tmp = Source % Multiple;
+		return Tmp ? Source - Tmp : Source;
 	}
 
 	template <> 

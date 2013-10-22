@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 /// OpenGL Mathematics (glm.g-truc.net)
 ///
-/// Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+/// Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
 /// in the Software without restriction, including without limitation the rights
@@ -284,14 +284,6 @@ namespace glm
 		return &(mat[0].x);
 	}
     
-	//! Get the address of the matrix content.
-	/// @see gtc_type_ptr
-	template<typename T>
-	GLM_FUNC_QUALIFIER T * value_ptr(detail::tmat4x3<T> & mat)
-	{
-		return &(mat[0].x);
-	}
-    
 	//! Return the constant address to the data of the input parameter.
 	/// @see gtc_type_ptr
 	template<typename T>
@@ -303,15 +295,12 @@ namespace glm
 		return &(q[0]);
 	}
     
-	//! Return the constant address to the data of the input parameter.
+	//! Get the address of the matrix content.
 	/// @see gtc_type_ptr
 	template<typename T>
-	GLM_FUNC_QUALIFIER T * value_ptr
-	(
-        detail::tquat<T> & q
-    )
+	GLM_FUNC_QUALIFIER T * value_ptr(detail::tmat4x3<T> & mat)
 	{
-		return &(q[0]);
+		return &(mat[0].x);
 	}
 
 	//! Build a vector from a pointer.

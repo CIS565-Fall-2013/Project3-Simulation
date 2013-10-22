@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 /// OpenGL Mathematics (glm.g-truc.net)
 ///
-/// Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+/// Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
 /// in the Software without restriction, including without limitation the rights
@@ -27,7 +27,7 @@
 /// 
 /// @see core (dependence)
 /// 
-/// @defgroup gtc_matrix_access GLM_GTC_matrix_access
+/// @defgroup gtc_matrix_access GLM_GTC_matrix_access: Access matrix rows and columns
 /// @ingroup gtc
 /// 
 /// Defines functions to access rows or columns of a matrix easily.
@@ -58,7 +58,7 @@ namespace glm
 
 	/// Set a specific row to a matrix.
 	/// @see gtc_matrix_access
-	template <typename genType> 
+    template <typename genType> 
 	genType row(
 		genType const & m, 
 		int index, 

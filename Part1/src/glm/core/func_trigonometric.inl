@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 /// OpenGL Mathematics (glm.g-truc.net)
 ///
-/// Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+/// Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
 /// in the Software without restriction, including without limitation the rights
@@ -25,6 +25,8 @@
 /// @date 2008-08-03 / 2011-06-15
 /// @author Christophe Riccio
 ///////////////////////////////////////////////////////////////////////////////////
+
+#include "_vectorize.hpp"
 
 namespace glm
 {
@@ -67,7 +69,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'sin' only accept floating-point input");
 
-		return genType(::std::sin(angle));
+		return ::std::sin(angle);
 	}
 
 	VECTORIZE_VEC(sin)
@@ -78,7 +80,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'cos' only accept floating-point input");
 
-		return genType(::std::cos(angle));
+		return ::std::cos(angle);
 	}
 
 	VECTORIZE_VEC(cos)
@@ -92,7 +94,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'tan' only accept floating-point input");
 
-		return genType(::std::tan(angle));
+		return ::std::tan(angle);
 	}
 
 	VECTORIZE_VEC(tan)
@@ -106,7 +108,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'asin' only accept floating-point input");
 
-		return genType(::std::asin(x));
+		return ::std::asin(x);
 	}
 
 	VECTORIZE_VEC(asin)
@@ -120,7 +122,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'acos' only accept floating-point input");
 
-		return genType(::std::acos(x));
+		return ::std::acos(x);
 	}
 
 	VECTORIZE_VEC(acos)
@@ -135,7 +137,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'atan' only accept floating-point input");
 
-		return genType(::std::atan2(y, x));
+		return ::std::atan2(y, x);
 	}
 
 	VECTORIZE_VEC_VEC(atan)
@@ -148,7 +150,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'atan' only accept floating-point input");
 
-		return genType(::std::atan(x));
+		return ::std::atan(x);
 	}
 
 	VECTORIZE_VEC(atan)
@@ -162,7 +164,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'sinh' only accept floating-point input");
 
-		return genType(std::sinh(angle));
+		return std::sinh(angle);
 	}
 
 	VECTORIZE_VEC(sinh)
@@ -176,7 +178,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'cosh' only accept floating-point input");
 
-		return genType(std::cosh(angle));
+		return std::cosh(angle);
 	}
 
 	VECTORIZE_VEC(cosh)
@@ -190,7 +192,7 @@ namespace glm
 	{
 		GLM_STATIC_ASSERT(detail::type<genType>::is_float, "'tanh' only accept floating-point input");
 
-		return genType(std::tanh(angle));
+		return std::tanh(angle);
 	}
 
 	VECTORIZE_VEC(tanh)

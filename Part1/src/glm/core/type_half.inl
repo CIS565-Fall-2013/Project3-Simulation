@@ -1,11 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 /// OpenGL Mathematics (glm.g-truc.net)
 ///
-/// Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
-///
-/// This half implementation is based on OpenEXR which is Copyright (c) 2002, 
-/// Industrial Light & Magic, a division of Lucas Digital Ltd. LLC
-///
+/// Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
 /// in the Software without restriction, including without limitation the rights
@@ -28,6 +24,10 @@
 /// @file glm/core/type_half.inl
 /// @date 2008-08-17 / 2011-06-15
 /// @author Christophe Riccio
+///
+/// Copyright:
+/// This half implementation is based on OpenEXR which is Copyright (c) 2002, 
+/// Industrial Light & Magic, a division of Lucas Digital Ltd. LLC
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "_detail.hpp"
@@ -135,9 +135,9 @@ namespace detail
 		// of float and half (127 versus 15).
 		//
 
-		int s =  (i >> 16) & 0x00008000;
-		int e = ((i >> 23) & 0x000000ff) - (127 - 15);
-		int m =   i        & 0x007fffff;
+		register int s =  (i >> 16) & 0x00008000;
+		register int e = ((i >> 23) & 0x000000ff) - (127 - 15);
+		register int m =   i        & 0x007fffff;
 
 		//
 		// Now reassemble s, e and m into a half:
@@ -152,17 +152,17 @@ namespace detail
 				// less than half_MIN (f may be a small normalized
 				// float, a denormalized float or a zero).
 				//
-				// We convert f to a half zero.
+				// We convert f to a _halfGTX zero.
 				//
 
-				return hdata(s);
+				return 0;
 			}
 
 			//
 			// E is between -10 and 0.  F is a normalized float,
 			// whose magnitude is less than __half_NRM_MIN.
 			//
-			// We convert f to a denormalized half.
+			// We convert f to a denormalized _halfGTX.
 			// 
 
 			m = (m | 0x00800000) >> (1 - e);
@@ -180,7 +180,7 @@ namespace detail
 				m += 0x00002000;
 
 			//
-			// Assemble the half from s, e (zero) and m.
+			// Assemble the _halfGTX from s, e (zero) and m.
 			//
 
 			return hdata(s | (m >> 13));
@@ -266,17 +266,11 @@ namespace detail
 	GLM_FUNC_QUALIFIER half::half(U const & s) :
 		data(toFloat16(float(s)))
 	{}
-/*
+
 	template <typename U>
 	GLM_FUNC_QUALIFIER half::operator U() const
 	{
 		return static_cast<U>(toFloat32(this->data));
-	}
-*/
-
-	GLM_FUNC_QUALIFIER half::operator float() const
-	{
-		return toFloat32(this->data);
 	}
 
 	// Unary updatable operators

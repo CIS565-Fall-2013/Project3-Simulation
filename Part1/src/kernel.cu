@@ -147,7 +147,7 @@ __device__
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	int thread_index = threadIdx.x;
-	__shared__ glm::vec4 shared_pos[BLOCK_SIZE];
+	extern __shared__ glm::vec4 shared_pos[];
 	int num_splits = ceil((float)N/(float)(BLOCK_SIZE));
 
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
@@ -274,6 +274,9 @@ void initCuda(int N)
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(BLOCK_SIZE)));
+	printf("fullBlocksPerGrid: %d\n", fullBlocksPerGrid);
+	printf("BLOCK_SIZE: %d\n", BLOCK_SIZE);
+	printf("BLOCK_SIZE*sizeof(glm::vec4): %d\n", BLOCK_SIZE*sizeof(glm::vec4));
     updateF<<<fullBlocksPerGrid, BLOCK_SIZE, BLOCK_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     updateS<<<fullBlocksPerGrid, BLOCK_SIZE>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);

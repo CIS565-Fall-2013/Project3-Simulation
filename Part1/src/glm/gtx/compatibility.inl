@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// OpenGL Mathematics Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+// OpenGL Mathematics Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Created : 2007-03-16
 // Updated : 2008-10-24
@@ -14,17 +14,18 @@ namespace glm
 	GLM_FUNC_QUALIFIER bool isfinite(
 		genType const & x)
 	{
-#		if(GLM_COMPILER & GLM_COMPILER_VC)
-			return _finite(x);
-#		elif(GLM_COMPILER & GLM_COMPILER_GCC)
-#			if(GLM_PLATFORM & GLM_PLATFORM_ANDROID)
-				return _isfinite(x) != 0;
-#			else
-				return std::isfinite(x) != 0;
-#			endif
-#		else
-			return std::isfinite(x) != 0;
-#		endif
+#       if(GLM_COMPILER & GLM_COMPILER_VC)
+            return _finite(x);
+#       elif(GLM_COMPILER & GLM_COMPILER_GCC)
+#           if(GLM_PLATFORM & GLM_PLATFORM_ANDROID)
+                return _isfinite(x) != 0;
+#           else
+                return std::isfinite(x) != 0;
+#           endif
+#       else
+            return std::isfinite(x) != 0;
+#       endif
+
 	}
 
 	template <typename valType> 

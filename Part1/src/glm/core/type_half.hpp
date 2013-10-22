@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 /// OpenGL Mathematics (glm.g-truc.net)
 ///
-/// Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+/// Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
 /// in the Software without restriction, including without limitation the rights
@@ -36,9 +36,11 @@ namespace detail
 {
 	typedef short hdata;
 
-	GLM_FUNC_DECL float toFloat32(hdata value);
-	GLM_FUNC_DECL hdata toFloat16(float const & value);
+	float toFloat32(hdata value);
+	hdata toFloat16(float const & value);
 
+	/// 16-bit floating point type.
+	/// @ingroup gtc_half_float
 	class half
 	{
 	public: 
@@ -50,9 +52,8 @@ namespace detail
 		GLM_FUNC_DECL explicit half(U const & s);
 
 		// Cast
-		//template <typename U>
-		//GLM_FUNC_DECL operator U() const;
-		GLM_FUNC_DECL operator float() const;
+		template <typename U>
+		GLM_FUNC_DECL operator U() const;
 
 		// Unary updatable operators
 		GLM_FUNC_DECL half& operator= (half const & s);
@@ -71,42 +72,42 @@ namespace detail
 		hdata data;
 	};
 
-	GLM_FUNC_DECL half operator+ (half const & s1, half const & s2);
+	half operator+ (half const & s1, half const & s2);
 
-	GLM_FUNC_DECL half operator- (half const & s1, half const & s2);
+	half operator- (half const & s1, half const & s2);
 
-	GLM_FUNC_DECL half operator* (half const & s1, half const & s2);
+	half operator* (half const & s1, half const & s2);
 
-	GLM_FUNC_DECL half operator/ (half const & s1, half const & s2);
+	half operator/ (half const & s1, half const & s2);
 
 	// Unary constant operators
-	GLM_FUNC_DECL half operator- (half const & s);
+	half operator- (half const & s);
 
-	GLM_FUNC_DECL half operator-- (half const & s, int);
+	half operator-- (half const & s, int);
 
-	GLM_FUNC_DECL half operator++ (half const & s, int);
+	half operator++ (half const & s, int);
 
-	GLM_FUNC_DECL bool operator==(
+	bool operator==(
 		detail::half const & x, 
 		detail::half const & y);
 
-	GLM_FUNC_DECL bool operator!=(
+	bool operator!=(
 		detail::half const & x, 
 		detail::half const & y);
 
-	GLM_FUNC_DECL bool operator<(
+	bool operator<(
 		detail::half const & x, 
 		detail::half const & y);
 
-	GLM_FUNC_DECL bool operator<=(
+	bool operator<=(
 		detail::half const & x, 
 		detail::half const & y);
 
-	GLM_FUNC_DECL bool operator>(
+	bool operator>(
 		detail::half const & x, 
 		detail::half const & y);
 
-	GLM_FUNC_DECL bool operator>=(
+	bool operator>=(
 		detail::half const & x, 
 		detail::half const & y);
 

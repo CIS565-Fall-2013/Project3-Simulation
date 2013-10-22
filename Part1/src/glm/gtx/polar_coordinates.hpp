@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 /// OpenGL Mathematics (glm.g-truc.net)
 ///
-/// Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+/// Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
 /// in the Software without restriction, including without limitation the rights
@@ -27,7 +27,7 @@
 ///
 /// @see core (dependence)
 ///
-/// @defgroup gtx_polar_coordinates GLM_GTX_polar_coordinates
+/// @defgroup gtx_polar_coordinates GLM_GTX_polar_coordinates: Polar coordinates
 /// @ingroup gtx
 /// 
 /// @brief Conversion from Euclidean space to polar space and revert.
@@ -50,19 +50,17 @@ namespace glm
 	/// @addtogroup gtx_polar_coordinates
 	/// @{
 
-	/// Convert Euclidean to Polar coordinates, x is the xz distance, y, the latitude and z the longitude.
-	///
-	/// @see gtx_polar_coordinates
+	//! Convert Euclidean to Polar coordinates, x is the xz distance, y, the latitude and z the longitude.
+	//! From GLM_GTX_polar_coordinates extension.
 	template <typename T> 
 	detail::tvec3<T> polar(
 		detail::tvec3<T> const & euclidean);
 
-	/// Convert Polar to Euclidean coordinates.
-	///
-	/// @see gtx_polar_coordinates
+	//! Convert Polar to Euclidean coordinates.
+	//! From GLM_GTX_polar_coordinates extension.
 	template <typename T> 
 	detail::tvec3<T> euclidean(
-		detail::tvec2<T> const & polar);
+		detail::tvec3<T> const & polar);
 
 	/// @}
 }//namespace glm

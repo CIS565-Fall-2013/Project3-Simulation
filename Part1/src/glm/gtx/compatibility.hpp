@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 /// OpenGL Mathematics (glm.g-truc.net)
 ///
-/// Copyright (c) 2005 - 2013 G-Truc Creation (www.g-truc.net)
+/// Copyright (c) 2005 - 2012 G-Truc Creation (www.g-truc.net)
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
 /// in the Software without restriction, including without limitation the rights
@@ -28,7 +28,7 @@
 /// @see core (dependence)
 /// @see gtc_half_float (dependence)
 ///
-/// @defgroup gtx_compatibility GLM_GTX_compatibility
+/// @defgroup gtx_compatibility GLM_GTX_compatibility: Cg and HLSL compatibility
 /// @ingroup gtx
 /// 
 /// @brief Provide functions to increase the compatibility with Cg and HLSL languages
@@ -49,12 +49,12 @@
 #endif
 
 #if(GLM_COMPILER & GLM_COMPILER_VC)
-#	include <cfloat>
+#include <cfloat>
 #elif(GLM_COMPILER & GLM_COMPILER_GCC)
-#	include <cmath>
-#	if(GLM_PLATFORM & GLM_PLATFORM_ANDROID)
-#		undef isfinite
-#	endif
+#include <cmath>
+#   if(GLM_PLATFORM & GLM_PLATFORM_ANDROID)
+#       undef isfinite
+#   endif
 #endif//GLM_COMPILER
 
 namespace glm
@@ -171,6 +171,6 @@ namespace glm
 }//namespace glm
 
 #include "compatibility.inl"
-
+    
 #endif//GLM_GTX_compatibility
 

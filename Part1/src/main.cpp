@@ -4,8 +4,8 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
-#define DT 0.2
+#define N_FOR_VIS 10
+#define DT .2
 #define VISUALIZE 1
 //-------------------------------
 //-------------MAIN--------------
