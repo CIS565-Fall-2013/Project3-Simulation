@@ -21,32 +21,32 @@ const __device__ int integrateMode = (int)EULER;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
 // constants for testing with acceleration
-//const __device__ float g_accKa = 0.15f;
-//const __device__ float g_velKv = 0.05f;
-//const __device__ float g_maxSpeed = 1.0f;
-//const __device__ float g_kSepNeighborhood = 10.0f;
-//const __device__ float g_kCohNeighborhood = 30.0f;
-//const __device__ float g_kAlgnNieghborhood = 10.0f;
-//const __device__ float g_kAlignment = 1.0f;
-//const __device__ float g_kSeparation = 0.5f;
-//const __device__ float g_kCohesion = 0.5f;
-//const __device__ float cseparation = 0.5f; // 0.5
-//const __device__ float ccohesion = 1.0f;
-//const __device__ float calignment = 0.7f; 
-
-// works with setting velocity directly
-const __device__ float g_accKa = 0.05f;
-const __device__ float g_velKv = 0.5f;
+const __device__ float g_accKa = 0.15f;
+const __device__ float g_velKv = 0.05f;
 const __device__ float g_maxSpeed = 1.0f;
-const __device__ float g_kSepNeighborhood = 60.0f;
+const __device__ float g_kSepNeighborhood = 10.0f;
 const __device__ float g_kCohNeighborhood = 30.0f;
 const __device__ float g_kAlgnNieghborhood = 10.0f;
 const __device__ float g_kAlignment = 1.0f;
-const __device__ float g_kSeparation = 50.0f;
+const __device__ float g_kSeparation = 0.5f;
 const __device__ float g_kCohesion = 0.5f;
-const __device__ float cseparation = 1.0f;
-const __device__ float ccohesion = 2.0f;
-const __device__ float calignment = 1.5f; 
+const __device__ float cseparation = 0.5f; // 0.5
+const __device__ float ccohesion = 1.0f;
+const __device__ float calignment = 0.7f; 
+
+// works with setting velocity directly
+//const __device__ float g_accKa = 0.05f;
+//const __device__ float g_velKv = 0.5f;
+//const __device__ float g_maxSpeed = 1.0f;
+//const __device__ float g_kSepNeighborhood = 60.0f;
+//const __device__ float g_kCohNeighborhood = 30.0f;
+//const __device__ float g_kAlgnNieghborhood = 10.0f;
+//const __device__ float g_kAlignment = 1.0f;
+//const __device__ float g_kSeparation = 50.0f;
+//const __device__ float g_kCohesion = 0.5f;
+//const __device__ float cseparation = 1.0f;
+//const __device__ float ccohesion = 2.0f;
+//const __device__ float calignment = 1.5f; 
 
 vec4 * dev_pos;
 vec3 * dev_vel;
@@ -294,7 +294,7 @@ vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos, vec3 target)
 		float toBoidILen = length(toBoidI);
 		if (toBoidILen < g_kSepNeighborhood && toBoidILen > 0)
 		{
-			separateDirection += (g_kSeparation * toBoidI) / (toBoidILen * toBoidILen);
+			separateDirection += (g_kSeparation * toBoidI) / (toBoidILen * toBoidILen + (float)1e-12);
 		}
 	}
 
@@ -302,7 +302,7 @@ vec3 naiveSeparate(int N, vec4 my_pos, vec4* boids_pos, vec3 target)
 	float arrivalVelocityLen = length(arrivalVelocity);
 	
 	if (arrivalVelocityLen > (float)EPSILON)
-		arrivalVelocity = arrivalVelocity / arrivalVelocityLen * g_maxSpeed;
+		arrivalVelocity = arrivalVelocity / ((arrivalVelocityLen+(float)1e-12) * g_maxSpeed);
 
 	return arrivalVelocity + separateDirection;
 }
@@ -407,21 +407,20 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 			float myVelMag = length(my_vel);
 			vec3 flockDirection = normalize(flockVel);
 		
-			//vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
-			vec3 acc = (g_velKv * (flockVelMag) / dt) * flockDirection;   // using accel
+			vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
 			vel[index] = integrateAcceleration(vel[index], g_accKa * acc, dt, N, my_pos, pos); // using accel
 
 			// try taking initial velocity into account
-			float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
-			vel[index] = finalVelMag * flockDirection;
+			//float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
+			//vel[index] = finalVelMag * flockDirection;
 		}
 		else
 		{
 			// use velocity directly
-			vel[index] = arrival(my_pos, target);
+			//vel[index] = arrival(my_pos, target);
 
 			// use arrival acceleration to get boids back
-			//vel[index] = integrateAcceleration(vel[index], g_accKa * (arrival(my_pos, target)-my_vel)/dt, dt, N, my_pos, pos);
+			vel[index] = integrateAcceleration(vel[index], g_accKa * (arrival(my_pos, target)-my_vel)/dt, dt, N, my_pos, pos);
 		}
     }
 }
