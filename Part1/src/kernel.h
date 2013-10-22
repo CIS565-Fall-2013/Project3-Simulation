@@ -53,4 +53,5 @@ void initCuda(int N);
 void initCudaFlock(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height,glm::vec3 targetPos);
+void cudaUpdateVelBO(float* velbodptr);
 #endif

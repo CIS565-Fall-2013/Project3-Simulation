@@ -37,13 +37,17 @@ using namespace std;
 
 GLuint positionLocation = 0;
 GLuint texcoordsLocation = 1;
-const char *attributeLocations[] = { "Position", "Texcoords" };
+GLuint velocityLocation = 2;
+const char *attributeLocations[] = { "Position", "Texcoords", "Velocity" };
 GLuint pbo = (GLuint)NULL;
 GLuint planeVBO = (GLuint)NULL;
 GLuint planeTBO = (GLuint)NULL;
 GLuint planeIBO = (GLuint)NULL;
 GLuint planetVBO = (GLuint)NULL;
 GLuint planetIBO = (GLuint)NULL;
+
+GLuint planetVelBO = (GLuint)NULL;
+
 GLuint displayImage;
 GLuint program[2];
 

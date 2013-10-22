@@ -57,10 +57,13 @@
     <None Include="shaders\planetFS.glsl">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="shaders\planetGS.glsl">
+    <None Include="shaders\planetVS.glsl">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="shaders\planetVS.glsl">
+    <None Include="shaders\planetGS_flock.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\planetGS_cloth.glsl">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

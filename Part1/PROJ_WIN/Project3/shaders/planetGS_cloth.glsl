@@ -6,6 +6,7 @@ uniform vec3 u_cameraPos;
 layout (points) in;
 layout (triangle_strip , max_vertices=6) out;
 
+in vec3 v_Velocity[];
 
 out vec3 WorldCoord;
 out vec3 ToCam;
@@ -26,8 +27,10 @@ const float scale = 0.03;
 void main()
 {
 
+	vec3 g_Vel=v_Velocity[0];
 
     vec3 Position = gl_in[0].gl_Position.xyz;
+
     WorldCoord = Position;
 
 	float coloridx=gl_in[0].gl_Position.w;
@@ -54,21 +57,30 @@ void main()
 
 	//thecolor=vec3(1,1,1);
 
-	vec3 pos1=Position+scale*vec3(1,0,0);
-	vec3 pos2=Position+scale*vec3(-0.5,-0.866,0);
-	vec3 pos3=Position+scale*vec3(-0.5,0.866,0);
+
+	//vec3 orientation=normalize(g_Vel);
+	//vec3 up=(abs(orientation.x)>0.5f)?vec3(0,1,0):vec3(1,0,0);
+	//vec3 left=normalize(cross(orientation,up));
+	//up=normalize(cross(orientation,left));
+
+
+	//vec3 pos1=Position+scale*(up);
+	//vec3 pos2=Position+scale*(-0.5*up-0.866*left);
+	//vec3 pos3=Position+scale*(-0.5*up+0.866*left);
+	//vec3 pos4=Position+scale*(4.414*orientation);
+
+		vec3 pos1=Position+scale*vec3(1,0,0);
+	vec3 pos2=Position+scale*vec3(-0.5,0.866,0);
+	vec3 pos3=Position+scale*vec3(-0.5,-0.866,0);
 	vec3 pos4=Position+scale*vec3(0,0,1.414);
-	vec3 center=(pos1+pos2+pos3+pos4)*0.25f;
 
-	vec3 cf1=(pos1+pos2+pos3)*0.33333333f;
-	vec3 cf2=(pos2+pos3+pos4)*0.33333333f;
-	vec3 cf3=(pos1+pos3+pos4)*0.33333333f;
-	vec3 cf4=(pos1+pos2+pos4)*0.33333333f;
 
-	normal_f1=normalize(cf1-center);
-	normal_f2=normalize(cf2-center);
-	normal_f3=normalize(cf3-center);
-	normal_f4=normalize(cf4-center);
+
+	normal_f1=normalize(cross(pos1-pos2,pos2-pos3));
+	normal_f2=normalize(cross(pos4-pos2,pos2-pos3));
+	normal_f3=normalize(cross(pos3-pos1,pos1-pos4));
+	normal_f4=normalize(cross(pos4-pos1,pos1-pos2));
+
 
     ToCam = normalize(u_cameraPos - Position);
     Up = vec3(0.0, 0.0, 1.0);

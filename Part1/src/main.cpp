@@ -36,6 +36,7 @@ int main(int argc, char** argv)
     cudaGLSetGLDevice( compat_getMaxGflopsDeviceId() );
     initPBO(&pbo);
     cudaGLRegisterBufferObject( planetVBO );
+	cudaGLRegisterBufferObject( planetVelBO );
     
 
 #if SIMMODE==CLOTHSIM
@@ -135,8 +136,10 @@ void runCuda()
 
     float4 *dptr=NULL;
     float *dptrvert=NULL;
+	float *dptrvel = NULL;
     cudaGLMapBufferObject((void**)&dptr, pbo);
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
+	cudaGLMapBufferObject((void**)&dptrvel, planetVelBO);
 
     // execute the kernel
 #if SIMMODE==CLOTHSIM
@@ -149,10 +152,12 @@ void runCuda()
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height,targetPosition);
+	cudaUpdateVelBO(dptrvel);
 	//targetPosition=glm::vec3(dptrvert[4*N_FOR_VIS],dptrvert[4*N_FOR_VIS+1],0);
 #endif
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
+	cudaGLUnmapBufferObject(planetVelBO);
     cudaGLUnmapBufferObject(pbo);
 }
 
@@ -231,8 +236,15 @@ if(!paused)  runCuda();
 
 	glEnableVertexAttribArray(positionLocation);
 
+
 	glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
 	glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
+
+#if SIMMODE==FLOCKSIM
+	glEnableVertexAttribArray(velocityLocation);
+	glBindBuffer(GL_ARRAY_BUFFER, planetVelBO);
+	glVertexAttribPointer((GLuint)velocityLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
+#endif
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
 
@@ -259,6 +271,9 @@ if(!paused)  runCuda();
 	glPointSize(1.0f);
 
 	glDisableVertexAttribArray(positionLocation);
+#if SIMMODE==FLOCKSIM
+	glDisableVertexAttribArray(velocityLocation);
+#endif
 
 #endif
     glutPostRedisplay();
@@ -393,6 +408,7 @@ void initVAO(void)
     glGenBuffers(1, &planeTBO);
     glGenBuffers(1, &planeIBO);
     glGenBuffers(1, &planetVBO);
+	glGenBuffers(1, &planetVelBO);
     glGenBuffers(1, &planetIBO);
     
     glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
@@ -407,6 +423,8 @@ void initVAO(void)
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
     glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
 
+	glBindBuffer(GL_ARRAY_BUFFER, planetVelBO);
+	glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS+1)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
@@ -439,8 +457,13 @@ void initShaders(GLuint * program)
     {
         glUniform1i(location, 0);
     }
-    
-    program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", attributeLocations, 1);
+#if SIMMODE==CLOTHSIM
+    program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS_cloth.glsl", "shaders/planetFS.glsl", attributeLocations, 3);
+#elif SIMMODE==BASICSIM
+	program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS_cloth.glsl", "shaders/planetFS.glsl", attributeLocations, 3);
+#elif SIMMODE==FLOCKSIM
+	program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS_flock.glsl", "shaders/planetFS.glsl", attributeLocations, 3);
+#endif
     glUseProgram(program[1]);
     
     if ((location = glGetUniformLocation(program[1], "u_projMatrix")) != -1)

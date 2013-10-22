@@ -16,7 +16,12 @@ PART 2: Your CUDA Simulation
 ---
 VIDEO LINK
 ---
+
+basic pyramid version
 http://youtu.be/ffbJMcmOPHc
+
+enhanced version
+http://www.youtube.com/watch?v=EDuQCPeSilE&feature=youtu.be
 
 Do feel free to watch my demo on the above link.
 

@@ -109,7 +109,8 @@
     <None Include="shaders\heightFS.glsl" />
     <None Include="shaders\heightVS.glsl" />
     <None Include="shaders\planetFS.glsl" />
-    <None Include="shaders\planetGS.glsl" />
+    <None Include="shaders\planetGS_cloth.glsl" />
+    <None Include="shaders\planetGS_flock.glsl" />
     <None Include="shaders\planetVS.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

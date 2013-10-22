@@ -100,7 +100,7 @@ __global__
 		
 		arr[index].z = -9.0f;//rand.z;
 		if(x%10==0) arr[index].w=1;
-		else if(y%10==0) arr[index].w==2;
+		else if(y%10==0) arr[index].w=1;
 		else arr[index].w=3;
 	}
 }
@@ -480,6 +480,30 @@ __global__
 	}
 }
 
+__global__
+	void flockSendToVelBO(int N, glm::vec3 * vel, float * velbo, float s_scale)
+{
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+
+	float c_scale_w = -2.0f / s_scale;
+	float c_scale_h = -2.0f / s_scale;
+
+	if(index<N)
+	{
+		velbo[4*index+0] = vel[index].x*c_scale_w;
+		velbo[4*index+1] = vel[index].y*c_scale_h;
+		velbo[4*index+2]  = vel[index].z*c_scale_h;
+		velbo[4*index+3] = 0;
+	}
+	else if (index==N)
+	{
+		velbo[4*index+0] = -5000;
+		velbo[4*index+1] = -5000;
+		velbo[4*index+2]  = 0;
+		velbo[4*index+3]  = 1;
+	}
+}
+
 //Update the texture pixel buffer object
 //(This texture is where openGL pulls the data for the height map)
 __global__
@@ -504,7 +528,7 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
 		//pbo[index].x=x*c_scale_w;
 		//pbo[index].y=y*c_scale_h;
 		//pbo[index].z=0;
-		pbo[index].w = -2.9f;
+		//pbo[index].w = -2.9f;
 
     }
 }
@@ -616,6 +640,14 @@ void cudaUpdateVBO(float * vbodptr, int width, int height,glm::vec3 targetPos)
 	sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
 #endif
     checkCUDAErrorWithLine("Kernel failed Update VBO!");
+}
+
+void cudaUpdateVelBO(float* velbodptr)
+{
+
+	dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+	flockSendToVelBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_vel, velbodptr, scene_scale);
+
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
