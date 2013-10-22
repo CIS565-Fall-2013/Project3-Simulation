@@ -37,9 +37,10 @@ using namespace std;
 GLuint positionLocation = 0;									// use to access the Position attribute in vertex shaders 
 GLuint texcoordsLocation = 1;									// use to access Texcoords attribute in vertex shaders
 GLuint colorLocation = 1;
+GLuint velocityLocation = 2;
 
 const char *attributeLocations[] = { "Position", "Texcoords" };
-const char *planetAttributeLocations[] = {"Position", "Color" };
+const char *planetAttributeLocations[] = {"Position", "Color", "Velocity"};
 
 GLuint pbo = (GLuint)NULL;										// texture pixel buffer object. PBO points to the buffer object with float4 with each w
 																// component containing the height at a particular texel
@@ -49,6 +50,8 @@ GLuint planeIBO = (GLuint)NULL;
 GLuint planetVBO = (GLuint)NULL;
 GLuint planetIBO = (GLuint)NULL;
 GLuint planetCBO = (GLuint)NULL;
+GLuint planetSBO = (GLuint)NULL;
+
 GLuint displayImage;											// texture map that will be sampled in heightVS. The values are stored in the PBO (float4) with each w
 																// component containing the height at a particular texel
 

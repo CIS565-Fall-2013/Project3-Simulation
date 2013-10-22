@@ -27,6 +27,7 @@ int main(int argc, char** argv)
 	// Thus, TODO: use cudaGraphicsGLRegisterBuffer instead!
 	// Goal for this part is to let CUDA kernels be able to write information into the pbo and interact with OpenGL
     cudaGLRegisterBufferObject( planetVBO );
+	cudaGLRegisterBufferObject( planetSBO );
     
 #if VISUALIZE == 1 
     initCuda(N_FOR_VIS);
@@ -71,10 +72,12 @@ void runCuda()
 
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
-    float4 *dptr=NULL;
-    float *dptrvert=NULL;
+    float4 *dptr = NULL;
+    float *dptrvert = NULL;
+	float *dptrvel = NULL;
     cudaGLMapBufferObject((void**)&dptr, pbo);
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
+	cudaGLMapBufferObject((void**)&dptrvel, planetSBO);
 
     // execute the kernel
     cudaNBodyUpdateWrapper(DT, target, recall);
@@ -83,10 +86,12 @@ void runCuda()
     cudaUpdatePBO(dptr, field_width, field_height);
 #endif
     cudaUpdateVBO(dptrvert, field_width, field_height);
+	cudaUpdateSBO(dptrvel, field_width, field_height);
 #endif
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
     cudaGLUnmapBufferObject(pbo);
+	cudaGLUnmapBufferObject(planetSBO);
 
 	//////////////////////
 	// Timing cuda call //
@@ -159,12 +164,16 @@ void display()
 
     glEnableVertexAttribArray(positionLocation);
 	glEnableVertexAttribArray(colorLocation);
+	glEnableVertexAttribArray(velocityLocation);
 
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
     glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
 
 	glBindBuffer(GL_ARRAY_BUFFER, planetCBO);
 	glVertexAttribPointer((GLuint)colorLocation, 3, GL_FLOAT, GL_FALSE, 0, 0); 
+
+	glBindBuffer(GL_ARRAY_BUFFER, planetSBO);
+	glVertexAttribPointer((GLuint)velocityLocation, 3, GL_FLOAT, GL_FALSE, 0, 0); 
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
    
@@ -179,6 +188,7 @@ void display()
 
     glDisableVertexAttribArray(positionLocation);
 	glDisableVertexAttribArray(colorLocation);
+	glDisableVertexAttribArray(velocityLocation);
 
 #endif
 
@@ -319,6 +329,7 @@ void initVAO(void)
     GLfloat *texcoords = new GLfloat[2*num_verts]; 
     GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS+1)];
 	GLfloat *colors	   = new GLfloat[3*(N_FOR_VIS+1)];
+	GLfloat *vels	   = new GLfloat[3*(N_FOR_VIS+1)];
     GLuint *indices    = new GLuint[6*num_faces];
     GLuint *bindices   = new GLuint[N_FOR_VIS+1];
 
@@ -380,9 +391,17 @@ void initVAO(void)
 		int rg = rand() % 255 + 1;
 		int rb = rand() % 255 + 1;
 
-		colors[3*i+0] = (float)rr / 255.f;
-		colors[3*i+1] = (float)rg / 255.f;
-		colors[3*i+2] = (float)rb / 255.f;
+		int id1 = 3*i+0;
+		int id2 = 3*i+1;
+		int id3 = 3*i+2;
+
+		colors[id1] = (float)rr / 255.f;
+		colors[id2] = (float)rg / 255.f;
+		colors[id3] = (float)rb / 255.f;
+
+		vels[id1] = 0.0f;
+		vels[id2] = 0.0f;
+		vels[id3] = 0.0f;
     }
 
 	// generate buffer objects for planeVBO, TBO, IBO and planetVBO and IBO
@@ -406,6 +425,7 @@ void initVAO(void)
 	glGenBuffers(1, &planetVBO);
     glGenBuffers(1, &planetIBO);
 	glGenBuffers(1, &planetCBO);
+	glGenBuffers(1, &planetSBO);
    
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
     glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
@@ -418,6 +438,9 @@ void initVAO(void)
 	glBindBuffer(GL_ARRAY_BUFFER, planetCBO);
 	glBufferData(GL_ARRAY_BUFFER, 3*(N_FOR_VIS+1)*sizeof(GLfloat), colors, GL_STATIC_DRAW);
 
+	glBindBuffer(GL_ARRAY_BUFFER, planetSBO);
+	glBufferData(GL_ARRAY_BUFFER, 3*(N_FOR_VIS+1)*sizeof(GLfloat), vels, GL_STATIC_DRAW);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
@@ -427,6 +450,7 @@ void initVAO(void)
     delete[] indices;
     delete[] bindices;
 	delete[] colors;
+	delete[] vels;
 }
 
 void initShaders(GLuint * program)
@@ -451,7 +475,7 @@ void initShaders(GLuint * program)
         glUniform1i(location, 0);
     }
     
-    program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", planetAttributeLocations, 2);
+    program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", planetAttributeLocations, 3);
     glUseProgram(program[1]);
     
     if ((location = glGetUniformLocation(program[1], "u_projMatrix")) != -1)

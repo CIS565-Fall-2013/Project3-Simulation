@@ -30,4 +30,5 @@ void cudaNBodyUpdateWrapper(float dt, vec3 target, bool recall);
 void initCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height);
+void cudaUpdateSBO(float * sbodptr, int width, int height);
 #endif

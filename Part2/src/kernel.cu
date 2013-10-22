@@ -404,9 +404,9 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 		{
 			// compute flocking behavior
 			vec3 flockVel = flockToTarget(N, my_pos, pos, vel, target);
-			float flockVelMag = length(flockVel);
+			float flockVelMag = length(flockVel) + 1e-10;
 			float myVelMag = length(my_vel);
-			vec3 flockDirection = normalize(flockVel);
+			vec3 flockDirection = flockVel / flockVelMag;
 		
 			vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
 			vel[index] = integrateAcceleration(vel[index], g_accKa * acc, dt, N, my_pos, pos); // using accel
@@ -423,10 +423,6 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 			// use arrival acceleration to get boids back
 			vel[index] = integrateAcceleration(vel[index], g_accKa * (arrival(my_pos, target)-my_vel)/dt, dt, N, my_pos, pos);
 		}
-
-
-
-
     }
 }
 
@@ -461,6 +457,24 @@ void sendToVBO(int N, vec4 * pos, float * vbo, int width, int height, float s_sc
         vbo[4*index+1] = pos[index].y*c_scale_h;
 		vbo[4*index+2] = pos[index].z*c_scale_d;
         vbo[4*index+3] = 1;
+    }
+}
+
+//Update the velocity buffer object
+//(The VBO is where OpenGL looks for the positions for the planets)
+__global__
+void sendToSBO(int N, vec3 * vels, float * sbo, int width, int height)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+
+    if(index<N)
+    {
+		vec3 vel = vels[index];
+		float velLen = length(vel) + 1e-6;
+		vel = vel / velLen;
+        sbo[3*index+0] = vel.x;
+        sbo[3*index+1] = vel.y;
+		sbo[3*index+2] = vel.z;
     }
 }
 
@@ -513,8 +527,10 @@ void initCuda(int N)
 
 void cudaNBodyUpdateWrapper(float dt, vec3 target, bool recall)
 {
+	checkCUDAErrorWithLine("Kernel failed!");
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     updateVelocity<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(vec4)>>>(numObjects, dt, dev_pos, dev_vel, target, recall);
+	checkCUDAErrorWithLine("Kernel failed!");
 	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
     checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
@@ -524,6 +540,14 @@ void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    checkCUDAErrorWithLine("Kernel failed!");
+	cudaThreadSynchronize();
+}
+
+void cudaUpdateSBO(float * sbodptr, int width, int height)
+{
+    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+	sendToSBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_vel, sbodptr, width, height);
     checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
 }

@@ -13,6 +13,7 @@ layout (max_vertices = 3) out;
 in vColor
 {
 	vec3 color;
+	vec3 velocity;
 }vertices[];
 
 out fColor
@@ -31,9 +32,16 @@ const float scale = 0.02;
 void main()
 {
 	int i;
+	vec3 orientation;
+
 	for (int i = 0 ; i < gl_in.length() ; ++i) // gl_in.length() is 1
 	{
-		frag.color = vertices[i].color;
+		orientation = vertices[i].velocity;
+
+		if (orientation != vec3(0,0,0))
+			frag.color = vertices[i].color;
+		else
+			frag.color = vec3(0,0,0);
 	}
 
     vec3 Position = gl_in[0].gl_Position.xyz;

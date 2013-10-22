@@ -48,7 +48,7 @@ PART 2: CUDA Behavioral Animation
 
 For the second part of this project, I implemented several behaviors according to the formulations described by Craig Reynods found [here](http://www.red3d.com/cwr/boids/). For this portion,
 there are two different modes that are availabe. Arrival and flocking behavior towards a target movable by using 'w', 'a', 's', 'd', and untargetd flocking behavior. The individual behaviors
-utlized in this part include cohesion, separation, and alignment.
+utlized in this part include cohesion, separation, and alignment. 
 
 Here are some preliminary results with similar rendering style of the N-Body simulation:
 
@@ -62,7 +62,9 @@ Here are some preliminary results with similar rendering style of the N-Body sim
 Flocking with each boid rendered as a triangle
 [Flocking towards target]()
 
-
+Note regarding GLM: when working on this project, glm::normalize was a major source of many interesting bugs that consumed a lot of time for me to track down. It turns out that this function
+does not protect against division by zero. Therefore, instead of relying on this function, it is best to first figure out the length, then add a small offset to the length and do the division
+manully.
 ---
 PERFORMANCE EVALUATION
 ---
