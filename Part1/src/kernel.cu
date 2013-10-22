@@ -12,7 +12,7 @@
 #endif
 
 //GLOBALS
-dim3 threadsPerBlock(blockSize);
+dim3 threadsPerBlock(BLOCK_SIZE);
 
 int numObjects;
 const float planetMass = 3e8;
@@ -118,24 +118,60 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+
+	glm::vec3 p_us = glm::vec3(us.x, us.y, us.z);
+	glm::vec3 p_them = glm::vec3(them.x, them.y, them.z);
+
+	float m_them = them.w;
+	float r = glm::distance(p_us, p_them);
+	return glm::normalize(p_them - p_us) * (float)G*m_them/(r*r);
 }
 
 //TODO: Core force calc kernel global memory
+
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	int i;
+	for (i=0; i<N; ++i) {
+		if (glm::distance(my_pos, their_pos[i]) > 10.0) {
+			acc += calculateAcceleration(my_pos, their_pos[i]);
+		}
+	}
     return acc;
 }
-
 
 //TODO: Core force calc kernel shared memory
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
+	int thread_index = threadIdx.x;
+	__shared__ glm::vec4 shared_pos[BLOCK_SIZE];
+	int num_splits = ceil((float)N/(float)(BLOCK_SIZE));
+
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+	int i, j, pos_index = 0;
+	for (i=0; i<num_splits; ++i) {
+		if (i*BLOCK_SIZE + thread_index < N) {
+			shared_pos[thread_index] = their_pos[i*BLOCK_SIZE + thread_index];
+		}
+
+		__syncthreads();
+
+		for (j=0; j<BLOCK_SIZE; ++j) {
+			++pos_index;
+			if (pos_index >= N) {
+				break;
+			}
+			if (glm::distance(my_pos, shared_pos[pos_index]) > 10.0) {
+				acc += calculateAcceleration(my_pos, shared_pos[pos_index]);
+			}
+		}
+
+		__syncthreads();
+	}
     return acc;
 }
 
@@ -219,7 +255,7 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
 void initCuda(int N)
 {
     numObjects = N;
-    dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
+    dim3 fullBlocksPerGrid((int)ceil(float(N)/float(BLOCK_SIZE)));
 
     cudaMalloc((void**)&dev_pos, N*sizeof(glm::vec4));
     checkCUDAErrorWithLine("Kernel failed!");
@@ -228,34 +264,34 @@ void initCuda(int N)
     cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
 
-    generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
+    generateRandomPosArray<<<fullBlocksPerGrid, BLOCK_SIZE>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
-    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+    generateCircularVelArray<<<fullBlocksPerGrid, BLOCK_SIZE>>>(2, numObjects, dev_vel, dev_pos);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }
 
 void cudaNBodyUpdateWrapper(float dt)
 {
-    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(BLOCK_SIZE)));
+    updateF<<<fullBlocksPerGrid, BLOCK_SIZE, BLOCK_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
-    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    updateS<<<fullBlocksPerGrid, BLOCK_SIZE>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
-    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(BLOCK_SIZE)));
+    sendToVBO<<<fullBlocksPerGrid, BLOCK_SIZE>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 {
-    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
+    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(BLOCK_SIZE)));
+    sendToPBO<<<fullBlocksPerGrid, BLOCK_SIZE, BLOCK_SIZE*sizeof(glm::vec4)>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
 }
 

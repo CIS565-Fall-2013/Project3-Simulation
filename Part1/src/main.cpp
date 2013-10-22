@@ -21,10 +21,10 @@ int main(int argc, char** argv)
     initPBO(&pbo);
     cudaGLRegisterBufferObject( planetVBO );
     
-#if VISUALIZE == 1 
+#if VISUALIZE == 1
     initCuda(N_FOR_VIS);
 #else
-    initCuda(2*128);
+    initCuda(N_FOR_VIS);
 #endif
 
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
