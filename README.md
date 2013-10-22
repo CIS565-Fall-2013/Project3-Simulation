@@ -33,7 +33,7 @@ Extended the framework:
 
 ![Screeshot1](Part1/resources/tess.png)
 
-Here, we can see, 
+Here, we can see: 
 * 1 is the highest level tessellation (level 6)
 * 2 is the medium level tessellation (levle 4)
 * 3 is the lowest level tessellation (levle 2)
@@ -69,11 +69,26 @@ The kernels used are as follows:
 
 ![kernelImage](http://people.csail.mit.edu/acornejo/Projects/images/latex/5d2c0d583ac49223a75457d83a1760a5.png)
 
+
+** Simulation Parameters **
+
+The basic simulation parameters are as follows:
+* Stiffness (k) : This is the magnitude of force to put the particles back in correct positions based on pressue.
+* Rest Pressure : This defines the rest state pressure of the liquid. It must be non-zero for liquid behavior. If zero, the matter behaves like a gas.
+* Viscosity Coefficient : This is for the viscosity damping. 
+ 
+The tuning of these parameters is extremely painful because the mapping of virtual space to real world dimensions and SI units is not super straight forward. For this reason, 
+I have only able to get the simulatino to work in certain conditions (super viscous liquid, splashy liquid, etc).
+
+
 ---
 Performance Analysis
 ---
 The jump from accessing all elements in global memory vs shared memory accesses in a cached pattern can be seen below. This timing is for the part one, just acceleration and integration parts timed, not the visualization stage.
+ As we can see, the performance is slightly better with shared memory but not a huge amount.
 
 ![Performance](performance.PNG)
 
 ![PerformanceLogScale](performance_log.PNG)
+
+SPH performance can be improved by improving the neighbor search since that is the most time consuming part of the simulation. A uniform grid itself would be quite useful.
