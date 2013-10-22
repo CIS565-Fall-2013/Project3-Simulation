@@ -10,7 +10,7 @@
 
 float fovy = 60.0f;
 float zNear = 0.10;
-float zFar = 50.0;
+float zFar = 100.0;
 
 glm::mat4 projection = glm::mat4(1.0f);
 glm::mat4 view = glm::mat4(1.0f);
