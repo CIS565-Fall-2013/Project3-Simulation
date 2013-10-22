@@ -4,9 +4,9 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 10000000
+#define N_FOR_VIS 25
 #define DT 0.2
-#define VISUALIZE 0
+#define VISUALIZE 1
 
 bool customSimulation = false;
 bool prefetchEnabled = false;

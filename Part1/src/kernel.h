@@ -24,4 +24,9 @@ void cudaUpdateVBO(float * vbodptr, int width, int height);
 void setDevicePrefetch (bool prefetchEnabled);
 
 inline __device__ glm::vec3 safeNormalize (glm::vec3 vectorToBeNormalized);		// normalize only if length > 0
+__device__ bool isApproximately (const float &a, const float &b);
+__device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos);
+__device__ glm::vec3 pfSharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos);
+__device__ glm::vec3 FlockGlobal (int N, float DT, glm::vec4 my_pos, glm::vec4 *pos, glm::vec3 *vel);
+__device__ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos);
 #endif
