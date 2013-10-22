@@ -22,5 +22,5 @@ void main()
     float diffuseTerm = clamp(dot(normalize(fs_EyeNormal), normalize(fs_EyeLightVector)), 0.0, 1.0);
     
 	//TODO: Use texture coordinates in some way
-    FragColor = diffuseColor*(diffuseTerm*0.95+0.05);//Small 5% ambient term
+    FragColor = diffuseColor*(diffuseTerm*0.9+0.1);//Small 5% ambient term
 }

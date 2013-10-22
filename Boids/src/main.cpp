@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 1000
+#define N_FOR_VIS 1500
 #define DT 0.2
 #define VISUALIZE 1
 
@@ -22,13 +22,13 @@ int main(int argc, char** argv)
 	cudaGLRegisterBufferObject( boidVBO );
 
 #if VISUALIZE == 1 
-	initCuda(N_FOR_VIS);
+	initCuda(N_FOR_VIS, mapDims);
 #else
 	initCuda(2*128);
 #endif
 
 	projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
-	view = glm::lookAt(cameraPosition, glm::vec3(0), glm::vec3(0,0,1));
+	view = glm::lookAt(cameraPosition, glm::vec3(0,0,mapDims.z/2), glm::vec3(0,0,1));
 
 
 	GLuint passthroughProgram;
@@ -63,7 +63,7 @@ void runCuda()
 	// execute the kernel
 	cudaNBodyUpdateWrapper(DT);
 #if VISUALIZE == 1
-	cudaUpdateVBO(dptrvert, field_width, field_height);
+	cudaUpdateVBO(dptrvert);
 #endif
 	// unmap buffer object
 	cudaGLUnmapBufferObject(boidVBO);
