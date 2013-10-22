@@ -76,6 +76,17 @@ SCREENSHOTS OF THE FEATURES IMPLEMENTED
 
 ![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/p2_10201551.PNG)
 
+* Flocking of Part 2 with improved height field
+
+![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/p2_10221055.PNG)
+
+* Flocking of Part 2 with improved noise height field
+
+![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/p2_10220903.PNG)
+
+* Flocking of Part 2 with improved ocean wave effect height field
+
+![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/p2_10221144.PNG)
 
 
 -------------------------------------------------------------------------------
@@ -91,8 +102,11 @@ This is the video of the flocking process of small pyramids.
 
 [![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/VideoScreenShot2.PNG)](http://www.youtube.com/watch?v=b5fV_K9yWqA)
 
-The youtube links are here if you cannot open the video in the markdown file: http://www.youtube.com/watch?v=CIzqrhkuMrI and http://www.youtube.com/watch?v=b5fV_K9yWqA.
+Another new video of flocking with ocean wave effect is this:
 
+[![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/VideoScreenShot2.PNG)](https://www.youtube.com/watch?v=pmQMEbN1d9E)
+
+The youtube links are here if you cannot open the video in the markdown file: http://www.youtube.com/watch?v=CIzqrhkuMrI, http://www.youtube.com/watch?v=b5fV_K9yWqA and https://www.youtube.com/watch?v=pmQMEbN1d9E.
 
 -------------------------------------------------------------------------------
 PERFORMANCE EVALUATION
@@ -125,6 +139,8 @@ REFERENCES
 * Flocking (Craig's Paper): http://www.red3d.com/cwr/papers/1999/gdc99steer.pdf
 
 * Russian Roulette rule from Peter and Karl: https://docs.google.com/file/d/0B72qrSEH6CGfbFV0bGxmLVJiUlU/edit
+
+* Noise function: http://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
 
 -------------------------------------------------------------------------------
 ACKNOWLEDGEMENT
