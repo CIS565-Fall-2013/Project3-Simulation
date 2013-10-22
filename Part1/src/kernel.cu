@@ -25,9 +25,9 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 
 #if SHARED == 1
 //	if (prefetch)
-		#define ACC(x,y,z) pfSharedMemAcc(x,y,z)
+//		#define ACC(x,y,z) pfSharedMemAcc(x,y,z)
 //	else
-//		#define ACC(x,y,z) sharedMemAcc(x,y,z)
+		#define ACC(x,y,z) sharedMemAcc(x,y,z)
 	#define FLOCK(p,q,r,s,t) FlockGlobal(p,q,r,s,t)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
@@ -208,7 +208,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 //		Synchronize here.
 		__syncthreads();		
 
-		// Compute acceleration only for all threads.
+		// Compute acceleration for all threads.
 		// Loop over each object, and calculate acceleration.
 		for (int i = 0; i < blockDim.x; i ++)
 		{	
