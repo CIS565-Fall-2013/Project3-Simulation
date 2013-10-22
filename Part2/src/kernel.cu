@@ -60,6 +60,15 @@ glm::vec3 generateRandomNumberFromThread(float time, int index)
     return glm::vec3((float) u01(rng), (float) u01(rng), (float) u01(rng));
 }
 
+__host__ __device__ 
+float generateRandomNumberFromThread1D(float time, int index)
+{
+    thrust::default_random_engine rng(hash(index*time));
+    thrust::uniform_real_distribution<float> u01(0,1);
+
+    return (float) u01(rng);
+}
+
 //Generate randomized starting positions for the planets in the XY plane
 //Also initialized the masses
 __global__
@@ -297,12 +306,17 @@ void sendToPBO(int N, glm::vec4 * pos, glm::vec3 *vel, float4 * pbo, int width, 
     float c_scale_h = height / s_scale;
 
     glm::vec3 color(0.05, 0.15, 0.3);
-    //glm::vec3 acc = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::vec3 acc = 0.3f * cohesion(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos, glm::vec3(0)); 
+	// Here I tried to use three kinds of field map the last and current one is with noise which refers to http://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
+       //no height field: glm::vec3 acc = glm::vec3(0.0f, 0.0f, 0.0f);
+       //refined grid height field with cohesion bump: glm::vec3 acc = (0.3f *1.0f/100.0f * cohesion(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos, glm::vec3(0)) * glm::vec3((sin(glm::fract(sin(glm::dot(glm::vec2((x-w2)/c_scale_w,(y-h2)/c_scale_h), glm::vec2(12.9898f,78.233f))) * 43758.5453f))-0.5f)*2.0f)); 
+    
+	// noise ocean wave height field
+	glm::vec3 acc = 1.0f/50.0f*glm::vec3((sin(glm::fract(sin(glm::dot(glm::vec2((x-w2)/c_scale_w/4,(y-h2)/c_scale_h/4), glm::vec2(12.9898f,78.233f))) * 43758.5453f))-0.5f)*2.0f);
     if(x<width && y<height) {
       float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
       // Each thread writes one pixel location in the texture (textel)
-      pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
+	  float randPixelVal = generateRandomNumberFromThread1D(2, glm::length(pos[(int)((float)index * generateRandomNumberFromThread1D(index, 2))]));
+      pbo[index].w = (mag < randPixelVal) ? mag * randPixelVal : 0.5f * randPixelVal;
     }
 }
 

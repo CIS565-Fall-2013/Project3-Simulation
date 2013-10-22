@@ -15,7 +15,7 @@
 #define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define RK 0
-#define separationDistance 50 
+#define separationDistance 50
 #define alignmentDistance 30
 #define cohesionDistance 5
 #define maxForce 5

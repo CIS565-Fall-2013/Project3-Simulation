@@ -12,7 +12,9 @@ void main(void)
     v_Texcoords = Texcoords;
     vec4 pos = Position;
     f_height = texture2D(u_height, Texcoords).w;
-    pos.z = -0.05-clamp(f_height,0.0,2.0);
+    pos.z = 0.03-clamp(f_height,0.0,2.0);
     pos = u_projMatrix * pos;
     gl_Position = pos;
+	// Noise function according to http://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
+	v_Texcoords = Texcoords * (sin(fract(sin(dot(pos.xy ,vec2(12.9898,78.233))) * 43758.5453))-0.5)*2;
 }
