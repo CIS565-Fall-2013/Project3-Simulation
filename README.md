@@ -25,6 +25,23 @@ FEATURES:
  *  Fragment shader code to render those billboards like colorful spheres with simple diffuse shading
  *  RK4 (Runge Kutta) and Euler numerical integration methods
  
+---
+BUILDING AND RUNNING
+---
+Change the following to run the code with different settings
+
+```
+//Control the number of bodies in the simulation
+//main.cpp (line 7)
+#define N_FOR_VIS 25
+```
+
+```
+//Settings for shared memory and RK4
+//kernel.h (line 17)
+#define SHARED 1
+#define RK4 0
+```
 
 ---
 SHARED MEMORY IMPLEMENTATION
