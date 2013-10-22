@@ -21,6 +21,8 @@ Features Overview:
 * Fragment shader with sphere rendering from billboards.
 * Runge Kutta integration
 
+[Video Demo](http://youtu.be/YzCPJ15O-_o)
+
 ---
 PERFORMANCE EVALUATION
 ---
@@ -32,14 +34,14 @@ memory to compute each planet's acceleration has a clear advantage.
 ![chart1](Part1/resources/runtime_compare.png)
 
 	Number of Planets	Global Memory	Shared Memory
-	20					7.6				10.6
-	100					29.5			21.4
-	200					55.8			40.5
-	500					136.2			90.5
-	1000				268.2			179.2
-	2000				536.4			357.5
-	3000				801.3			536.1
-	5000				1340.7			895.1
+	20			7.6		10.6
+	100			29.5		21.4
+	200			55.8		40.5
+	500			136.2		90.5
+	1000			268.2		179.2
+	2000			536.4		357.5
+	3000			801.3		536.1
+	5000			1340.7		895.1
 
 PART 2: CUDA Behavioral Animation
 ===
@@ -50,9 +52,12 @@ utlized in this part include cohesion, separation, and alignment.
 
 Here are some preliminary results with similar rendering style of the N-Body simulation:
 
-[Alignment]()
-[Cohesion]()
-[Separation]()
+[Alignment](http://youtu.be/d2Ledg5wZlk)
+
+[Cohesion](http://youtu.be/uTp8H38lxA4)
+
+[Separation](http://youtu.be/BcDpVr_Pu00)
+
 
 Flocking with each boid rendered as a triangle
 [Flocking towards target]()
