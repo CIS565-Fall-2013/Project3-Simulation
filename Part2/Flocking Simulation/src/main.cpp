@@ -16,6 +16,7 @@ int main(int argc, char** argv)
     init(argc, argv);
     cudaGLSetGLDevice( compat_getMaxGflopsDeviceId() );
     cudaGLRegisterBufferObject( planetVBO );
+	cudaGLRegisterBufferObject( velocityVBO );
     
 #if VISUALIZE == 1 
     initCuda(N_FOR_VIS);
@@ -24,7 +25,7 @@ int main(int argc, char** argv)
 #endif
 
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
-    view = glm::lookAt(cameraPosition, glm::vec3(1.0, 1.0, 0), glm::vec3(0,0,1));
+    view = glm::lookAt(cameraPosition, glm::vec3(0.0, 0.0, 0), glm::vec3(0,1,0));
     projection = projection * view;
 
     initShaders(program);
@@ -33,6 +34,7 @@ int main(int argc, char** argv)
 
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
+	glutMotionFunc(mouseMotion);
 
     glutMainLoop();
 
@@ -49,15 +51,18 @@ void runCuda()
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
     float *dptrvert=NULL;
+	float *velptr=NULL;
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
+	cudaGLMapBufferObject((void**)&velptr, velocityVBO);
 
     // execute the kernel
-    cudaFlockingUpdateWrapper(DT);
+    cudaFlockingUpdateWrapper(DT, seekTarget);
 #if VISUALIZE == 1
-    cudaUpdateVBO(dptrvert);
+    cudaUpdateVBO(dptrvert, velptr);
 #endif
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
+	cudaGLUnmapBufferObject(velocityVBO);
 }
 /*
 float ORG[3] = {0,0,0};
@@ -169,11 +174,14 @@ void display()
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
     glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
 
+	glEnableVertexAttribArray(velocityLocation);
+	glBindBuffer(GL_ARRAY_BUFFER, velocityVBO);
+	glVertexAttribPointer((GLuint)velocityLocation, 3, GL_FLOAT, GL_FALSE, 0, 0); 
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
    
     glPointSize(4.0f); 
     glDrawElements(GL_POINTS, N_FOR_VIS, GL_UNSIGNED_INT, 0);
-    glPointSize(1.0f);
 
     glDisableVertexAttribArray(positionLocation);
 //	Draw_Axes();
@@ -191,6 +199,46 @@ void keyboard(unsigned char key, int x, int y)
             exit(1);
             break;
     }
+}
+
+void mouseMotion(int x, int y)
+{
+	float dx, dy;
+	dx = (float)(x - mouse_old_x);
+	dy = (float)(y - mouse_old_y);
+
+/*
+	if (button_mask & 0x01) 
+	{// left button*/
+		viewPhi   += 0.005f*dx;
+		viewTheta += 0.005f*dy;
+		seekTarget.x = 400.0f*sin(viewTheta)*sin(viewPhi);
+		seekTarget.y = 400.0f*cos(viewTheta);
+		seekTarget.z = 400.0f*sin(viewTheta)*cos(viewPhi);
+/*
+		renderCam->views[0].x = sin(viewTheta)*sin(viewPhi);
+		renderCam->views[0].y = cos(viewTheta);
+		renderCam->views[0].z = sin(viewTheta)*cos(viewPhi);*/
+
+//	} 
+/*
+	if (button_mask & 0x02) 
+	{// middle button
+		renderCam->positions[0] += 0.02f*dx*glm::cross(renderCam->views[0], renderCam->ups[0]);
+		renderCam->positions[0] += 0.02f*dy*glm::cross(glm::cross(renderCam->views[0], renderCam->ups[0]), renderCam->views[0]);
+	}
+	if (button_mask & 0x04)
+	{// right button
+		renderCam->positions[0] -= 0.02f*dy*renderCam->views[0];
+	}
+
+	iterations = 0;
+	for(int i=0; i<renderCam->resolution.x*renderCam->resolution.y; i++){
+		renderCam->image[i] = glm::vec3(0,0,0);
+	}*/
+
+	mouse_old_x = x;
+	mouse_old_y = y;
 }
 
 
@@ -224,8 +272,9 @@ void init(int argc, char* argv[])
 void initVAO(void)
 {
 
-    GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS)];
-    GLuint *bindices   = new GLuint[N_FOR_VIS];
+    GLfloat *bodies     = new GLfloat[4*(N_FOR_VIS)];
+	GLfloat *velocities = new GLfloat[3*(N_FOR_VIS)];
+    GLuint *bindices    = new GLuint [N_FOR_VIS];
 
     for(int i = 0; i < N_FOR_VIS; i++)
     {
@@ -233,15 +282,24 @@ void initVAO(void)
         bodies[4*i+1] = 0.0f;
         bodies[4*i+2] = 0.0f;
         bodies[4*i+3] = 1.0f;
+
+		velocities[3*i+0] = 0.0f;
+		velocities[3*i+1] = 0.0f;
+		velocities[3*i+2] = 0.0f;
+
         bindices[i] = i;
     }
 
     glGenBuffers(1, &planetVBO);
+	glGenBuffers(1, &velocityVBO);
     glGenBuffers(1, &planetIBO);
 
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
     glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
     
+	glBindBuffer(GL_ARRAY_BUFFER, velocityVBO);
+	glBufferData(GL_ARRAY_BUFFER, 3*(N_FOR_VIS)*sizeof(GLfloat), velocities, GL_DYNAMIC_DRAW);
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
 
@@ -250,6 +308,7 @@ void initVAO(void)
 
     delete[] bodies;
     delete[] bindices;
+	delete[] velocities;
 }
 
 void initShaders(GLuint * program)

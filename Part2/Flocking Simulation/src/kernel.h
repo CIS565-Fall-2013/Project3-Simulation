@@ -16,11 +16,10 @@
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 0
 #define N_FOR_VIS 15000
-#define g_fMaxSpeed 1.0f
+#define g_fMaxSpeed 2.0f
 
 void checkCUDAError(const char *msg, int line);
-void cudaFlockingUpdateWrapper(float dt);
+void cudaFlockingUpdateWrapper(float dt, glm::vec3 target);
 void initCuda(int N);
-void cudaUpdatePBO(float4 * pbodptr, int width, int height);
-void cudaUpdateVBO(float * vbodptr);
+void cudaUpdateVBO(float *vbodptr, float *velptr);
 #endif

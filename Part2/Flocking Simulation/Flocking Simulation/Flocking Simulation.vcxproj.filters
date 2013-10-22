@@ -17,12 +17,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\heightFS.glsl">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\heightVS.glsl">
-      <Filter>shaders</Filter>
-    </None>
     <None Include="shaders\planetFS.glsl">
       <Filter>shaders</Filter>
     </None>

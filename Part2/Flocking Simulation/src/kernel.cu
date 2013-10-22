@@ -16,15 +16,15 @@ dim3 threadsPerBlock(blockSize);
 
 int numObjects;
 const float boidMass = 1.0f;
-const float scene_scale = 2e2; //size of the height map in simulation space
+const float scene_scale = 4e2; 
 
 const __device__ float neighborRadius = 20.0f;
-const __device__ float g_fMaxForce = 3.0f;
+const __device__ float g_fMaxForce = 1.0f;
 const __device__ float neighborAngle = 180.0f;
-const __device__ float c_alignment = 1.0f;
-const __device__ float c_separation = 2.0f;
-const __device__ float c_cohesion = 0.01f;
-const __device__ float c_seek = 0.5f;
+const __device__ float c_alignment = 2.0f;
+const __device__ float c_separation = 3.0f;
+const __device__ float c_cohesion = 0.005f;
+const __device__ float c_seek = 0.001f;
 
 
 glm::vec4 * dev_pos;
@@ -103,7 +103,7 @@ __global__ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float s
 
 
 //Integration 
-__global__ void updateAccelaration(int N, float dt, glm::vec4 *pos, glm::vec3 *vel, glm::vec3 *acc)
+__global__ void updateAccelaration(int N, float dt, glm::vec4 *pos, glm::vec3 *vel, glm::vec3 *acc, glm::vec3 target)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
@@ -134,11 +134,11 @@ __global__ void updateAccelaration(int N, float dt, glm::vec4 *pos, glm::vec3 *v
 		{
 			alignmentVelocity = alignmentNumerator / float(numberOfNeighbors);
 			centerOfMass = centerOfMass / float(numberOfNeighbors);
-			desiredVel = c_alignment*alignmentVelocity + c_separation*separationVel + c_cohesion*(centerOfMass - myPosition);
+			desiredVel = c_alignment*alignmentVelocity + c_separation*separationVel + c_cohesion*(centerOfMass - myPosition) + c_seek * glm::normalize(target-myPosition);
 		}
-		else desiredVel = myVelocity;
+		else desiredVel = c_seek * (target-myPosition);
 
-		if(glm::length(myPosition) > 400.0f) desiredVel = c_seek * (-myPosition);
+		if(glm::length(myPosition) > 800.0f) desiredVel = glm::normalize(-myPosition);
 		
 		// Calculate acceleration from steering direction
 		acc[index] = truncate(desiredVel - myVelocity, g_fMaxForce) / pos[index].w;
@@ -174,20 +174,24 @@ __global__ void updatePosition(int N, float dt, glm::vec4 *pos, glm::vec3 *vel, 
 
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
-__global__ void sendToVBO(int N, glm::vec4 * pos, float * vbo, float s_scale)
+__global__ void sendToVBO(int N, glm::vec4 * pos, glm::vec3 *vel, float * posVBO, float *velVBO, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
-    float c_scale_w = -2.0f / s_scale;
-    float c_scale_h = -2.0f / s_scale;
-	float c_scale_s = -2.0f / s_scale;
+    float c_scale_w = 2.0f / s_scale;
+    float c_scale_h = 2.0f / s_scale;
+	float c_scale_s = 2.0f / s_scale;
 
     if(index<N)
     {
-        vbo[4*index+0] = pos[index].x*c_scale_w;
-        vbo[4*index+1] = pos[index].y*c_scale_h;
-        vbo[4*index+2] = pos[index].z*c_scale_s;
-        vbo[4*index+3] = 1;
+        posVBO[4*index+0] = pos[index].x*c_scale_w;
+        posVBO[4*index+1] = pos[index].y*c_scale_h;
+        posVBO[4*index+2] = pos[index].z*c_scale_s;
+        posVBO[4*index+3] = 1;
+
+		velVBO[3*index+0] = vel[index].x*c_scale_w;
+		velVBO[3*index+1] = vel[index].y*c_scale_h;
+		velVBO[3*index+2] = vel[index].z*c_scale_s;
     }
 }
 
@@ -208,27 +212,25 @@ void initCuda(int N)
 	cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));  
     checkCUDAErrorWithLine("Kernel failed!");  
 
-
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, boidMass); // one dimensional block
     checkCUDAErrorWithLine("Kernel failed!");
-//    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
 	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, g_fMaxSpeed);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
-void cudaFlockingUpdateWrapper(float dt)
+void cudaFlockingUpdateWrapper(float dt, glm::vec3 target)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    updateAccelaration<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    updateAccelaration<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, target);
     checkCUDAErrorWithLine("Kernel failed!");
 	updatePosition<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
 	checkCUDAErrorWithLine("Kernel failed!");
 }
 
-void cudaUpdateVBO(float * vbodptr)
+void cudaUpdateVBO(float *vbodptr, float *velptr)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, scene_scale);
+    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, dev_vel, vbodptr, velptr, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 

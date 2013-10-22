@@ -34,9 +34,10 @@ using namespace std;
 //-------------------------------
 
 GLuint positionLocation = 0;
-GLuint texcoordsLocation = 1;
-const char *attributeLocations[] = { "Position", "Texcoords" };
+GLuint velocityLocation = 1;
+const char *attributeLocations[] = { "position", "velocity" };
 GLuint planetVBO = (GLuint)NULL;
+GLuint velocityVBO = (GLuint)NULL;
 GLuint planetIBO = (GLuint)NULL;
 GLuint displayImage;
 GLuint program[2];
@@ -73,6 +74,17 @@ int main(int argc, char** argv);
 int timeSinceLastFrame;
 
 //-------------------------------
+//----------Mouse Control--------
+//-------------------------------
+
+int mouse_old_x, mouse_old_y;
+unsigned char button_mask = 0x00;
+
+glm::vec3 seekTarget(0.0f);
+float viewPhi = 0;
+float viewTheta = 0;
+
+//-------------------------------
 //---------RUNTIME STUFF---------
 //-------------------------------
 
@@ -80,6 +92,7 @@ void runCuda();
 
 void display();
 void keyboard(unsigned char key, int x, int y);
+void mouseMotion(int x, int y);
 
 //-------------------------------
 //----------SETUP STUFF----------
@@ -88,7 +101,6 @@ void keyboard(unsigned char key, int x, int y);
 void init(int argc, char* argv[]);
 
 
-void initPBO(GLuint* pbo);
 void initCuda();
 void initTextures();
 void initVAO();
