@@ -32,7 +32,7 @@ void main()
 	// calculating the fake intersection point and its lighting
 	vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
     vec3 L = normalize(-WorldCoord);
-    float light = 0.1 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
+    float light = 0.2 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
     //vec3 color = vec3(0.4, 0.1, 0.6);
     FragColor = vec4(frag.color*light,1.0);
 }

@@ -118,7 +118,8 @@ vec3 calculateAcceleration(vec4 us, vec4 them)
     //a = ------------- = --------
     //      m_us*r^2        r^2
     
-	float eps = 0.1f; // protect against division of small number
+	//float eps = 0.1f; // protect against division of small number
+	float eps = 1e-6; // protect against division of small number
    	vec4 rvec4 = them-us;
 	vec3 rvec = vec3(rvec4.x, rvec4.y, rvec4.z);
 	//vec3 accDir = glm::normalize(rvec);
