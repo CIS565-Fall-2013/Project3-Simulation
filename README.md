@@ -25,9 +25,21 @@ Features Overview:
 PERFORMANCE EVALUATION
 ---
 
-Here I provide a comparison between the number of planets in the simulation vs. the use of global memory and shared memory in terms of the average time per frame.
+Here I provide a comparison between the number of planets in the simulation vs. the use of global memory and shared memory in terms of the average time per frame. With shared memory
+frames. With small number of plants in the simulation, using global memory is faster than using shared memory. However, once the number of planets starts to increase, using shared 
+memory to compute each planet's acceleration has a clear advantage.
 
-TODO: Insert Chart
+![chart1](Part1/resources/runtime_compare.png)
+
+	Number of Planets	Global Memory	Shared Memory
+	20			7.6		10.6
+	100			29.5		21.4
+	200			55.8		40.5
+	500			136.2		90.5
+	1000			268.2		179.2
+	2000			536.4		357.5
+	3000			801.3		536.1
+	5000			1340.7		895.1
 
 PART 2: Your CUDA Simulation
 ===
