@@ -28,7 +28,7 @@
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt, int blockSize);
-void initCuda(int N, int blockSize);
+glm::vec4* initCuda(int N, int blockSize);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height, int blockSize);
 void cudaUpdateVBO(float * vbodptr, int width, int height, int blockSize);
 void cleanupCuda();

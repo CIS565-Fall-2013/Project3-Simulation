@@ -381,7 +381,7 @@ void cleanupCuda(){
 	cudaDeviceReset();
 }
 //Initialize memory, update some globals
-void initCuda(int N, int blockSize)
+glm::vec4* initCuda(int N, int blockSize)
 {
     numObjects = N;
     dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
@@ -398,6 +398,8 @@ void initCuda(int N, int blockSize)
     generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
+
+	return dev_pos;
 
 	//atexit(cleanupCuda);
 }

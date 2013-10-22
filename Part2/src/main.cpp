@@ -9,6 +9,7 @@
 #define blockSize 32
 #define DT 0.2
 #define VISUALIZE 1
+glm::vec4 * dev_pos_ptr;
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -24,7 +25,7 @@ int main(int argc, char** argv)
     cudaGLRegisterBufferObject( planetVBO );
     
 #if VISUALIZE == 1 
-    initCuda(N_FOR_VIS, blockSize);
+    dev_pos_ptr = initCuda(N_FOR_VIS, blockSize);
 #else
     initCuda(2*128);
 #endif
