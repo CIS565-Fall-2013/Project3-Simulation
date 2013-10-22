@@ -1,5 +1,10 @@
 #version 330
 
+in fColor
+{
+	vec3 color;
+}frag;
+
 in vec3 WorldCoord;
 in vec3 ToCam;
 in vec3 Up;
@@ -31,5 +36,5 @@ void main()
  //   FragColor = vec4(color*light,1.0);
 
 
-	FragColor = vec4(1.0,0.0,0.0,1.0);
+	FragColor = vec4(frag.color, 1.0);
 }
