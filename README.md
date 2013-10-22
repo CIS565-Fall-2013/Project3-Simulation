@@ -41,8 +41,21 @@ memory to compute each planet's acceleration has a clear advantage.
 	3000			801.3		536.1
 	5000			1340.7		895.1
 
-PART 2: Your CUDA Simulation
+PART 2: CUDA Behavioral Animation
 ===
+
+For the second part of this project, I implemented several behaviors according to the formulations described by Craig Reynods found [here](http://www.red3d.com/cwr/boids/). For this portion,
+there are two different modes that are availabe. Arrival and flocking behavior towards a target movable by using 'w', 'a', 's', 'd', and untargetd flocking behavior. The individual behaviors
+utlized in this part include cohesion, separation, and alignment.
+
+Here are some preliminary results with similar rendering style of the N-Body simulation:
+
+[Alignment]()
+[Cohesion]()
+[Separation]()
+
+Flocking with each boid rendered as a triangle
+[Flocking towards target]()
 
 
 ---

@@ -7,6 +7,9 @@
 #define N_FOR_VIS 25
 #define DT 0.2
 #define VISUALIZE 1
+#define RENDER_PLANE 0
+#define RENDER_CENTER 0 // decide whether or not to draw the center unmovable point
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -76,7 +79,9 @@ void runCuda()
     // execute the kernel
     cudaNBodyUpdateWrapper(DT, target, recall);
 #if VISUALIZE == 1
+#if RENDER_PLANE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
+#endif
     cudaUpdateVBO(dptrvert, field_width, field_height);
 #endif
     // unmap buffer object
@@ -130,6 +135,7 @@ void display()
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
+#if RENDER_PLANE == 1
     glUseProgram(program[HEIGHT_FIELD]); // "shaders/heightVS.glsl", "shaders/heightFS.glsl"
 
     glEnableVertexAttribArray(positionLocation);
@@ -147,6 +153,7 @@ void display()
 
     glDisableVertexAttribArray(positionLocation);
     glDisableVertexAttribArray(texcoordsLocation);
+#endif
 
     glUseProgram(program[PASS_THROUGH]); // "shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl"
 
@@ -162,7 +169,11 @@ void display()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
    
     glPointSize(4.0f); 
-    glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
+#if RENDER_CENTER == 0
+    glDrawElements(GL_POINTS, N_FOR_VIS, GL_UNSIGNED_INT, 0);
+#elif RENDER_CENTER == 1
+	glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
+#endif
 
     glPointSize(1.0f);
 
@@ -170,6 +181,7 @@ void display()
 	glDisableVertexAttribArray(colorLocation);
 
 #endif
+
     glutPostRedisplay();
     glutSwapBuffers();
 }
@@ -374,13 +386,11 @@ void initVAO(void)
     }
 
 	// generate buffer objects for planeVBO, TBO, IBO and planetVBO and IBO
-    glGenBuffers(1, &planeVBO);
+#if RENDER_PLANE == 1
+	glGenBuffers(1, &planeVBO);
     glGenBuffers(1, &planeTBO);
     glGenBuffers(1, &planeIBO);
-    glGenBuffers(1, &planetVBO);
-    glGenBuffers(1, &planetIBO);
-	glGenBuffers(1, &planetCBO);
-    
+
     glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
     glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
 
@@ -391,7 +401,12 @@ void initVAO(void)
 	// see display() for the glDrawElements call
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO); 
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6*num_faces*sizeof(GLuint), indices, GL_STATIC_DRAW);
+#endif
 
+	glGenBuffers(1, &planetVBO);
+    glGenBuffers(1, &planetIBO);
+	glGenBuffers(1, &planetCBO);
+   
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
     glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
     
@@ -417,6 +432,7 @@ void initVAO(void)
 void initShaders(GLuint * program)
 {
     GLint location;
+
     program[0] = glslUtility::createProgram("shaders/heightVS.glsl", "shaders/heightFS.glsl", attributeLocations, 2);
     glUseProgram(program[0]);
     
