@@ -1,5 +1,4 @@
 
-
 ---
 INTRODUCTION:
 ---
@@ -20,7 +19,7 @@ every other object within a confined neighbourhood radius.
 ---
 Video :
 ---
-[Flocking Video](http://www.youtube.com/watch?v=bA-7rGa7juM&feature=youtu.be)
+[Flocking Video](http://www.youtube.com/watch?v=QnTGIj2jIUw)
 
 ---
 Screen Shots:
