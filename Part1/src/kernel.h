@@ -18,10 +18,14 @@
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt, bool customSimulation);
-void initCuda(int N);
+void initCuda(int N, const glm::vec4 &camera_position);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height);
 void setDevicePrefetch (bool prefetchEnabled);
+
+void moveCameraToNextFlock (glm::vec3 &cameraPos);
+glm::vec4	getCurrentCameraPosition ();
+void		setCurrentCameraPosition (const glm::vec4 &camera_position);
 
 inline __device__ glm::vec3 safeNormalize (glm::vec3 vectorToBeNormalized);		// normalize only if length > 0
 __device__ bool isApproximately (const float &a, const float &b);

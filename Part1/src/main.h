@@ -55,9 +55,11 @@ float fovy = 60.0f;
 float zNear = 0.10;
 float zFar = 5.0;
 
+glm::mat4 perspMat;
 glm::mat4 projection;
 glm::mat4 view;
-glm::vec3 cameraPosition(1.75,1.75,1.35);
+glm::vec3 originalCamPosition(1.75,1.75,1.35);
+glm::vec3 cameraPosition (originalCamPosition);
 //-------------------------------
 //----------CUDA STUFF-----------
 //-------------------------------

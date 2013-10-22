@@ -10,7 +10,7 @@
 
 bool customSimulation = false;
 bool prefetchEnabled = false;
-
+bool cameraToggle = false;
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -26,15 +26,15 @@ int main(int argc, char** argv)
     cudaGLRegisterBufferObject( planetVBO );
     
 #if VISUALIZE == 1 
-    initCuda(N_FOR_VIS);
+	initCuda(N_FOR_VIS, glm::vec4 (cameraPosition, 1));
 #else
     initCuda(20*120);
 #endif
 //	setDevicePrefetch (prefetchEnabled);
-    projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
+    perspMat = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
     view = glm::lookAt(cameraPosition, glm::vec3(0), glm::vec3(0,0,1));
 
-    projection = projection * view;
+    projection = perspMat * view;
 
     GLuint passthroughProgram;
     initShaders(program);
@@ -156,6 +156,33 @@ void keyboard(unsigned char key, int x, int y)
         case(27):
             exit(1);
             break;
+		case 'C':
+			cameraToggle = !cameraToggle;
+			if (!cameraToggle)
+			{
+				cameraPosition = glm::vec3 (originalCamPosition);
+				setCurrentCameraPosition (glm::vec4 (cameraPosition, 1.0));
+				view = glm::lookAt(cameraPosition, glm::vec3 (0), glm::vec3(0,0,1));
+			}
+		case 'N':
+			if (cameraToggle)
+			{
+				moveCameraToNextFlock (cameraPosition);
+				glm::vec4 temp_cp = getCurrentCameraPosition ();
+				cameraPosition.x = temp_cp.x;	cameraPosition.y = temp_cp.y;	cameraPosition.z = temp_cp.z;
+//				cameraPosition = glm::vec3 (1.0, 1.0, 1.2);
+				view = glm::lookAt(cameraPosition, glm::vec3 (cameraPosition.x, cameraPosition.y +0.7f, cameraPosition.z-0.5f), 
+										glm::vec3(0,0,1));
+			}
+
+			projection = perspMat * view;
+			glUseProgram(program[0]);
+			glUniformMatrix4fv (glGetUniformLocation(program[0], "u_projMatrix"), 1, GL_FALSE, &projection [0][0]);
+			glUseProgram(program[1]);
+			glUniformMatrix4fv (glGetUniformLocation(program[1], "u_projMatrix"), 1, GL_FALSE, &projection [0][0]);
+			glUniform3fv (glGetUniformLocation(program[1], "u_cameraPos"), 1, &cameraPosition [0]);
+			glUseProgram (program[0]);
+			break;
     }
 }
 

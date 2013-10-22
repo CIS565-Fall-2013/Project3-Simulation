@@ -29,6 +29,7 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
+glm::vec4 * dev_campos;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -473,12 +474,28 @@ void setupVelocityLF (int N, float dt, glm::vec3 * vel, glm::vec3 * acc)
 		vel[index] += acc [index] * dt;
 }
 
+__global__	void	moveCamera (int N, glm::vec4* campos, glm::vec4* pos)
+{
+	for (int i = 0;	i < N; i ++)
+	{
+		if (glm::length (pos [i] - *campos) > 5.0)
+		{
+			*campos = pos [i];
+			campos->z += 2.0f;
+//			campos->y -= 0.5f;
+
+			break;
+		}
+	}
+}
+
+
 /*************************************
  * Wrappers for the __global__ calls *
  *************************************/
 
 //Initialize memory, update some globals
-void initCuda(int N)
+void initCuda(int N, const glm::vec4 &camera_position)
 {
     numObjects = N;
     dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
@@ -489,7 +506,10 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaMalloc((void**)&dev_campos, sizeof(glm::vec4));
+    checkCUDAErrorWithLine("Kernel failed!");
 
+	cudaMemcpy (dev_campos, &camera_position, sizeof (camera_position), cudaMemcpyHostToDevice);
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
     generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
@@ -534,4 +554,21 @@ void cudaUpdatePBO(float4 * pbodptr, int width, int height)
 void setDevicePrefetch (bool prefetchEnabled)
 {
 	cudaMemcpyToSymbol (&prefetch, &prefetchEnabled, sizeof (bool), 0);
+}
+
+glm::vec4	getCurrentCameraPosition ()
+{
+	glm::vec4	camera_position;
+	cudaMemcpy (&camera_position, dev_campos, sizeof (camera_position), cudaMemcpyDeviceToHost);
+	return camera_position/scene_scale;
+}
+
+void		setCurrentCameraPosition (const glm::vec4 &camera_position)
+{
+	cudaMemcpy (dev_campos, &camera_position, sizeof (camera_position), cudaMemcpyHostToDevice);
+}
+
+void	moveCameraToNextFlock (glm::vec3 &cameraPos)
+{
+	moveCamera<<<1,1>>> (numObjects, dev_campos, dev_pos);
 }
