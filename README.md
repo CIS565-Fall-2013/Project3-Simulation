@@ -95,5 +95,7 @@ Acknowledgements
 Many thanks to Ishaan for his help with transforming the shaders to draw the boids as they currently are. 
 
 Much of my implementation of the flocking simulator was informed by the following:
-[Game Dev Tutorial on 2D Flocking]:http://gamedev.tutsplus.com/tutorials/implementation/the-three-simple-rules-of-flocking-behaviors-alignment-cohesion-and-separation/
-[Reynolds' Flocking Paper]:www.­red3d.­com/­cwr/­boids/­
+
+Game Dev Tutorial on 2D Flocking : http://gamedev.tutsplus.com/tutorials/implementation/the-three-simple-rules-of-flocking-behaviors-alignment-cohesion-and-separation/
+
+Reynolds' Flocking Paper : www.­red3d.­com/­cwr/­boids/­
