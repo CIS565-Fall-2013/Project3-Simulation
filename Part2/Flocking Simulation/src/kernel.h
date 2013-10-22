@@ -15,12 +15,12 @@
 #define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 0
-#define N_FOR_VIS 1500
-#define g_fMaxSpeed 0.5f
+#define N_FOR_VIS 15000
+#define g_fMaxSpeed 1.0f
 
 void checkCUDAError(const char *msg, int line);
 void cudaFlockingUpdateWrapper(float dt);
 void initCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
-void cudaUpdateVBO(float * vbodptr, int width, int height);
+void cudaUpdateVBO(float * vbodptr);
 #endif

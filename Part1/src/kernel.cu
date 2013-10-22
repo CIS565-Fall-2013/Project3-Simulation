@@ -123,7 +123,7 @@ __device__ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 	glm::vec3 usPosition(us.x, us.y, us.z);
 	glm::vec3 themPosition(them.x, them.y, them.z);
 	glm::vec3 gravityDir = themPosition - usPosition;
-	float _1overR = abs(glm::length(gravityDir)) < EPSILON ? 0 : 1.0f / glm::length(gravityDir);
+	float _1overR = abs(glm::length(gravityDir)) < 0.5f ? 0 : 1.0f / glm::length(gravityDir);
 
     return gravityDir * (float)G * them.w * _1overR*_1overR*_1overR;
 }
@@ -137,8 +137,8 @@ __device__  glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 		acc += calculateAcceleration(my_pos, their_pos[i]);
 	}
 //	printf("acc.x = %f, acc.y = %f, acc.z = %f\n", acc.x, acc.y, acc.z);
-    return truncate(acc, g_fMaxAcc);
-//	return acc;
+//    return truncate(acc, g_fMaxAcc);
+	return acc;
 }
 
 

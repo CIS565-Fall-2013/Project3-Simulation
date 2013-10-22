@@ -19,12 +19,11 @@ const float boidMass = 1.0f;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
 const __device__ float neighborRadius = 20.0f;
-const __device__ float g_fVelKv = 0.5f;
 const __device__ float g_fMaxForce = 3.0f;
 const __device__ float neighborAngle = 180.0f;
 const __device__ float c_alignment = 1.0f;
 const __device__ float c_separation = 2.0f;
-const __device__ float c_cohesion = 0.008f;
+const __device__ float c_cohesion = 0.01f;
 const __device__ float c_seek = 0.5f;
 
 
@@ -84,28 +83,10 @@ __global__ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float s
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0f;//rand.z;
+        arr[index].z = /*0.0f;*/rand.z;
         arr[index].w = mass;
     }
 }
-
-//Determine velocity from the distance from the center star. Not super physically accurate because 
-//the mass ratio is too close, but it makes for an interesting looking scene
-/*
-__global__ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
-{
-    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if(index < N)
-    {
-        glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
-        float r = glm::length(R) + EPSILON;
-        float s = sqrt(G*starMass/r);
-        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
-        arr[index].x = s*D.x;
-        arr[index].y = s*D.y;
-        arr[index].z = s*D.z;
-    }
-}*/
 
 //Generate randomized starting velocities in the XY plane
 __global__ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
@@ -116,7 +97,7 @@ __global__ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float s
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0;//rand.z;
+        arr[index].z = /*0.0;*/rand.z;
     }
 }
 
@@ -193,18 +174,19 @@ __global__ void updatePosition(int N, float dt, glm::vec4 *pos, glm::vec3 *vel, 
 
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
-__global__ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
+__global__ void sendToVBO(int N, glm::vec4 * pos, float * vbo, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
     float c_scale_w = -2.0f / s_scale;
     float c_scale_h = -2.0f / s_scale;
+	float c_scale_s = -2.0f / s_scale;
 
     if(index<N)
     {
         vbo[4*index+0] = pos[index].x*c_scale_w;
         vbo[4*index+1] = pos[index].y*c_scale_h;
-        vbo[4*index+2] = 0;
+        vbo[4*index+2] = pos[index].z*c_scale_s;
         vbo[4*index+3] = 1;
     }
 }
@@ -243,18 +225,10 @@ void cudaFlockingUpdateWrapper(float dt)
 	checkCUDAErrorWithLine("Kernel failed!");
 }
 
-/*
-void cudaUpdatePBO(float4 * pbodptr, int width, int height)
-{
-    dim3 fullBlocksPerGrid((int)ceil(float(width*height)/float(blockSize)));
-    sendToPBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
-    checkCUDAErrorWithLine("Kernel failed!");
-}*/
-
-void cudaUpdateVBO(float * vbodptr, int width, int height)
+void cudaUpdateVBO(float * vbodptr)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
