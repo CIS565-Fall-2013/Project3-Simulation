@@ -25,9 +25,9 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 
 #if SHARED == 1
 //	if (prefetch)
-//		#define ACC(x,y,z) pfSharedMemAcc(x,y,z)
+		#define ACC(x,y,z) pfSharedMemAcc(x,y,z)
 //	else
-		#define ACC(x,y,z) sharedMemAcc(x,y,z)
+//		#define ACC(x,y,z) sharedMemAcc(x,y,z)
 	#define FLOCK(p,q,r,s,t) FlockGlobal(p,q,r,s,t)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
@@ -154,16 +154,14 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	glm::vec3 acc = glm::vec3 (0);
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
-//	if (index < N)
-//	{	
-		for (int i = 0; i < N; i ++)
-		{	
-			if (their_pos [i] == my_pos)
-				continue;
-			acc += calculateAcceleration(my_pos, their_pos [i]);
-		}
-		acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
-//	}
+	for (int i = 0; i < N; i ++)
+	{	
+		if (their_pos [i] == my_pos)
+			continue;
+		acc += calculateAcceleration(my_pos, their_pos [i]);
+	}
+	acc += calculateAcceleration (my_pos, glm::vec4 (0, 0, 0, starMass));
+
 	return acc;
 }
 
@@ -184,23 +182,13 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 
 	glm::vec3 acc = glm::vec3 (0);
 
-//	int loopMax = ceil (N / (float)blockDim.x);
-
 	// Loop over each block (assuming parallelization of objects) and load objects from global to shared memory.
-	// The first block of threads will load the first blockDim.x no. of objects from global memory to shared memory; 
-	// The next block will load the next blockDim.x no. of objects from global and so on. Thus, we load the entire
-	// set of positions in global memory into shared memory iteratively, one block at a time.
+	// Each block of threads will load blockDim.x no. of objects from global memory to shared memory; 
+	// Thus, we load the entire set of positions in global memory into shared memory iteratively, one block at a time.
 	for (int j = 0; j < ceil (N / (float)blockDim.x); j ++)
 	{
-		// refBlockIndex is the block index of the block of memory locations we're trying to copy into shared.
-		int refblockIndex = blockIdx.x + j;
-		
-		// If trying to load a block beyond the grid boundary, wrap around.
-		if (refblockIndex >= ceil (N / (float)blockDim.x))
-			refblockIndex -= ceil (N / (float)blockDim.x);
-
 		// Calculate global memory index that should be accessed by this thread.
-		int index = blockDim.x * refblockIndex + threadIdx.x;
+		int index = blockDim.x * j + threadIdx.x;
 		// Load the value from global to shared. 
 		if (index < N)
 			shared_pos [threadIdx.x] = their_pos [index];
@@ -215,7 +203,7 @@ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 			// If the block of global memory we're loading into shared mem corresponds to the last block in the grid, 
 			// it can contain less than blockDim.x elements. In such a situation, break out of the loop once we pass 
 			// the last element in that "block".
-			if (refblockIndex == (floor (N / (float)blockDim.x)))
+			if (j == (floor (N / (float)blockDim.x)))
 				if (i >= (N%blockDim.x))
 					break;
 
@@ -246,17 +234,13 @@ glm::vec3 pfSharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 	glm::vec3 acc = glm::vec3 (0);
 	glm::vec4 prefetcher = glm::vec4 (0);
 
-	int index = blockDim.x * blockIdx.x + threadIdx.x;
+	int index = threadIdx.x;
 	if (index < N)
 		prefetcher = their_pos [index];		// Prefetch first element into register.
 
 	for (int j = 0; j < ceil (N / (float)blockDim.x); j ++)
 	{
-		int refblockIndex = blockIdx.x + j + 1;
-		if (refblockIndex >= ceil (N / (float)blockDim.x))
-			refblockIndex -= ceil (N / (float)blockDim.x);
-
-		index = blockDim.x * refblockIndex + threadIdx.x;
+		index = blockDim.x * (j+1) + threadIdx.x;
 
 		shared_pos [threadIdx.x] = prefetcher;	// Copy prefetched element into shared memory.
 		prefetcher = glm::vec4 (0);
@@ -268,7 +252,7 @@ glm::vec3 pfSharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 
 		for (int i = 0; i < blockDim.x; i ++)
 		{	
-			if (refblockIndex == (floor (N / (float)blockDim.x)))
+			if (j == (floor (N / (float)blockDim.x)))
 				if (i >= (N%blockDim.x))
 					break;
 
@@ -472,11 +456,7 @@ void cudaNBodyUpdateWrapper(float dt, bool customSimulation)
 	else
 		updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
-	//glm::vec3 *accn = new glm::vec3 [numObjects];
-	//for (int i= 0; i < numObjects; i ++)
-	//	accn [i] = glm::vec3 (0);
-	//cudaMemcpy (accn, dev_acc, sizeof(glm::vec3)*numObjects, cudaMemcpyDeviceToHost);
-	//int breakHere = -1;
+
 	updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
