@@ -5,7 +5,7 @@
 #include "utilities.h"
 #include "kernel.h"
 
-#if SHARED == 1
+#if SHARED == 0
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
@@ -119,15 +119,30 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //a = ------------- = --------
     //      m_us*r^2        r^2
     
-    return glm::vec3(0.0f);
+	glm::vec3 usPos (us.x, us.y, us.z);
+	glm::vec3 themPos (them.x, them.y, them.z);
+	glm::vec3 dir = themPos - usPos;
+
+	float rSqr = glm::dot(dir, dir);
+	if(rSqr < EPSILON)
+		return glm::vec3(0);
+
+	float a = G * them.w / rSqr;
+	
+	return a*glm::normalize(dir);
 }
 
 //TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	
+	//loop through all bodies and sum all acceleration
+	for(int i = 0; i < N; ++i)
+		acc += calculateAcceleration(my_pos, their_pos[i]);
+
+	return acc;
 }
 
 
@@ -135,8 +150,24 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-    return acc;
+	int numTiles = ceil((float)N/blockSize);
+	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	__shared__ glm::vec4 posTile[blockSize];
+
+	for(int i = 0; i < numTiles; ++i){
+		//load to shared memory
+		posTile[threadIdx.x] = their_pos[i*blockSize + threadIdx.x];
+		__syncthreads();
+
+		//calculate acceleration
+		for(int j = 0; j < blockSize; ++j)
+			if(blockSize*i+j < N)
+				acc += calculateAcceleration(my_pos, posTile[j]);
+		__syncthreads();
+	}
+
+	return acc;
+	
 }
 
 //Simple Euler integration scheme
@@ -258,5 +289,3 @@ void cudaUpdatePBO(float4 * pbodptr, int width, int height)
     sendToPBO<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dev_pos, pbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
 }
-
-
