@@ -144,25 +144,23 @@ __device__
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	extern __shared__ glm::vec4 s[]; // Must hold: blockSize == blockDim.x
-	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	int index = threadIdx.x;
 	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 
-	int numBlocksForPlanets = N / blockDim.x + 1;
-	for ( int i = 0; i < numBlocksForPlanets; ++i )
+	//int numBlocksForPlanets = ceil((float)N / (float)blockDim.x);
+	//for ( int i = 0; i < numBlocksForPlanets; ++i )
+	for(int i = 0; i < N; i += blockSize)
 	{
 		// Calculate first & last thread indices for this block.
-		int startIdx = i * blockDim.x;		// Inclusive.
-		int endIdx = startIdx + blockDim.x; // Not including this.
-		if ( endIdx > N ) endIdx = N;
+		//int startIdx = i * blockDim.x;		// Inclusive.
 
 		// Store pos[0 to blockDim.x-1] to shared memory.
-		if ( startIdx <= index && index < endIdx ) s[index - startIdx] = their_pos[index - startIdx];
+		s[index] = their_pos[index + i];
 		__syncthreads();
 
-		int numPlanetsInThisBlock = endIdx - startIdx;
-		for ( int j = 0; j < numPlanetsInThisBlock; ++j )
+		for ( int j = 0; j < blockSize && j+i < N; ++j )
 		{
-			acc += calculateAcceleration(my_pos, glm::vec4(s[j].x, s[j].y, s[j].z, planetMass));
+			acc += calculateAcceleration(my_pos, s[j]);
 		}
 		__syncthreads();
 	}
