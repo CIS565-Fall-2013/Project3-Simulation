@@ -22,7 +22,7 @@ dim3 threadsPerBlock(blockSize);
 
 int numObjects;
 const float planetMass = 3e8;
-const __device__ float starMass = 2e12;
+const __device__ float starMass = 2e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 

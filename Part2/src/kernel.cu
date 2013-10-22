@@ -208,7 +208,7 @@ __device__ glm::vec3 calcSeparation(int N, boid my_boid, boid* them_boids){
 		}
 	}
 	v = 1.0f / numNeighbors * v;
-	return -1.02f * v;
+	return -1.05f * v;
 }
 
 __device__ void separation(int N, boid* boids, glm::vec3* vel){
@@ -254,23 +254,14 @@ __device__ void avoidWalls(int N, float dt, boid my_boid, glm::vec3* acc){
 	int numBlocks = (int)ceil((float)N/blockSize);
 	int index = threadIdx.x + (blockDim.x * blockIdx.x);
 	float axis, d;
-	glm::vec3 wall_intersect;
-	thrust::default_random_engine rng(hash(N * index * my_boid.vel.y));
-	thrust::uniform_real_distribution<float> u01(MIN_VELOCITY, MAX_VELOCITY);
 
 	for(int i = 0; i < 3; i++){
 		axis = my_boid.pos[i];
 
-		if(abs(axis) > (WALL_DEPTH - BUFFER) && abs(axis) < WALL_DEPTH){
+		if(abs(axis) > (WALL_DEPTH - BUFFER)){
 			glm::vec3 wall_pos = my_boid.pos;
-			wall_pos[i] = axis < -(WALL_DEPTH - BUFFER) ? -WALL_DEPTH : WALL_DEPTH;
+			wall_pos[i] = axis > (WALL_DEPTH - BUFFER) ? WALL_DEPTH : -WALL_DEPTH;
 			acc[index] += my_boid.pos - wall_pos - my_boid.vel;
-		}
-
-		if(abs(axis) >= WALL_DEPTH){
-			glm::vec3 wall_pos = my_boid.pos;
-			wall_pos[i] = axis < -WALL_DEPTH ? -WALL_DEPTH : WALL_DEPTH;
-			acc[index] += 2.0f * wall_pos - my_boid.pos;
 		}
 	}
 }
@@ -300,7 +291,7 @@ void eulerIntegrate(float dt, boid* boids, glm::vec3* acc){
 	thrust::default_random_engine rng(hash(index * boids[index].vel.y));
 	thrust::uniform_real_distribution<float> u01(MIN_VELOCITY, MAX_VELOCITY);
 
-    boids[index].vel   = glm::clamp(boids[index].vel + (acc[index]   * dt), -MAX_VELOCITY, MAX_VELOCITY);
+    boids[index].vel   = glm::clamp(boids[index].vel + (acc[index] * dt), -MAX_VELOCITY, MAX_VELOCITY);
     boids[index].pos += boids[index].vel * dt;
 }
 
