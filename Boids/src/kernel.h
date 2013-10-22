@@ -13,7 +13,7 @@
     #include <cutil_math.h>
 #endif
 
-#define blockSize 128
+#define blockSize 256
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 
 //TODO: Add parameterized control for each boid having different rules.
@@ -37,6 +37,9 @@ struct WorldProps{
 	glm::vec3 AttractionZone;//(minDist, maxDist, force);
 	glm::vec3 AlignmentZone;//(minDist, maxDist, force);
 	glm::vec3 RepulsionZone;//(minDist, maxDist, force);
+	float TargetSpeed;
+	float SpeedControlForce;
+	float MaxForceMagnitude;
 };
 
 

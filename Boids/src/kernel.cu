@@ -126,6 +126,12 @@ __device__ glm::vec4 ruleDoABarrelRoll(const WorldProps world, const BoidProps m
 	return glm::vec4(0,0,0,world.BarrelRoll);	
 }
 
+__device__ glm::vec4 ruleSpeedControl(const WorldProps world, const BoidProps me)
+{	
+	return glm::vec4(world.SpeedControlForce*(world.TargetSpeed-me.speed)*me.heading,0.0);	
+}
+
+
 __device__ 
 	glm::vec4 applyIndividualRules(const WorldProps world, const BoidProps me)
 {
@@ -135,6 +141,7 @@ __device__
 	netForce += ruleAvoidGround(world, me);
 	netForce += ruleStayInBounds(world, me);
 	netForce += ruleDoABarrelRoll(world, me);
+	netForce += ruleSpeedControl(world, me);
 
 	return netForce;
 }
@@ -253,6 +260,14 @@ __global__
 		//TODO: Include gravity component
 		//TODO: Include non-holonomic controller
 		glm::vec4 netF = netForces[index];
+
+		//Simulated force saturation
+		float FMagnitude = glm::sqrt(netF.x*netF.x+netF.y*netF.y+netF.z*netF.z);
+		if(FMagnitude > world.MaxForceMagnitude)
+		{
+			netF *= (world.MaxForceMagnitude/FMagnitude);
+		}
+
 		glm::vec3 delV = glm::vec3(netF)/1.0f*dt;//a = F/m
 
 		glm::vec3 vel = glm::vec3(boids[index].heading)*boids[index].speed;
