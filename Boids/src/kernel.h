@@ -27,6 +27,8 @@ struct WorldProps{
 	glm::vec3 InitialDims;
 	glm::vec3 WorldBounds;
 	float InitialMaxVel;
+	float GroundAvoidanceHeight;
+	float GroundAvoidanceForce;
 };
 
 

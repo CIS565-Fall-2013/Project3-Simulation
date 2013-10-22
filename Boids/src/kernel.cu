@@ -58,7 +58,7 @@ __global__
 	int index = (blockIdx.x * blockDim.x) + threadIdx.x;
 	if(index < N)
 	{
-		
+
 		glm::vec3 randPos = properties.InitialDims*(generateRandomNumberFromThread(time, index)-glm::vec3(0.5f,0.5f,0.0f));
 		boids[index].pos.x = randPos.x;
 		boids[index].pos.y = randPos.y;
@@ -74,15 +74,34 @@ __global__
 }
 
 
-__device__ 
-	glm::vec4 applyIndividualRules(WorldProps world, BoidProps me)
+
+__device__ glm::vec4 ruleAvoidGround(const WorldProps world, const BoidProps me)
 {
-	//TODO: Apply rules
-	return glm::vec4(0,0,0.01,0);
+	//Normalize
+	float forceIntensity = (world.GroundAvoidanceHeight-me.pos.z)/world.GroundAvoidanceHeight;
+
+	if(forceIntensity < 0)
+		forceIntensity = 0;
+
+	return glm::vec4(0,0,forceIntensity*world.GroundAvoidanceForce,0);
+	
 }
 
 __device__ 
-	glm::vec4 applyPairwiseRules(WorldProps world, BoidProps me, BoidProps them)
+	glm::vec4 applyIndividualRules(const WorldProps world, const BoidProps me)
+{
+	//TODO: Apply rules
+	glm::vec4 netForce = glm::vec4(0);
+
+	//netForce += ruleMapBoundary(world, me);
+	netForce += ruleAvoidGround(world, me);
+
+
+	return netForce;
+}
+
+__device__ 
+	glm::vec4 applyPairwiseRules(const WorldProps world, const BoidProps me, const BoidProps them)
 {
 	//TODO: Apply rules
 	return glm::vec4(0,0,0,0);
@@ -90,7 +109,7 @@ __device__
 
 
 __device__
-	glm::vec4 computeNetForce(int N, WorldProps world, int myIndex, BoidProps me, BoidProps* boids)
+	glm::vec4 computeNetForce(const int N, const WorldProps world, const int myIndex, const BoidProps me, const BoidProps* boids)
 {
 	extern __shared__ BoidProps shBoids[]; 
 	glm::vec4 netForce = glm::vec4(0,0,0,0);//Use 4th field for roll torque
