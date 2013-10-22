@@ -148,7 +148,7 @@ __device__ glm::vec4 ruleAttraction(const WorldProps world, const BoidProps me, 
 __device__ glm::vec4 ruleAlignment(const WorldProps world, const BoidProps me, const BoidProps them, const float radius, const glm::vec3 towardsThem)
 {
 	
-	return glm::vec4(world.AlignmentZone.z*(them.heading*them.speed-me.heading*me.speed), 0.0f);
+	return glm::vec4(world.AlignmentZone.z*(them.heading-me.heading), 0.0f);
 }
 
 
