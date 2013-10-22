@@ -4,8 +4,9 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 100
-#define DT 0.2
+#define N_FOR_VIS 2500
+#define DT 0.001
+#define numIterationsPerFrame 1
 #define VISUALIZE 1
 
 cam::cam()
@@ -16,6 +17,8 @@ cam::cam()
 	pos = cameraPosition;
 	view = glm::lookAt(pos, glm::vec3(0), glm::vec3(0,0,1));
 	projectionView = projection * view;
+	idle = false;
+	delPhi = 0.1f;
 }
 void cam::reset()
 {
@@ -95,15 +98,19 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptr, pbo);
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
+	cudaSPHUpdateWrapper(DT);
+
+
+	/*
     // execute the kernel
 	if(integration == EULER)
 		    cudaNBodyUpdateWrapper(DT);
 	else if(integration == VELVERLET)
 		cudaNBodyUpdateVelocityVerletWrapper(DT);
-
+	*/
 
 #if VISUALIZE == 1
-    cudaUpdatePBO(dptr, field_width_pbo, field_height_pbo);
+    //cudaUpdatePBO(dptr, field_width_pbo, field_height_pbo);
     cudaUpdateVBO(dptrvert, field_width, field_height);
 #endif
     // unmap buffer object
@@ -116,6 +123,8 @@ int frame = 0;
 
 void display()
 {
+	if(mouseCam.idle)
+		mouseCam.phi += mouseCam.delPhi;
 	mouseCam.setFrame();
     static float fps = 0;
     frame++;
@@ -126,7 +135,12 @@ void display()
         timebase = time;
         frame = 0;
     }
-    runCuda();
+	if(runNextStep || playBackMode)
+	{
+		for(int i=0;i<numIterationsPerFrame;i++)
+			runCuda();
+		runNextStep = false;
+	}
 
     char title[100];
 	char integMethod[30];
@@ -205,7 +219,7 @@ void display()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
    
     glPointSize(4.0f); 
-    glDrawElements(GL_POINTS, N_FOR_VIS+1, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_POINTS, N_FOR_VIS, GL_UNSIGNED_INT, 0);
 
     glPointSize(1.0f);
 
@@ -218,7 +232,7 @@ void display()
 
 void keyboard(unsigned char key, int x, int y)
 {
-    std::cout << key << std::endl;
+    std::cout << "KeyPress:"<<key << std::endl;
     switch (key) 
     {
         case(27):
@@ -232,6 +246,15 @@ void keyboard(unsigned char key, int x, int y)
 			break;
 		case 'I':
 			integration = (integration - 1 ) % NUMBEROFINTEGRATIONS;
+			break;
+		case 'm':
+			mouseCam.idle = !mouseCam.idle;
+			break;
+		case 'p':
+			runNextStep = true;
+			break;
+		case 'P':
+			playBackMode = !playBackMode;
 			break;
     }
 }

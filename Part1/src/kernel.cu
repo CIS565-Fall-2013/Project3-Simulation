@@ -24,6 +24,8 @@ glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
 
+glm::vec3 * dev_acc_2;
+
 void checkCUDAError(const char *msg, int line = -1)
 {
     cudaError_t err = cudaGetLastError();
@@ -103,7 +105,7 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0;//rand.z;
+        arr[index].z = 0.0f;//rand.z;
     }
 }
 
@@ -179,44 +181,69 @@ __device__ glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos
 
 
 //Simple Euler integration scheme
-__global__
-void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel)
+__global__ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec4 my_pos = glm::vec4(0,0,0,1);
+    if( index < N )
+       my_pos = pos[index];
+	glm::vec3 accel = ACC(N, my_pos, pos);
+	if( index < N )
+		acc[index] = accel;
+}
+__global__ void updateP(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
-    {
-        glm::vec4 my_pos = pos[index];
-        glm::vec3 acc = ACC(N, my_pos, pos);
-        vel[index] += acc * dt;
+	{
+        vel[index] += acc[index] * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;
     }
 }
 
-__global__ void updateVelVerletPart1(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+__global__ void updateVelVerletPart1F(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec4 my_pos;
+	glm::vec3 accel;
     if( index < N )
-    {
-		glm::vec4 my_pos = pos[index];
-		glm::vec3 accel = ACC(N,my_pos,pos);
-		glm::vec3 deltaPos = dt * (vel[index] + dt * 0.5f * accel);
+		my_pos = pos[index];
+	accel = ACC(N,my_pos,pos);
+	if( index < N )
+		acc[index] = accel;
+}
+__global__ void updateVelVerletPart1P(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+
+	if( index < N )
+	{
+		glm::vec3 deltaPos = dt * (vel[index] + dt * 0.5f * acc[index]);
 		pos[index].x += deltaPos.x;
 		pos[index].y += deltaPos.y;
 		pos[index].z += deltaPos.z;
-		acc[index] = accel;
 	}
 }
+__global__ void updateVelVerletPart2F(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc_2)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec4 my_pos;
+	glm::vec3 accel;
+    if( index < N )
+		my_pos = pos[index];
+	accel = ACC(N,my_pos,pos);
+	if( index < N )
+		acc_2[index] = accel;
+}
 
-__global__ void updateVelVerletPart2(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+__global__ void updateVelVerletPart2P(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, glm::vec3  * acc_2)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-		glm::vec4 my_pos = pos[index];
-		glm::vec3 accel = ACC(N,my_pos,pos);
-		vel[index] += dt * 0.5f * (accel + acc[index]);
+		vel[index] += dt * 0.5f * (acc[index] + acc_2[index]);
 	}
 }
 
@@ -254,10 +281,12 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     float c_scale_w = width / s_scale;
     float c_scale_h = height / s_scale;
 
+	glm::vec3 color(0.05, 0.15, 0.3);
+    glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+
     if(x<width && y<height)
     {
-        glm::vec3 color(0.05, 0.15, 0.3);
-        glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+
         float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)
         pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
@@ -278,9 +307,11 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
+	checkCUDAErrorWithLine("Kernel failed!");
 
 	// For velocityVerlet
-	cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
+	cudaMalloc((void**)&dev_acc_2, N*sizeof(glm::vec3));
 	checkCUDAErrorWithLine("Kernel failed!");
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
@@ -292,19 +323,27 @@ void initCuda(int N)
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel);
+    updateF<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+	updateP<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
 void cudaNBodyUpdateVelocityVerletWrapper(float dt)
 {
 	dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    updateVelVerletPart1<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel,dev_acc);
+    updateVelVerletPart1F<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    checkCUDAErrorWithLine("Kernel failed!");
+    updateVelVerletPart1P<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
 
-    updateVelVerletPart2<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel,dev_acc);
+
+    updateVelVerletPart2F<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc_2);
     checkCUDAErrorWithLine("Kernel failed!");
+    updateVelVerletPart2P<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, dev_acc_2);
+    checkCUDAErrorWithLine("Kernel failed!");
+
 }
+
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
