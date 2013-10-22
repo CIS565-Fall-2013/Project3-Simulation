@@ -18,7 +18,7 @@
 //dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
+const float planetMass = 1;
 //const __device__ float starMass = 5e10;
 const __device__ float starMass = 0;
 float totalTime = 0;

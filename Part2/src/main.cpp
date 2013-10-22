@@ -14,6 +14,15 @@ glm::vec4 * dev_pos_ptr;
 //-------------MAIN--------------
 //-------------------------------
 
+void setPosition(glm::vec3 positionDiff)
+{
+	glm::vec4 currPosition;
+	cudaMemcpy( &currPosition, dev_pos_ptr, sizeof(glm::vec4), cudaMemcpyDeviceToHost);
+	currPosition.x += positionDiff.x;
+	currPosition.y += positionDiff.y;
+	currPosition.z += positionDiff.z;
+	cudaMemcpy( dev_pos_ptr, &currPosition, sizeof(glm::vec4), cudaMemcpyHostToDevice);
+}
 int main(int argc, char** argv)
 {
     // Launch CUDA/GL
@@ -156,6 +165,18 @@ void keyboard(unsigned char key, int x, int y)
 			cleanupCuda();
             exit(0);
             break;
+		case(119): //W
+			setPosition(glm::vec3(0,1,0));
+			break;
+       case(115): //S
+			setPosition(glm::vec3(0,-1,0));
+			break;
+       case(97): //A
+			setPosition(glm::vec3(1,0,0));
+			break;
+       case(100)://D
+         setPosition(glm::vec3(-1,0,0));
+		 break;
     }
 }
 
