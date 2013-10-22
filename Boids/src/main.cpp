@@ -19,19 +19,20 @@ glm::vec3 lightPosition(20.0,20.0,20.0);
 WorldProps worldProps = {
 	glm::vec3(10,10,10), //Initial Random Flock Size
 	glm::vec3(10,10,20), //World map boundary
-	0.5, //Initial maximum BOID velocity
+	0.6, //Initial maximum BOID velocity
 	1.0, //Ground avoidance height
 	0.08, //Ground Avoidance Force
 	0.03, //Boundary stiffness
-	0.01, //Min Speed
+	0.1, //Min Speed
 	0.0, //Do a barrel roll!
-	glm::cos(glm::radians(125.0f)), //Cosine of View Angle 
-	glm::vec3(5,20,0.0025),//AttractionZone (minDist, maxDist, force);
-	glm::vec3(3,5,0.000005),//AlignmentZone (minDist, maxDist, force);
-	glm::vec3(0,3,0.002),//RepulsionZone (minDist, maxDist, force);
-	0.45, //Target speed
-	0.01, //Speed Control Force
-	1.0, //Max force magnitude
+	glm::cos(glm::radians(140.0f)), //Cosine of View Angle 
+	glm::vec3(3.5,20,0.001),//AttractionZone (minDist, maxDist, force);
+	glm::vec3(2.5,3.5,0.0001),//AlignmentZone (minDist, maxDist, force);
+	glm::vec3(0,2.5,0.001),//RepulsionZone (minDist, maxDist, force);
+	0.5, //Target speed
+	0.1, //Speed Control Force
+	0.5, //Max force magnitude
+	1.0, //Max Speed
 };
 						
 

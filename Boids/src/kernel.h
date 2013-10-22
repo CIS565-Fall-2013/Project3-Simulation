@@ -40,6 +40,7 @@ struct WorldProps{
 	float TargetSpeed;
 	float SpeedControlForce;
 	float MaxForceMagnitude;
+	float MaxSpeed;
 };
 
 

@@ -275,6 +275,8 @@ __global__
 		float mag = glm::length(vel);
 		if(mag > world.MinSpeed){
 			boids[index].heading = vel/mag;//Only change direction if we are moving, otherwise maintain heading
+			if(mag > world.MaxSpeed)
+				mag = world.MaxSpeed;
 		}else{
 			mag = world.MinSpeed;
 		}
