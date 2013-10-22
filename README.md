@@ -20,7 +20,7 @@ Part 1: N Body Simulation
 
 A basic formulation of acceleration due to a body's mass is used as ![equation](http://latex.codecogs.com/gif.latex?\frac{G*m_j}{r^2}\hat%20r)
 
-![Screeshot1]()
+![Screeshot1](Part1/resources/closeUP.png)
 
 
 Using Shared Memory: Shared memory is used to cache the bodies so that threads in a warp can run over multiple bodies without having to access global memory for each of those. This helps speed up execution time and N bodies can be brought into the buffer P at a time.
@@ -30,6 +30,18 @@ Extended the framework:
 * **Geometry Shaders**: The geometry shader is used on the plane to visualize the tessellation. The distance from the original triangles is stored and the distance from the tessellated triangles is stored and this is visualized as *thicker lines for the original triangles and thinner lines for the newly generated ones*.
 * **Velocity Verlet Integration**: An energy preserving velocity verlet integration scheme is implemented and can be switched to by using the *'i' and 'I' key* on the keyboard. RK4 is on the list but not yet implemented.
 * **Mouse interaction**: Mouse interactions works like in Maya, right click to zoom in and out, left click to pan aronud the object.
+
+![Screeshot1](Part1/resources/tess.png)
+
+Here, we can see, 
+* 1 is the highest level tessellation (level 6)
+* 2 is the medium level tessellation (levle 4)
+* 3 is the lowest level tessellation (levle 2)
+
+![Screeshot1](Part1/resources/velVerlet.png)
+
+Here we can see the velocity verlet integration.
+
 
 ---
 Part2: SPH Fluid Simulation
@@ -62,6 +74,6 @@ Performance Analysis
 ---
 The jump from accessing all elements in global memory vs shared memory accesses in a cached pattern can be seen below. This timing is for the part one, just acceleration and integration parts timed, not the visualization stage.
 
-![Performance]()
+![Performance](performance.PNG)
 
-![PerformanceLogScale]()
+![PerformanceLogScale](performance_log.PNG)
