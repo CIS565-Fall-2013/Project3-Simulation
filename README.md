@@ -97,8 +97,19 @@ FEATURES
 **Flocking**: Combination of alignment, cohesion and separation. Useful to simulate flocking of birds, shoals of fish swimming, etc.
 
 
+---
+PERFORMANCE ANALYSIS
+---
 
+**Tested on a laptop with Intel Core2Duo T7100 and Nvidia 8600M GT**
 
+Test 1: Comparison of Euler vs RK4 integration
+
+![alt tag](https://raw.github.com/vimanyu/Project3-Simulation/master/Part1/resources/eulerVsRk4.png)
+
+Test 2: Comparison of Naive implementation vs Shared memory implementation
+
+![alt tag](https://raw.github.com/vimanyu/Project3-Simulation/master/Part1/resources/naiveVsSharedMem.png)
 
 ---
 ACKNOWLEDGEMENTS
