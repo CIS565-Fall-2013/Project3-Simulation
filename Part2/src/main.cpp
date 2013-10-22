@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 2500
+#define N_FOR_VIS 500
 #define DT 0.001
 #define numIterationsPerFrame 1
 #define VISUALIZE 1
@@ -90,6 +90,16 @@ int main(int argc, char** argv)
 
 void runCuda()
 {
+	
+	// Performance Analysis End
+	cudaEvent_t start,stop;
+	// Generate events
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+
+	// Trigger event 'start'
+	cudaEventRecord(start, 0);
+
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
@@ -116,6 +126,18 @@ void runCuda()
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
     cudaGLUnmapBufferObject(pbo);
+
+	// Performance Analysis End
+	cudaEventRecord(stop, 0); // Trigger Stop event
+	cudaEventSynchronize(stop); // Sync events (BLOCKS till last (stop in this case) has been recorded!)
+
+	float elapsedTime; // Initialize elapsedTime;
+	cudaEventElapsedTime(&elapsedTime, start, stop); // Calculate runtime, write to elapsedTime -- cudaEventElapsedTime returns value in milliseconds. Resolution ~0.5ms
+
+	numberOfIterations++;
+	totalElapsedTime += elapsedTime;
+
+	printf("Execution Time: %fms and average time is %fms\n", elapsedTime,totalElapsedTime/numberOfIterations); // Print Elapsed time
 }
 
 int timebase = 0;

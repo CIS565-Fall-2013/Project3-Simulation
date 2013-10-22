@@ -90,7 +90,9 @@ bool RMB=false;
 //----------CUDA STUFF-----------
 //-------------------------------
 
-int width=1000; int height=1000;
+int width=1280; int height=720;
+int numberOfIterations = 0;
+float totalElapsedTime = 0.0f;
 
 //-------------------------------
 //-------------MAIN--------------

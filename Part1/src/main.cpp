@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 100
+#define N_FOR_VIS 250
 #define DT 0.2
 #define VISUALIZE 1
 
@@ -87,6 +87,16 @@ int main(int argc, char** argv)
 
 void runCuda()
 {
+
+	// Performance Analysis End
+	cudaEvent_t start,stop;
+	// Generate events
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+
+	// Trigger event 'start'
+	cudaEventRecord(start, 0);
+
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
@@ -101,6 +111,17 @@ void runCuda()
 	else if(integration == VELVERLET)
 		cudaNBodyUpdateVelocityVerletWrapper(DT);
 
+	// Performance Analysis End
+	cudaEventRecord(stop, 0); // Trigger Stop event
+	cudaEventSynchronize(stop); // Sync events (BLOCKS till last (stop in this case) has been recorded!)
+
+	float elapsedTime; // Initialize elapsedTime;
+	cudaEventElapsedTime(&elapsedTime, start, stop); // Calculate runtime, write to elapsedTime -- cudaEventElapsedTime returns value in milliseconds. Resolution ~0.5ms
+
+	numberOfIterations++;
+	totalElapsedTime += elapsedTime;
+
+	printf("Execution Time: %fms and average time is %fms\n", elapsedTime,totalElapsedTime/numberOfIterations); // Print Elapsed time
 
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width_pbo, field_height_pbo);
@@ -229,6 +250,8 @@ void keyboard(unsigned char key, int x, int y)
 			break;
 		case 'i':
 			integration = (integration + 1 ) % NUMBEROFINTEGRATIONS;
+			numberOfIterations = 0;
+			totalElapsedTime = 0.0f;
 			break;
 		case 'I':
 			integration = (integration - 1 ) % NUMBEROFINTEGRATIONS;

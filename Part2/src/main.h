@@ -95,6 +95,8 @@ bool playBackMode = false;
 //-------------------------------
 
 int width=1000; int height=1000;
+int numberOfIterations = 0;
+float totalElapsedTime = 0.0f;
 
 //-------------------------------
 //-------------MAIN--------------
