@@ -6,7 +6,7 @@ Fall 2013
 
 ###Overview
 
-We have implemented a very straight forward nbody simulator that simulates a simple planetary system with a singular star that resides at the world's center (<0,0,0>).
+We have implemented a very straight forward nbody simulator that simulates a simple planetary system with a singular star that resides at the world's center (0,0,0).
 
 ###Performance Analysis
 
@@ -57,7 +57,7 @@ We have implemented the following features of flocking:
 In addition to this we have changed the shaders to allow for the boids to be drawn as triangles, where the triangle is drawn in the direction of velocity of the boid.
 This was done by creating another VBO that was mapped.  This VBO copied velocities on every iteration of the CUDA call and sent it as another vertex attribute.
 The vertex shader took both the position and the velocity and output the position and velocity, and the geometry shader took the position and velocity as single element
-arrays.  The "right" and "left" directions for the triangle are determined by the cross product of the normalized velocity and the world's UP direction (<0,0,1>). If the boid is 
+arrays.  The "right" and "left" directions for the triangle are determined by the cross product of the normalized velocity and the world's UP direction (0,0,1). If the boid is 
 moving upwards, the "right" direction is determined by the cross product of the normalized velocity and the normalized direction to the camera. 
 
 Finally we have added motion blur by using GL's accumulation buffer.
