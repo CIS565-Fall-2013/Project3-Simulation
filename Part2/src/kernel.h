@@ -20,7 +20,7 @@
 
 #define STIFFNESS 100.0f
 #define REF_DENSITY 1000.0f
-#define VISCOSITY 50.0f
+#define VISCOSITY 75.0f
 #define SIMULATIONSCALE 1.0f
 #define GRAVITY glm::vec3(0,0,-9.8)
 #define RADIUS 0.0451f
@@ -45,7 +45,9 @@ void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);
 void cudaNBodyUpdateVelocityVerletWrapper(float dt);
 void cudaSPHUpdateWrapper(float dt);
+void resetSim(int N);
 void initCuda(int N);
+void freeCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height);
 #endif

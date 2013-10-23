@@ -4,26 +4,26 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 1500
 #define DT 0.001
 #define numIterationsPerFrame 1
 #define VISUALIZE 1
+int N_FOR_VIS=1500;
 
 cam::cam()
 {
-	rad=glm::length(cameraPosition);
-	theta=45.0;
+	rad=2*glm::length(cameraPosition);
+	theta=75.0;
 	phi=45.0;
 	pos = cameraPosition;
 	view = glm::lookAt(pos, glm::vec3(0), glm::vec3(0,0,1));
 	projectionView = projection * view;
-	idle = false;
+	idle = true;
 	delPhi = 0.1f;
 }
 void cam::reset()
 {
-	rad=glm::length(cameraPosition);
-	theta=45.0;
+	rad=2*glm::length(cameraPosition);
+	theta=75.0;
 	phi=45.0;
 	pos = cameraPosition;
 	view = glm::lookAt(pos, glm::vec3(0), glm::vec3(0,0,1));
@@ -76,6 +76,7 @@ int main(int argc, char** argv)
 
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
+	glutSpecialFunc(handleSpecialKeypress);
 	glutMouseFunc(mouseClick); //check for mouse click
 	glutMotionFunc(mouseMovement); //check for mouse movement
 	glutPassiveMotionFunc(mouseMovementUpdate); //check for mouse movement
@@ -250,6 +251,25 @@ void display()
 #endif
     glutPostRedisplay();
     glutSwapBuffers();
+}
+
+void handleSpecialKeypress(int key, int x, int y)
+{
+	switch (key)
+	{
+		case GLUT_KEY_UP:	N_FOR_VIS = N_FOR_VIS * 2;
+							freeCuda(N_FOR_VIS);
+							initCuda(N_FOR_VIS);
+							resetSim(N_FOR_VIS);
+							break;
+		case GLUT_KEY_DOWN:	N_FOR_VIS = N_FOR_VIS / 2;
+							freeCuda(N_FOR_VIS);
+							initCuda(N_FOR_VIS);
+							resetSim(N_FOR_VIS);
+							break;
+		case GLUT_KEY_LEFT: resetSim(N_FOR_VIS);
+							break;
+	}
 }
 
 void keyboard(unsigned char key, int x, int y)

@@ -88,13 +88,13 @@ bool LMB=false;
 bool MMB=false;
 bool RMB=false;
 bool runNextStep = false;
-bool playBackMode = false;
+bool playBackMode = true;
 
 //-------------------------------
 //----------CUDA STUFF-----------
 //-------------------------------
 
-int width=1000; int height=1000;
+int width=1280; int height=720;
 int numberOfIterations = 0;
 float totalElapsedTime = 0.0f;
 
@@ -112,6 +112,7 @@ void runCuda();
 
 void display();
 void keyboard(unsigned char key, int x, int y);
+void handleSpecialKeypress(int key, int x, int y);
 void mouseMovement(int x, int y);
 void mouseMovementUpdate(int x, int y);
 void mouseClick(int button, int state, int x, int y);

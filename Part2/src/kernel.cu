@@ -611,6 +611,28 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
+void freeCuda(int N)
+{
+	cudaFree(dev_pos);
+	cudaFree(dev_vel);
+	cudaFree(dev_acc);
+	cudaFree(dev_density);
+	cudaFree(dev_pressure);
+	cudaFree(dev_force);
+	cudaFree(dev_acc_2);
+}
+
+void resetSim(int N)
+{
+    numObjects = N;
+    dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
+
+    generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
+    checkCUDAErrorWithLine("Kernel failed!");
+    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+    checkCUDAErrorWithLine("Kernel failed!");
+}
+
 void cudaCollisionsWrapper()
 {
 	dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
