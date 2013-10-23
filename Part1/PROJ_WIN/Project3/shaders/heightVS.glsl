@@ -14,8 +14,8 @@ void main(void)
     v_Texcoords = Texcoords;
     vec4 pos = Position;
     f_height = texture2D(u_height, Texcoords).w;
-    //pos.z = -0.01-clamp(f_height,0.0,2.0);
-	pos.z=-0.5f;//-f_height/2.0f;
+    pos.z = -0.01-clamp(f_height,0.0,2.0);
+	//pos.z=-0.5f;//-f_height/2.0f;
     pos = u_projMatrix * pos;
     gl_Position = pos;
 }

@@ -9,7 +9,7 @@
 #elif SIMMODE==BASICSIM
 	#define N_FOR_VIS 12
 #elif SIMMODE==FLOCKSIM
-	#define N_FOR_VIS 12000
+	#define N_FOR_VIS 10000
 #endif
 #define DT 0.16
 #define VISUALIZE 1

@@ -7,7 +7,8 @@ Due Sunday, 10/20/2013 by 11:59:59 pm
 
 PART 1: CUDA NBody Simulation
 ===
-This is the basic tutorial part. I'd done with this part, as well as the shared memory force calculation. You can find the performance evaluation below for this shared memory part.
+This is the basic tutorial part. I'd done with this part, as well as the shared memory force calculation. As far as much of the code was modified after finishing this part, the N-Body currently is a pyramid that keeps changing the color. 
+Anyway, it's there!
 
 
 PART 2: Your CUDA Simulation
@@ -54,7 +55,16 @@ In the file "main.cpp", the number of the agents in flocking simulation can be c
 
 In the file "main.h", the cloth_weight and cloth_height will work for the size of the cloth.
 
+Mouse Operation:
+LMB drag: up-> zoom in, down-> zoom out;
+MMB drag: left->camera move left,  right-> camera move right
+RMB drag: left-> camera rotate left, right-> camera rotate right
 
+The mouse operation is coarse designed, which just fulfilled the use of obeservation, screenshots and making demos.
+
+Keyboard:
+
+Using space button to Pause and Continue.
 
 ---
 CLOTH SIMULATION

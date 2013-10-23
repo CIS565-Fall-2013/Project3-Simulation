@@ -506,8 +506,8 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
-    float c_scale_w = -2.0f / s_scale;
-    float c_scale_h = -2.0f / s_scale;
+    float c_scale_w = -4.0f / s_scale;
+    float c_scale_h = -4.0f / s_scale;
 
     if(index<N)
     {
@@ -582,11 +582,13 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
 
     if(x<width && y<height)
     {
+#if SIMMODE==BASICSIM
         glm::vec3 color(0.05, 0.15, 0.3);
-        //glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
-        //float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
+        glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
+        float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
         // Each thread writes one pixel location in the texture (textel)
-        //pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
+        pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
+#endif
 		//pbo[index].x=x*c_scale_w;
 		//pbo[index].y=y*c_scale_h;
 		//pbo[index].z=0;
