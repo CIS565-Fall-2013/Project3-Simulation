@@ -18,9 +18,7 @@ GPU was indeed faster. It can also be seen that the CPU exhibits the characteris
 
 Flocking
 --------
-
-
-
+![Flocking](Part1/resources/Flocking.png)  
 
 <sub><sup>Note: This was for a class at UPenn: CIS565 Project 3 Fall 2013 (Due 10/22/2013)</sup></sub>
 
