@@ -16,6 +16,11 @@ on performance without performing performance profiling using NSight, which is o
 
 Nevertheless, using this code, I was able to witness a HUGE speedup when using shared memory as opposed to global (53 fps vs. 243).
 
+SCREENSHOTS
+-----------
+<img src="https://raw.github.com/rohith10/Project3-Simulation/master/screenshots/flock.png" height="350" width="350"/><br />
+<img src="https://raw.github.com/rohith10/Project3-Simulation/master/screenshots/gravsim.png" height="350" width="350"/><br />
+
 DETAILS
 -------
 In this project, the positions, velocities and accelerations of all objects are stored in global memory locations 
@@ -36,34 +41,115 @@ PERFORMANCE EVALUATION
 Performance of the program was compared for different number of planets/objects being simulated, using global memory, shared 
 memory and prefetched version of shared memory. Here are the results:<br />
 <br />
-With visualization on:<br />
+With visualization on:
+
+<table>
+<tr>
+  <th>Memory type</th>
+  <th>Number of objects</th>       
+  <th>Framerate</th>
+  <th>Number of objects</th>       
+  <th>Framerate</th>
+</tr>
+<tr>
+  <td>Global</td>              
+  <td>2500</td>
+  <td>1.75</td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>Shared</td>              
+  <td>2500 </td>                   
+  <td>12</td>
+  <td>5000</td>
+  <td>6.77 </td>
+</tr>
+<tr>
+  <td>Shared (Prefetched)</td> 
+  <td>2500</td>                    
+  <td>12</td>
+  <td>5000</td>
+  <td>6.77</td>
+</tr>
+</table>
+
+5000 objects were not simulated in global memory since the framerate was close to 0.
 <br />
-Memory type         Number of objects       Framerate       Number of objects       Framerate
------------         -----------------       ---------       -----------------       ---------
-Global              2500                    1.75            5000                                <br />
-Shared              2500                    12              5000                    6.77        <br />
-Shared (Prefetched) 2500                    12              5000                    6.77        <br />
-<br />
-<br />
-With visualization off:<br />
-<br />
-Memory type         Number of objects       Framerate (avg.)    Number of objects       Framerate
------------         -----------------       ----------------    -----------------       ---------
-Global              1,500,000               53                  3,000,000               53      <br />
-Shared              1,500,000               615                 3,000,000               620     <br />
-Shared (Prefetched) 1,500,000               630                 3,000,000               630     <br />
-<br />
-Memory type         Number of objects       Framerate (avg.)    Number of objects       Framerate
------------         -----------------       ----------------    -----------------       ---------
-Global              5,000,000               53                  10,000,000              53      <br />
-Shared              5,000,000               630                 10,000,000              615     <br />
-Shared (Prefetched) 5,000,000               630                 10,000,000              615     <br />
-<br />
-Memory type         Number of objects       Framerate (avg.)    Number of objects       Framerate
------------         -----------------       ----------------    -----------------       ---------
-Global              20,000,000              53                  50,000,000              53      <br />
-Shared              20,000,000              620                 50,000,000              620     <br />
-Shared (Prefetched) 20,000,000              615                 50,000,000              630     <br />
+With visualization off:
+
+<table>
+<tr>
+  <th>Memory type</th>
+  <th>Number of objects</th>       
+  <th>Framerate (avg.)</th>
+  <th>Number of objects</th>       
+  <th>Framerate (avg.)</th>  
+</tr>
+<tr>
+  <td>Global</td>
+  <td>1,500,000</td>
+  <td>53</td>
+  <td>3,000,000</td>
+  <td>53</td>
+</tr>
+<tr>
+  <td>Shared</td>
+  <td>1,500,000</td>
+  <td>615</td>
+  <td>3,000,000</td>
+  <td>620</td>
+</tr>
+<tr>
+  <td>Shared (Prefetched)</td>
+  <td>1,500,000</td>
+  <td>630</td>
+  <td>3,000,000</td>
+  <td>630</td>
+</tr>
+<tr>
+  <td>Global</td>
+  <td>5,000,000</td>
+  <td>53</td>
+  <td>10,000,000</td>
+  <td>53</td>
+</tr>
+<tr>
+  <td>Shared</td>
+  <td>5,000,000</td>
+  <td>630</td>
+  <td>10,000,000</td>
+  <td>615</td>
+</tr>
+<tr>
+  <td>Shared (Prefetched)</td>
+  <td>5,000,000</td>
+  <td>630</td>
+  <td>10,000,000</td>
+  <td>615</td>
+</tr>
+<tr>
+  <td>Global</td>
+  <td>20,000,000</td>
+  <td>53</td>
+  <td>50,000,000</td>
+  <td>53</td>
+</tr>
+<tr>
+  <td>Shared</td>
+  <td>20,000,000</td>
+  <td>620</td>
+  <td>50,000,000</td>
+  <td>620</td>
+</tr>
+<tr>
+  <td>Shared (Prefetched)</td>
+  <td>20,000,000</td>
+  <td>615</td>
+  <td>50,000,000</td>
+  <td>630</td>
+</tr>
+</table>
 
 These results show that shared memory is WAY better than global memory. As I mentioned above, if the bank conflicts 
 resulting out of threads accessing multiple shared memory locations were to be corrected, the program would run much faster.
