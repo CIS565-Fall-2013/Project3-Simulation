@@ -31,16 +31,17 @@ const __device__ float max_z = 100.0f;
 // constants for testing with acceleration
 const __device__ float g_accKa = 0.15f;
 const __device__ float g_velKv = 0.5f;
-const __device__ float g_maxSpeed = 1.0f;
+const __device__ float g_maxAccel = 3.0f;
+const __device__ float g_maxSpeed = 2.0f;
 const __device__ float g_kSepNeighborhood = 10.0f;
 const __device__ float g_kCohNeighborhood = 30.0f;
 const __device__ float g_kAlgnNieghborhood = 10.0f;
 const __device__ float g_kAlignment = 1.0f;
-const __device__ float g_kSeparation = 0.5f;
-const __device__ float g_kCohesion = 0.5f;
-const __device__ float cseparation = 0.5f; 
-const __device__ float ccohesion = 1.3f;
-const __device__ float calignment = 1.7f; 
+const __device__ float g_kSeparation = 1.0f;
+const __device__ float g_kCohesion = 1.0f;
+const __device__ float cseparation = 1.5f; 
+const __device__ float ccohesion = 1.0f;
+const __device__ float calignment = 0.5f; 
 
 // works with setting velocity directly
 //const __device__ float g_accKa = 0.05f;
@@ -105,7 +106,7 @@ void generateRandomPosArray(int time, int N, vec4 * arr, float scale, float mass
         vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0f;//rand.z;
+        arr[index].z = rand.z;
         arr[index].w = mass;
     }
 }
@@ -504,8 +505,19 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 			float myVelMag = length(my_vel);
 			vec3 flockDirection = flockVel / flockVelMag;
 		
-			vec3 acc = (g_velKv * (flockVelMag - myVelMag) / dt) * flockDirection;   // using accel
+
+			// clamp acceleration
+			float accelMag = (g_velKv * (flockVelMag - myVelMag) / dt);
+			vec3 acc = fminf(accelMag, g_maxAccel) * flockDirection;   // using accel
+			
 			vel[index] = integrateAcceleration(vel[index], g_accKa * acc, dt, N, my_pos, pos); // using accel
+			
+			// clamp velocity
+			float newVelMag = length(vel[index]) + 1e-10;
+			vec3 newVelDirection = vel[index] / newVelMag;
+			vel[index] = fminf(newVelMag, g_maxSpeed) * newVelDirection;
+
+
 
 			// try taking initial velocity into account, but use velocity directly
 			//float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
@@ -617,8 +629,8 @@ void initCuda(int N)
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
-    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
-    checkCUDAErrorWithLine("Kernel failed!");
+    //generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+    //checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
 }
 
