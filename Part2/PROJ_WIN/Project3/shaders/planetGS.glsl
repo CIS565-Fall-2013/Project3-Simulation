@@ -25,7 +25,8 @@ void main()
     Right = cross(ToCam, Up);
     Up = cross(Right, ToCam);
 
-	vec3 Pos = Position + scale*Right - scale*Up;
+	//render as a triangle
+	vec3 Pos = Position - 2.0f*scale*Up;
     gl_Position = u_projMatrix * vec4(Pos, 1.0);
     TexCoord = vec2(0.0, 0.0);
     EmitVertex();
@@ -35,15 +36,15 @@ void main()
     TexCoord = vec2(0.0, 1.0);
     EmitVertex();
 
-    Pos = Position - scale*Right - scale*Up;
+    Pos = Position - scale*Right + scale*Up;
     gl_Position = u_projMatrix * vec4(Pos, 1.0);
     TexCoord = vec2(1.0, 0.0);
     EmitVertex();
 
-    Pos = Position - scale*Right + scale*Up;
-    gl_Position = u_projMatrix * vec4(Pos, 1.0);
-    TexCoord = vec2(1.0, 1.0);
-    EmitVertex();
+    //Pos = Position - scale*Right + scale*Up;
+    //gl_Position = u_projMatrix * vec4(Pos, 1.0);
+    //TexCoord = vec2(1.0, 1.0);
+    //EmitVertex();
 
     EndPrimitive();
 }

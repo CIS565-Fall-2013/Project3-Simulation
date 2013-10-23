@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
+#define N_FOR_VIS 10
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -20,6 +20,7 @@ int main(int argc, char** argv)
     cudaGLSetGLDevice( compat_getMaxGflopsDeviceId() );
     initPBO(&pbo);
     cudaGLRegisterBufferObject( planetVBO );
+
     
 #if VISUALIZE == 1 
     initCuda(N_FOR_VIS);
@@ -39,8 +40,7 @@ int main(int argc, char** argv)
     glActiveTexture(GL_TEXTURE0);
 
     glEnable(GL_DEPTH_TEST);
-
-
+	
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
 
@@ -66,7 +66,7 @@ void runCuda()
     // execute the kernel
     cudaNBodyUpdateWrapper(DT);
 #if VISUALIZE == 1
-    cudaUpdatePBO(dptr, field_width, field_height);
+    //cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
 #endif
     // unmap buffer object
@@ -91,7 +91,7 @@ void display()
     runCuda();
 
     char title[100];
-    sprintf( title, "565 NBody sim [%0.2f fps]", fps );
+    sprintf( title, "565 Flocking sim [%0.2f fps]", fps );
     glutSetWindowTitle(title);
 
     glBindBuffer( GL_PIXEL_UNPACK_BUFFER, pbo);
@@ -102,26 +102,24 @@ void display()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);   
 #if VISUALIZE == 1
     // VAO, shader program, and texture already bound
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    //glUseProgram(program[HEIGHT_FIELD]);
+
+    //glEnableVertexAttribArray(positionLocation);
+    //glEnableVertexAttribArray(texcoordsLocation);
+    //
+    //glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    //glVertexAttribPointer((GLuint)positionLocation, 2, GL_FLOAT, GL_FALSE, 0, 0); 
+
+    //glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
+    //glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
+
     //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
 
-    glUseProgram(program[HEIGHT_FIELD]);
-
-    glEnableVertexAttribArray(positionLocation);
-    glEnableVertexAttribArray(texcoordsLocation);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-    glVertexAttribPointer((GLuint)positionLocation, 2, GL_FLOAT, GL_FALSE, 0, 0); 
-
-    glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
-    glVertexAttribPointer((GLuint)texcoordsLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
-
-    glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
-
-    glDisableVertexAttribArray(positionLocation);
-    glDisableVertexAttribArray(texcoordsLocation);
+    //glDisableVertexAttribArray(positionLocation);
+    //glDisableVertexAttribArray(texcoordsLocation);
 
     glUseProgram(program[PASS_THROUGH]);
 
@@ -184,7 +182,7 @@ void init(int argc, char* argv[])
 
 void initPBO(GLuint* pbo)
 {
-    if (pbo) 
+    if (pbo)  
     {
         // set up vertex data parameter
         int num_texels = field_width*field_height;
@@ -226,34 +224,34 @@ void initVAO(void)
     GLuint *indices    = new GLuint[6*num_faces];
     GLuint *bindices   = new GLuint[N_FOR_VIS+1];
 
-    glm::vec4 ul(-1.0,-1.0,1.0,1.0);
-    glm::vec4 lr(1.0,1.0,0.0,0.0);
+    //glm::vec4 ul(-1.0,-1.0,1.0,1.0);
+    //glm::vec4 lr(1.0,1.0,0.0,0.0);
 
-    for(int i = 0; i < field_width; ++i)
-    {
-        for(int j = 0; j < field_height; ++j)
-        {
-            float alpha = float(i) / float(fw_1);
-            float beta = float(j) / float(fh_1);
-            vertices[(j*field_width + i)*2  ] = alpha*lr.x + (1-alpha)*ul.x;
-            vertices[(j*field_width + i)*2+1] = beta*lr.y + (1-beta)*ul.y;
-            texcoords[(j*field_width + i)*2  ] = alpha*lr.z + (1-alpha)*ul.z;
-            texcoords[(j*field_width + i)*2+1] = beta*lr.w + (1-beta)*ul.w;
-        }
-    }
+    //for(int i = 0; i < field_width; ++i)
+    //{
+    //    for(int j = 0; j < field_height; ++j)
+    //    {
+    //        float alpha = float(i) / float(fw_1);
+    //        float beta = float(j) / float(fh_1);
+    //        vertices[(j*field_width + i)*2  ] = alpha*lr.x + (1-alpha)*ul.x;
+    //        vertices[(j*field_width + i)*2+1] = beta*lr.y + (1-beta)*ul.y;
+    //        texcoords[(j*field_width + i)*2  ] = alpha*lr.z + (1-alpha)*ul.z;
+    //        texcoords[(j*field_width + i)*2+1] = beta*lr.w + (1-beta)*ul.w;
+    //    }
+    //}
 
-    for(int i = 0; i < fw_1; ++i)
-    {
-        for(int j = 0; j < fh_1; ++j)
-        {
-            indices[6*(i+(j*fw_1))    ] = field_width*j + i;
-            indices[6*(i+(j*fw_1)) + 1] = field_width*j + i + 1;
-            indices[6*(i+(j*fw_1)) + 2] = field_width*(j+1) + i;
-            indices[6*(i+(j*fw_1)) + 3] = field_width*(j+1) + i;
-            indices[6*(i+(j*fw_1)) + 4] = field_width*(j+1) + i + 1;
-            indices[6*(i+(j*fw_1)) + 5] = field_width*j + i + 1;
-        }
-    }
+    //for(int i = 0; i < fw_1; ++i)
+    //{
+    //    for(int j = 0; j < fh_1; ++j)
+    //    {
+    //        indices[6*(i+(j*fw_1))    ] = field_width*j + i;
+    //        indices[6*(i+(j*fw_1)) + 1] = field_width*j + i + 1;
+    //        indices[6*(i+(j*fw_1)) + 2] = field_width*(j+1) + i;
+    //        indices[6*(i+(j*fw_1)) + 3] = field_width*(j+1) + i;
+    //        indices[6*(i+(j*fw_1)) + 4] = field_width*(j+1) + i + 1;
+    //        indices[6*(i+(j*fw_1)) + 5] = field_width*j + i + 1;
+    //    }
+    //}
 
     for(int i = 0; i < N_FOR_VIS+1; i++)
     {
@@ -264,20 +262,20 @@ void initVAO(void)
         bindices[i] = i;
     }
 
-    glGenBuffers(1, &planeVBO);
-    glGenBuffers(1, &planeTBO);
-    glGenBuffers(1, &planeIBO);
+    //glGenBuffers(1, &planeVBO);
+    //glGenBuffers(1, &planeTBO);
+    //glGenBuffers(1, &planeIBO);
     glGenBuffers(1, &planetVBO);
     glGenBuffers(1, &planetIBO);
     
-    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-    glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+    //glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    //glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
-    glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), texcoords, GL_STATIC_DRAW);
+    //glBindBuffer(GL_ARRAY_BUFFER, planeTBO);
+    //glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), texcoords, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6*num_faces*sizeof(GLuint), indices, GL_STATIC_DRAW);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planeIBO);
+    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6*num_faces*sizeof(GLuint), indices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
     glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLfloat), bodies, GL_DYNAMIC_DRAW);
@@ -298,7 +296,7 @@ void initVAO(void)
 void initShaders(GLuint * program)
 {
     GLint location;
-    program[0] = glslUtility::createProgram("shaders/heightVS.glsl", "shaders/heightFS.glsl", attributeLocations, 2);
+ /*   program[0] = glslUtility::createProgram("shaders/heightVS.glsl", "shaders/heightFS.glsl", attributeLocations, 2);
     glUseProgram(program[0]);
     
     if ((location = glGetUniformLocation(program[0], "u_image")) != -1)
@@ -312,7 +310,7 @@ void initShaders(GLuint * program)
     if ((location = glGetUniformLocation(program[0], "u_height")) != -1)
     {
         glUniform1i(location, 0);
-    }
+    }*/
     
     program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", attributeLocations, 1);
     glUseProgram(program[1]);

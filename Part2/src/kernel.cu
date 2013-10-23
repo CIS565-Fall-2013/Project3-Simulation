@@ -24,6 +24,8 @@ glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
 
+int iteration = 1;
+
 void checkCUDAError(const char *msg, int line = -1)
 {
     cudaError_t err = cudaGetLastError();
@@ -70,8 +72,9 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0f;//rand.z;
-        arr[index].w = mass;
+        arr[index].z = rand.z;
+        
+		arr[index].w = mass;
     }
 }
 
@@ -103,98 +106,114 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0;//rand.z;
+        arr[index].z = rand.z;
     }
 }
 
-//TODO: Determine force between two bodies
+//generate random point on a sphere
+__device__ glm::vec3 getRandomPointOnSphere(float randomSeed, int time){
+	
+	thrust::default_random_engine rng(hash(randomSeed*time));
+	thrust::uniform_real_distribution<float> u01(-1, 1);
+    thrust::uniform_real_distribution<float> u02(0, 2*PI);
+
+    glm::vec3 point (0.5f, 0.5f, 0.5f);
+        
+    float z = (float)u01(rng);
+    float theta = (float)u02(rng);
+
+    point.x = sqrt(1 - (z*z)) * cos(theta);
+    point.y = sqrt( 1 - (z*z)) * sin(theta);
+    point.z = z;
+	
+	return point;
+}
+
+
 __device__
-glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
-{
-    //    G*m_us*m_them
-    //F = -------------
-    //         r^2
-    //
-    //    G*m_us*m_them   G*m_them
-    //a = ------------- = --------
-    //      m_us*r^2        r^2
-    
-	glm::vec3 usPos (us.x, us.y, us.z);
-	glm::vec3 themPos (them.x, them.y, them.z);
-	glm::vec3 dir = themPos - usPos;
-
-	float rSqr = glm::dot(dir, dir);
-	if(rSqr < EPSILON)
-		return glm::vec3(0);
-
-	float a = G * them.w / rSqr;
+glm::vec3 wander(glm::vec3 vel, glm::vec4 pos, int index, float dt, int time){
 	
-	return a*glm::normalize(dir);
+	//find random displacement on sphere
+	glm::vec3 vWander = getRandomPointOnSphere(index, time);
+	
+	//translate to new center
+	glm::vec3 myPos(pos.x, pos.y, pos.z);
+	glm::vec3 center = myPos + vel;
+	vWander += center;
+
+	vel = VRADIUS*glm::normalize(vWander);
+	
+	return vel;
 }
 
-//TODO: Core force calc kernel global memory
-__device__ 
-glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
-{
-	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
-	
-	//loop through all bodies and sum all acceleration
-	for(int i = 0; i < N; ++i)
-		acc += calculateAcceleration(my_pos, their_pos[i]);
+__device__
+glm::vec3 alignment(int N, glm::vec4 myPos, glm::vec3 myVel, glm::vec3* vel, glm::vec4* pos){
 
-	return acc;
-}
-
-
-//TODO: Core force calc kernel shared memory
-__device__ 
-glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
-{
 	int numTiles = ceil((float)N/blockSize);
-	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 	__shared__ glm::vec4 posTile[blockSize];
+	__shared__ glm::vec3 velTile[blockSize];
+
+	glm::vec3 vAlign(0);
+	int numNeigbors = 0;
 
 	for(int i = 0; i < numTiles; ++i){
-		//load to shared memory
-		posTile[threadIdx.x] = their_pos[i*blockSize + threadIdx.x];
+	
+		//load positions and velocities to shared memory
+		posTile[threadIdx.x] = pos[i*blockSize + threadIdx.x];
+		velTile[threadIdx.x] = vel[i*blockSize + threadIdx.x];
 		__syncthreads();
 
-		//calculate acceleration
-		for(int j = 0; j < blockSize; ++j)
-			if(blockSize*i+j < N)
-				acc += calculateAcceleration(my_pos, posTile[j]);
+		//find weighted average of velocities in neighborhood
+		for( int j = 0; j < blockSize; ++j){
+			if(blockSize*i+j < N){
+				//check if in neigborhood
+				float dist = glm::length(posTile[threadIdx.x] - myPos);
+				if(dist < NEIGHBOR_RAD){
+					vAlign += velTile[threadIdx.x];
+					++numNeigbors;
+				}
+			}
+		}
 		__syncthreads();
+
 	}
 
-	return acc;
-	
+	return glm::normalize(vAlign*(1.0f/numNeigbors));
+
 }
 
-//Simple Euler integration scheme
+//updates velocity
 __global__
-void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, int time)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     glm::vec4 my_pos;
-    glm::vec3 accel;
+    glm::vec3 my_vel;
 
-    if(index < N) my_pos = pos[index];
+	if(index < N){
 
-    accel = ACC(N, my_pos, pos);
-
-    if(index < N) acc[index] = accel;
+		my_pos = pos[index];
+		my_vel = vel[index];
+		//vel[index] += wander(vel[index], my_pos, index, dt, time);
+		vel[index] = alignment(N, my_pos, my_vel, vel, pos); 
+	}
 }
 
+//does euler integration to find new position
 __global__
 void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-        vel[index]   += acc[index]   * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;
+
+		//pos[index].x += 0.01;
+  //      pos[index].y += 0.01;
+  //      pos[index].z += 0.01;
+
     }
 }
 
@@ -207,12 +226,13 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 
     float c_scale_w = -2.0f / s_scale;
     float c_scale_h = -2.0f / s_scale;
+	float c_scale_b = -2.0f / s_scale;
 
     if(index<N)
     {
         vbo[4*index+0] = pos[index].x*c_scale_w;
         vbo[4*index+1] = pos[index].y*c_scale_h;
-        vbo[4*index+2] = 0;
+		vbo[4*index+2] = pos[index].z*c_scale_b;
         vbo[4*index+3] = 1;
     }
 }
@@ -223,23 +243,6 @@ __global__
 void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    int x = index % width;
-    int y = index / width;
-    float w2 = width / 2.0;
-    float h2 = height / 2.0;
-
-    float c_scale_w = width / s_scale;
-    float c_scale_h = height / s_scale;
-
-    glm::vec3 color(0.05, 0.15, 0.3);
-    glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
-
-    if(x<width && y<height)
-    {
-        float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));
-        // Each thread writes one pixel location in the texture (textel)
-        pbo[index].w = (mag < 1.0f) ? mag : 1.0f;
-    }
 }
 
 /*************************************
@@ -256,20 +259,24 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
-    cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
+    cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3)); 
     checkCUDAErrorWithLine("Kernel failed!");
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
-    generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
-    checkCUDAErrorWithLine("Kernel failed!");
+    
+	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, scene_scale);
+	checkCUDAErrorWithLine("Kernel failed!");
+
+	//generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+    //checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }
 
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, iteration);
     checkCUDAErrorWithLine("Kernel failed!");
     updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
@@ -278,8 +285,9 @@ void cudaNBodyUpdateWrapper(float dt)
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
+	iteration ++;
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+	sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
 }
 
