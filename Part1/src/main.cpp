@@ -4,9 +4,9 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
-#define DT 0.2
-#define VISUALIZE 1
+#define N_FOR_VIS 1000
+#define DT .2
+#define VISUALIZE 0
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -21,10 +21,10 @@ int main(int argc, char** argv)
     initPBO(&pbo);
     cudaGLRegisterBufferObject( planetVBO );
     
-#if VISUALIZE == 1 
+#if VISUALIZE == 1
     initCuda(N_FOR_VIS);
 #else
-    initCuda(2*128);
+    initCuda(N_FOR_VIS);
 #endif
 
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);
