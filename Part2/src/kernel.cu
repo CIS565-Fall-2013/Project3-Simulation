@@ -381,7 +381,7 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 
 	float my_rot;
 	float my_ang_vel; //angular velocity
-	float desired_angle = 0;
+
 
     if(index < N){
 		my_pos = pos[index];
@@ -401,6 +401,13 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 
 	if(index == 0){
 		desired_vel = glm::vec3(0, 0, 0);
+	}
+
+	float desired_angle;
+	if(glm::length(desired_vel) > EPSILON){
+		desired_angle = atan2(desired_vel.y, desired_vel.x);
+	} else { //keep the same heading as before
+		desired_angle = my_rot;
 	}
 
     //accel = ACC(N, my_pos, pos);
