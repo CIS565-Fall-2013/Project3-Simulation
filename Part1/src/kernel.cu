@@ -8,15 +8,15 @@
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
 
-#define	CAMHEIGHT	150.0f
-#define CAMFORWARD	60.0f
+#define	CAMHEIGHT	75.0f
+#define CAMFORWARD	30.0f
 
 int numObjects;
 const float planetMass = 3e8;
 const __device__ float starMass = 5e10;
 const __device__ float GravConst = 6.67384e-11;
 __device__ bool prefetch;
-__device__ int attachedToIndex;
+__device__ int attachedToIndex = 0;
 const float scene_scale = 2e2; //size of the height map in simulation space
 bool camUpdate = false;
 
@@ -534,7 +534,15 @@ __global__	void	moveCamera (int N, glm::vec4* campos, glm::vec4* pos)
 {
 	for (int i = 0;	i < N; i ++)
 	{
-		if (glm::length (pos [i] - *campos) > 5.0)
+		if (i <= attachedToIndex)
+		{
+			/*if (attachedToIndex == N)
+				attachedToIndex = 0;
+			else*/
+				continue;
+		}
+
+		if (glm::length (pos [i] - pos [attachedToIndex]) > 5.0)
 		{
 			*campos = pos [i];
 			campos->z += CAMHEIGHT;
@@ -547,6 +555,10 @@ __global__	void	moveCamera (int N, glm::vec4* campos, glm::vec4* pos)
 	}
 }
 
+__global__ void attachedToIndexReset ()
+{
+	attachedToIndex = 0;
+}
 
 /*************************************
  * Wrappers for the __global__ calls *
@@ -567,6 +579,8 @@ void initCuda(int N, const glm::vec4 &camera_position)
 	cudaMalloc((void**)&dev_campos, sizeof(glm::vec4));
     checkCUDAErrorWithLine("Kernel failed!");
 
+	resetAttachedToIndex ();
+	checkCUDAErrorWithLine("Kernel failed!");
 	cudaMemcpy (dev_campos, &camera_position, sizeof (camera_position), cudaMemcpyHostToDevice);
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
@@ -621,6 +635,21 @@ glm::vec4	getCurrentCameraPosition ()
 	return camera_position/scene_scale;
 }
 
+glm::vec3	getCurrentCameraLookAt ()
+{
+	int attachedTo = 0;
+	cudaMemcpy (&attachedTo, &attachedToIndex, sizeof (int), cudaMemcpyDeviceToHost);
+	checkCUDAErrorWithLine("Kernel failed!");
+	glm::vec3	accelerationDir = glm::vec3 (0);
+	glm::vec3	pos = glm::vec3 (0);
+	cudaMemcpy (&accelerationDir, &dev_acc [attachedTo], sizeof (glm::vec3), cudaMemcpyDeviceToHost);
+	checkCUDAErrorWithLine("Kernel failed!");
+	cudaMemcpy (&pos, &dev_pos [attachedTo], sizeof (glm::vec3), cudaMemcpyDeviceToHost);
+	checkCUDAErrorWithLine("Kernel failed!");
+	pos += accelerationDir * 5.0f;
+	return	pos/scene_scale;
+}
+
 void		setCurrentCameraPosition (const glm::vec4 &camera_position)
 {
 	glm::vec4	cPos = camera_position * scene_scale;
@@ -635,4 +664,9 @@ void	moveCameraToNextFlock (glm::vec3 &cameraPos)
 void	setCameraUpdate (bool shouldCameraUpdate)
 {
 	camUpdate = shouldCameraUpdate;
+}
+
+void	resetAttachedToIndex ()
+{
+	attachedToIndexReset<<<1,1>>> ();
 }

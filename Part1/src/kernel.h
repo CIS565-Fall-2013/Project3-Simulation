@@ -25,7 +25,10 @@ void setDevicePrefetch (bool prefetchEnabled);
 
 void moveCameraToNextFlock (glm::vec3 &cameraPos);
 void	setCameraUpdate (bool shouldCameraUpdate);
+void	resetAttachedToIndex ();
+
 glm::vec4	getCurrentCameraPosition ();
+glm::vec3	getCurrentCameraLookAt ();
 void		setCurrentCameraPosition (const glm::vec4 &camera_position);
 
 inline __device__ glm::vec3 safeNormalize (glm::vec3 vectorToBeNormalized);		// normalize only if length > 0

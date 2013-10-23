@@ -80,6 +80,7 @@ void runCuda(bool customSimulation);
 
 void display();
 void keyboard(unsigned char key, int x, int y);
+void updateCameraTransformation ();
 
 //-------------------------------
 //----------SETUP STUFF----------

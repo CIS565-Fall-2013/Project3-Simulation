@@ -108,6 +108,8 @@ void display()
     // VAO, shader program, and texture already bound
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     //glDrawElements(GL_TRIANGLES, 6*field_width*field_height,  GL_UNSIGNED_INT, 0);
+	if (cameraToggle)
+		updateCameraTransformation ();
 
     glUseProgram(program[HEIGHT_FIELD]);
 
@@ -164,6 +166,7 @@ void keyboard(unsigned char key, int x, int y)
 				cameraPosition = glm::vec3 (originalCamPosition);
 				setCurrentCameraPosition (glm::vec4 (cameraPosition, 1.0));
 				view = glm::lookAt(cameraPosition, glm::vec3 (0), glm::vec3(0,0,1));
+				resetAttachedToIndex ();
 			}
 		case 'N':
 			if (cameraToggle)
@@ -173,7 +176,7 @@ void keyboard(unsigned char key, int x, int y)
 				glm::vec4 temp_cp = getCurrentCameraPosition ();
 				cameraPosition.x = temp_cp.x;	cameraPosition.y = temp_cp.y;	cameraPosition.z = temp_cp.z;
 //				cameraPosition = glm::vec3 (1.0, 1.0, 1.2);
-				view = glm::lookAt(cameraPosition, glm::vec3 (cameraPosition.x, cameraPosition.y +0.7f, cameraPosition.z-0.5f), 
+				view = glm::lookAt(cameraPosition, getCurrentCameraLookAt (), 
 										glm::vec3(0,0,1));
 			}
 
@@ -188,6 +191,19 @@ void keyboard(unsigned char key, int x, int y)
     }
 }
 
+void updateCameraTransformation ()
+{
+	glm::vec4 temp_cp = getCurrentCameraPosition ();
+	cameraPosition.x = temp_cp.x;	cameraPosition.y = temp_cp.y;	cameraPosition.z = temp_cp.z;
+	view = glm::lookAt(cameraPosition, /*glm::vec3 (cameraPosition.x, cameraPosition.y +0.7f, cameraPosition.z-0.5f)*/getCurrentCameraLookAt (), 
+							glm::vec3(0,0,1));
+	projection = perspMat * view;
+	glUseProgram(program[0]);
+	glUniformMatrix4fv (glGetUniformLocation(program[0], "u_projMatrix"), 1, GL_FALSE, &projection [0][0]);
+	glUseProgram(program[1]);
+	glUniformMatrix4fv (glGetUniformLocation(program[1], "u_projMatrix"), 1, GL_FALSE, &projection [0][0]);
+	glUniform3fv (glGetUniformLocation(program[1], "u_cameraPos"), 1, &cameraPosition [0]);
+}
 
 //-------------------------------
 //----------SETUP STUFF----------
