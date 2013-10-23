@@ -104,9 +104,9 @@ This is the video of the flocking process of small pyramids.
 
 Another new video of flocking with ocean wave effect is this:
 
-[![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/VideoScreenShot2.PNG)](https://www.youtube.com/watch?v=pmQMEbN1d9E)
+[![ScreenShot](https://raw.github.com/GabriellaQiong/Project3-Simulation/master/IMG_1985.PNG)](http://www.youtube.com/watch?v=OxMKQQeQXx4)
 
-The youtube links are here if you cannot open the video in the markdown file: http://www.youtube.com/watch?v=CIzqrhkuMrI, http://www.youtube.com/watch?v=b5fV_K9yWqA and https://www.youtube.com/watch?v=pmQMEbN1d9E.
+The youtube links are here if you cannot open the video in the markdown file: http://www.youtube.com/watch?v=CIzqrhkuMrI, http://www.youtube.com/watch?v=b5fV_K9yWqA and http://www.youtube.com/watch?v=OxMKQQeQXx4.
 
 -------------------------------------------------------------------------------
 PERFORMANCE EVALUATION
