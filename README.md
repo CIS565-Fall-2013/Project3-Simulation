@@ -37,7 +37,7 @@ The flocking agent I implemented as a pyramid, so the user could easily figure o
 
 **Video:**
 
-[http://www.youtube.com/watch?v=qfx1AQ81Lxk&feature=youtu.be](http://www.youtube.com/watch?v=qfx1AQ81Lxk&feature=youtu.be)
+[http://www.youtube.com/watch?v=xS2ItIx7jx4&feature=youtu.be](http://www.youtube.com/watch?v=xS2ItIx7jx4&feature=youtu.be)
 
 
 With 12000 agents, runs in real time.
