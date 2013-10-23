@@ -429,7 +429,7 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
         vbo[4*index+0] = pos[index].x*c_scale_w;
         vbo[4*index+1] = pos[index].y*c_scale_h;
         vbo[4*index+2] = 0;
-        vbo[4*index+3] = 1;
+        vbo[4*index+3] = ((float)index)/N * TWO_PI;
     }
 }
 
