@@ -40,10 +40,11 @@ Here are some preliminary results with similar rendering style of the N-Body sim
 [Separation](http://youtu.be/BcDpVr_Pu00)
 
 
-Flocking with each boid rendered as a triangle
-[Flocking](http://youtu.be/BO_e8MUmjeM)
+Flocking with each boid rendered as a triangle:
 
-[Flocking towards target](http://youtu.be/WzI8o743bUk)
+[Flocking](http://youtu.be/BO_e8MUmjeM) with a recall to target half way through!
+
+[Flocking towards target](http://youtu.be/WzI8o743bUk) at the center of the screen. The target can be adjusted w/ wasd.
 
 Note regarding GLM: when working on this project, glm::normalize was a major source of many interesting bugs that consumed a lot of time for me to track down. It turns out that this function
 does not protect against division by zero. Therefore, instead of relying on this function, it is best to first figure out the length, then add a small offset to the length and do the division
