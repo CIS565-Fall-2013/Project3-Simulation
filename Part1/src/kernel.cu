@@ -7,9 +7,9 @@
 #include "kernel.h"
 
 #if SHARED == 1
-    //#define ACC(x,y,z) sharedMemAcc(x,y,z)
+    #define ACC(x,y,z) sharedMemAcc(x,y,z)
 	//#define ACC(x,y,z) prefetchAcc(x,y,z)
-	#define ACC(x,y,z) unrolledAcc(x,y,z)
+	//#define ACC(x,y,z) unrolledAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
