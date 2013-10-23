@@ -20,7 +20,7 @@ Part 1: N Body Simulation
 
 A basic formulation of acceleration due to a body's mass is used as ![equation](http://latex.codecogs.com/gif.latex?\frac{G*m_j}{r^2}\hat%20r)
 
-![Screeshot1]()
+![Screeshot1](Part1/resources/closeUP.png)
 
 
 Using Shared Memory: Shared memory is used to cache the bodies so that threads in a warp can run over multiple bodies without having to access global memory for each of those. This helps speed up execution time and N bodies can be brought into the buffer P at a time.
@@ -31,17 +31,31 @@ Extended the framework:
 * **Velocity Verlet Integration**: An energy preserving velocity verlet integration scheme is implemented and can be switched to by using the *'i' and 'I' key* on the keyboard. RK4 is on the list but not yet implemented.
 * **Mouse interaction**: Mouse interactions works like in Maya, right click to zoom in and out, left click to pan aronud the object.
 
+![Screeshot1](Part1/resources/tess.png)
+
+Here, we can see: 
+* 1 is the highest level tessellation (level 6)
+* 2 is the medium level tessellation (levle 4)
+* 3 is the lowest level tessellation (levle 2)
+
+![Screeshot1](Part1/resources/velVerlet.png)
+
+Here we can see the velocity verlet integration.
+
+
 ---
 Part2: SPH Fluid Simulation
 ---
 
 For a simulation to build upon this N-Body interaction, I've implemented a very basic SPH simulation with forces based on pressure and viscosity. SPH fluid simulations are a standard in the industry for large scale fluid scenes in movies as well as smaller scale interactive applications. It is based on solving the Navier-Stokes equation in a Lagrangian (particle) based manner.
 
-![Screenshots!!!]()
+![Screenshots!!!](Part1/resources/SPH4.png)
 
-![Screenshots!!!]()
+![Screenshots!!!](Part1/resources/SPH3.png)
 
-![Screenshots!!!]()
+![Screenshots!!!](Part1/resources/SPH2.png)
+
+![Screenshots!!!](Part1/resources/SPH1.png)
 
 The equations are as follows:
 
@@ -57,11 +71,26 @@ The kernels used are as follows:
 
 ![kernelImage](http://people.csail.mit.edu/acornejo/Projects/images/latex/5d2c0d583ac49223a75457d83a1760a5.png)
 
+
+** Simulation Parameters **
+
+The basic simulation parameters are as follows:
+* Stiffness (k) : This is the magnitude of force to put the particles back in correct positions based on pressue.
+* Rest Pressure : This defines the rest state pressure of the liquid. It must be non-zero for liquid behavior. If zero, the matter behaves like a gas.
+* Viscosity Coefficient : This is for the viscosity damping. 
+ 
+The tuning of these parameters is extremely painful because the mapping of virtual space to real world dimensions and SI units is not super straight forward. For this reason, 
+I have only able to get the simulatino to work in certain conditions (super viscous liquid, splashy liquid, etc).
+
+
 ---
 Performance Analysis
 ---
 The jump from accessing all elements in global memory vs shared memory accesses in a cached pattern can be seen below. This timing is for the part one, just acceleration and integration parts timed, not the visualization stage.
+ As we can see, the performance is slightly better with shared memory but not a huge amount.
 
-![Performance]()
+![Performance](performance.PNG)
 
-![PerformanceLogScale]()
+![PerformanceLogScale](performance_log.PNG)
+
+SPH performance can be improved by improving the neighbor search since that is the most time consuming part of the simulation. A uniform grid itself would be quite useful.
