@@ -153,6 +153,16 @@ Test 2: Comparison of Naive implementation vs Shared memory implementation
 
 ![alt tag](https://raw.github.com/vimanyu/Project3-Simulation/master/Part1/resources/naiveVsSharedMem.png)
 
+**Tested on a laptop with Intel Core-i7 and Nvidia 740M GT**
+
+Test 1: Comparison of Euler vs RK4 integration
+
+![alt tag](https://raw.github.com/vimanyu/Project3-Simulation/master/Part2/resources/eulerVsRk4.png)
+
+Test 2: Comparison of Naive implementation vs Shared memory implementation
+
+![alt tag](https://raw.github.com/vimanyu/Project3-Simulation/master/Part2/resources/naiveVsSharedMem.png)
+
 ---
 ACKNOWLEDGEMENTS
 ---
