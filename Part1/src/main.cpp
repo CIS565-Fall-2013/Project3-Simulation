@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
+#define N_FOR_VIS 10
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -76,6 +76,9 @@ void runCuda()
 
 int timebase = 0;
 int frame = 0;
+float gpu_time = 0.0f;
+float cpu_time = 0.0f;
+int frame_count = 0;
 
 void display()
 {
@@ -142,6 +145,17 @@ void display()
 #endif
     glutPostRedisplay();
     glutSwapBuffers();
+
+	frame_count ++;
+	cout << frame_count << endl;
+	if (frame_count == 1000)
+	{
+		cout << "NBody update time (frames/sec)" << endl;
+		cout << "GPU: " << (float)frame_count / gpu_time << endl;
+		cout << "CPU: " << (float)frame_count / cpu_time << endl;
+		system("pause");
+		exit(0);
+	}
 }
 
 void keyboard(unsigned char key, int x, int y)

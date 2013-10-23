@@ -4,8 +4,9 @@
 #include "glm/glm.hpp"
 #include "utilities.h"
 #include "kernel.h"
+#include <time.h>
 
-#if SHARED == 0
+#if SHARED == 1
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
@@ -239,6 +240,74 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
     }
 }
 
+
+/*************************************
+ * CPU Implementation for speed comparison. *
+ *************************************/
+
+float* cpu_x;
+float* cpu_y;
+float* cpu_vx;
+float* cpu_vy;
+float* cpu_ax;
+float* cpu_ay;
+int cpu_N;
+
+void initCPU(int N)
+{
+	cpu_N = N;
+
+	cpu_x = new float[N];
+	cpu_y = new float[N];
+	cpu_vx = new float[N];
+	cpu_vy = new float[N];
+	cpu_ax = new float[N];
+	cpu_ay = new float[N];
+
+	thrust::default_random_engine rng(hash(N));
+    thrust::uniform_real_distribution<float> u01(-1,1);
+
+	for (int i = 0; i < N; ++i)
+	{
+		cpu_x[i] = (float) u01(rng);
+		cpu_y[i] = (float) u01(rng);
+		cpu_vx[i] = (float) u01(rng) * 0.05f;
+		cpu_vy[i] = (float) u01(rng) * 0.05f;
+		cpu_ax[i] = 0.0f;
+		cpu_ay[i] = 0.0f;
+	}
+}
+
+void updateCPU(float dt)
+{
+	// updateF (set ax, ay)
+	for (int i = 0; i < cpu_N; ++i)
+	{
+		float ax = 0.0f;
+		float ay = 0.0f;
+		for (int j = 0; j < cpu_N; ++j)
+		{
+			float dx = cpu_x[i] - cpu_x[j];
+			float dy = cpu_y[i] - cpu_y[j];
+			float r = sqrt(dx*dx + dy*dy);
+			float f = G * 3e8 / (r * r);
+			ax += (dx / r) * f;
+			ay += (dy / r) * f;
+		}
+		cpu_ax[i] = ax;
+		cpu_ay[i] = ay;
+	}
+
+	// updateS (set x, y, vx, vy)
+	for (int i = 0; i < cpu_N; ++i)
+	{
+		cpu_vx[i] += cpu_ax[i] * dt;
+		cpu_vy[i] += cpu_ay[i] * dt;
+		cpu_x[i] += cpu_vx[i] * dt;
+		cpu_y[i] += cpu_vy[i] * dt;
+	}
+}
+
 /*************************************
  * Wrappers for the __global__ calls *
  *************************************/
@@ -261,16 +330,31 @@ void initCuda(int N)
     generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
+
+	initCPU(N);
 }
+
+extern float cpu_time;
+extern float gpu_time;
 
 void cudaNBodyUpdateWrapper(float dt)
 {
+	clock_t t = clock();
+
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
     updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
+
+	gpu_time += ((float)(clock() - t))/CLOCKS_PER_SEC;
+
+	t = clock();
+
+	updateCPU(dt);
+	
+	cpu_time += ((float)(clock() - t))/CLOCKS_PER_SEC;
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
