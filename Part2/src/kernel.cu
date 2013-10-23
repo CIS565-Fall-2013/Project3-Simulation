@@ -501,6 +501,7 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 #else
 			flockVel = flock(N, my_pos, pos, vel);
 #endif
+			
 			float flockVelMag = length(flockVel) + 1e-10;
 			float myVelMag = length(my_vel);
 			vec3 flockDirection = flockVel / flockVelMag;
