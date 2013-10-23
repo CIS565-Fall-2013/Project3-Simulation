@@ -57,6 +57,12 @@ memory to compute each planet's acceleration has a clear advantage.
 
 ![chart1](Part1/resources/runtime_compare.png)
 
+| Number of Planets        | Global Memory           | Shared Memory  |
+| ------------- |-------------| -----|
+| 20  | 7.6 | 10.6 |
+| 100 | 29.5 | 21.4 |
+| 200 | 55.8 | 40.5 |
+
 	Number of Planets	Global Memory	Shared Memory
 	20			7.6		10.6
 	100			29.5		21.4
