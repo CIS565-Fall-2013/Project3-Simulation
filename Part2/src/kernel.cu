@@ -366,7 +366,7 @@ __device__ glm::vec3 leader_follow(int N, glm::vec3 my_pos, glm::vec3 goal_pos, 
 
 //Simple Euler integration scheme
 __global__
-void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, BehaviorType bType)
+void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, float* rots, float* ang_vels, BehaviorType bType)
 {
 	
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -378,6 +378,8 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 	glm::vec3 desired_vel;
 	glm::vec3 goal_pos = glm::vec3(pos[0]);
 	glm::vec3 leader_vel = vel[0];
+	//float angular_accel;
+	//float my_rot = 
 
     if(index < N){
 		my_pos = pos[index];
@@ -532,7 +534,7 @@ void cudaNBodyUpdateWrapper(float dt, int blockSize, BehaviorType bType)
 	float nathanTime;
 	cudaEventCreate(&start);
 	cudaEventRecord(start,0);
-    updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, bType);
+    updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, dev_rot, dev_angular_vel,  bType);
 	cudaEventCreate(&stop);
 	cudaEventRecord(stop,0);
 	cudaEventSynchronize(stop);
