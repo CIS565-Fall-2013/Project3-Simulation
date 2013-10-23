@@ -5,13 +5,13 @@
 #include "utilities.h"
 #include "kernel.h"
 
-#if SHARED == 1
+#if SHARED == 1 
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
 #endif
 
-#define FLOCKING 1
+#define FLOCKING 0
 
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
@@ -24,6 +24,7 @@ const float scene_scale = 2e1; //size of the height map in simulation space
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
+glm::vec3 * dev_acc;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -71,9 +72,9 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
         glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
         arr[index].x = rand.x;
         arr[index].y = rand.y;
-        arr[index].z = 0.0f;//rand.z;
+        //arr[index].z = 0.0f;//rand.z;
         arr[index].z = rand.z;
-        //arr[index].w = mass;
+        arr[index].w = mass;
     }
 }
 
@@ -88,7 +89,7 @@ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
         glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
         float r = glm::length(R) + EPSILON;
         float s = sqrt(G*starMass/r);
-        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
+        glm::vec3 D = 10.0f*glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
         arr[index].x = s*D.x;
         arr[index].y = s*D.y;
         arr[index].z = s*D.z;
@@ -263,10 +264,24 @@ glm::vec3 Seperation( int N, glm::vec4 my_pos, glm::vec4* pos  )
   return acc;
 }
 
+//Simple Euler integration scheme
+__global__
+void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+{
+    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    glm::vec4 my_pos;
+    glm::vec3 accel;
+
+    if(index < N) my_pos = pos[index];
+
+    accel = ACC(N, my_pos, pos);
+
+    if(index < N) acc[index] = accel;
+}
 
 //Simple Euler integration scheme
 __global__
-void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 star_position )
+void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, glm::vec3 star_position )
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
@@ -274,8 +289,8 @@ void update(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 star_po
         glm::vec4 my_pos = pos[index];
 
 	#if FLOCKING == 0 
-        glm::vec3 acc = ACC(N, my_pos, pos);
-        vel[index] += acc * dt;
+        //glm::vec3 acc = ACC(N, my_pos, pos);
+        vel[index] += acc[index] * dt;
 	#else 
 	// Align velocity with flock average
 	glm::vec3 align_vel = Alignment( N, my_pos, pos, vel );
@@ -372,6 +387,8 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
+    cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
+    checkCUDAErrorWithLine("Kernel failed!");
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
@@ -382,7 +399,8 @@ void initCuda(int N)
 void cudaNBodyUpdateWrapper(float dt, glm::vec3 goal_position )
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    update<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, goal_position);
+    updateF<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, goal_position);
     checkCUDAErrorWithLine("Kernel failed!");
 }
 
