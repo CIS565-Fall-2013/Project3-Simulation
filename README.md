@@ -1,4 +1,164 @@
+![planets](Part1/resources/planets.png)
+
+---
 CIS565: Project 3: CUDA Simulation and GLSL Visualization
+---
+
+After completing the initial simulation requirements I chose to implement flocking. 
+Each particle has 3 behaviors:
+Alignment - the particle velocity converges to the average velocity of its neighbors
+Cohesion - the particle is attracted to the center of the flock
+Seperation - particles repel from other particles nearby so they don't collide. 
+
+I chose to have a radius of interaction for each behavior which allows for various
+overall flock behaviors. For instance a small cohesion radius generally leads to 
+particles bunching into multiple smaller flocks while a large radius will lead the
+particles to all converge to the global flock center. 
+
+To keep the particles from leaving the viewing region I added a control point that 
+each particle is drawn towards and to make things interesting I added a rotational
+velocity component to this behavior. The control point may be moved around interactively 
+using the 'wasd' keys. 
+
+Showing the particles flocking. 
+![flocking](Part1/resources/particles_flocking.png)
+
+Showing particles in a rest state ( no rotational velocity component added ). 
+![flocking](Part1/resources/particle_flock_no_spin.png)
+
+---
+Video
+---
+I posted a video of flocking up on youtube, it gets a little bit choppy due to my screencapture
+software ( I'm working on putting up a better one ), but it gets the point across. 
+
+http://youtu.be/GNqQbQlhye4
+
+---
+Performance: Shared memory 
+---
+For the N-Body forces calculation its recommended to load particle states into 
+shared memory for each block. I varied the block size for shared and non-shared
+memory and saw that performance went up somewhat from 64 to 512. And then fixing
+the blocksize at 512 ( maximum performance ) I evaluated number of particles 
+versus framerate and surprisingly didn't find a large performance difference 
+between my shared memory implementation and the naive implementation, which 
+is surprising ( I'm still investigating this ). 
+
+Note: I removed the ACC calculation for the grid for the test, allowing me
+to observe the absolute number of particles that can be handled. 
+
+particles | framerate
+
+BlockSize: 64
+
+no shared memory:
+
+- 1024 | 38.46
+- 2048 | 33.53
+- 4096 | 20.37
+- 8192 | 7.98
+- 16384 | 2.30
+- 24576 | 1.06
+
+shared memory:
+
+- 1024 | 39.68
+- 2048 | 33.80
+- 4096 | 21.32
+- 8192 | 8.64
+- 16384 | 2.57
+- 24576 | 1.19
+
+BlockSize: 256
+
+shared memory:
+
+- 1024 | 39.96
+- 2048 | 33.90
+- 4096 | 21.05
+- 8192 | 8.56
+- 16384 | 2.53
+- 24576 | 1.17
+
+no shared memory:
+- 1024 | 39.96
+- 2048 | 34.25
+- 4096 | 21.26
+- 8192 | 9.06
+- 16384 | 2.72
+- 24576 | 1.26
+
+BlockSize: 512
+
+no shared memory:
+
+- 64 | 38.31 
+- 128 | 37.11
+- 256 | 37.00
+- 512 | 37.55
+- 1024 | 37.51
+- 2048 | 33.40
+- 4096 | 21.19
+- 8192 | 8.23
+- 16384 | 2.50
+- 24576 | 1.16
+
+shared memory:
+
+- 1024 | 38.77
+- 2048 | 32.80
+- 4096 | 21.48
+- 8192 | 8.90
+- 16384 | 2.67
+- 24576 | 1.124
+
+BlockSize: 1024
+
+no shared memory:
+- 1024 | 37.51
+- 2048 | 33.40
+- 4096 | 21.19
+- 8192 | 8.23
+- 16384 | 2.50
+- 24576 | 1.16
+
+shared memory:
+- 1024 | 38.58
+- 2048 | 33.30
+- 4096 | 21.13
+- 8192 | 8.73
+- 16384 | 2.58
+- 24576 | 1.19
+
+
+Generally blocksize does not have a large effect on framerate.
+There appears to be a few percent improvement when using shared memory
+over the naive implementation. The following is the specs for my GPU
+if anyone is interested. 
+
+```
+GPU Info:
+GeForce 610M
+Total amount of global memory:                 1024 MBytes (1073414144 bytes)
+( 1) Multiprocessors, ( 48) CUDA Cores/MP:     48 CUDA Cores
+GPU Clock rate:                                1344 MHz (1.34 GHz)
+Memory Clock rate:                             800 Mhz
+Memory Bus Width:                              64-bit
+Maximum Texture Dimension Size (x,y,z)         1D=(65536), 2D=(65536, 65535), 3D=(2048, 2048, 2048)
+Maximum Layered 1D Texture Size, (num) layers  1D=(16384), 2048 layers
+Maximum Layered 2D Texture Size, (num) layers  2D=(16384, 16384), 2048 layers
+Total amount of constant memory:               65536 bytes
+Total amount of shared memory per block:       49152 bytes
+Total number of registers available per block: 32768
+Warp size:                                     32
+Maximum number of threads per multiprocessor:  1536
+Maximum number of threads per block:           1024
+Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
+Max dimension size of a grid size    (x,y,z): (65535, 65535, 65535)
+Maximum memory pitch:                          2147483647 bytes
+```
+
 ===
 Fall 2013
 ---
@@ -14,6 +174,9 @@ card in the machine you are working on, feel free to use any machine in the SIG
 Lab or in Moore100 labs. All machines in the SIG Lab and Moore100 are equipped
 with CUDA capable NVIDIA graphics cards. If this too proves to be a problem,
 please contact Patrick or Liam as soon as possible.
+
+
+
 
 ---
 INTRODUCTION:
