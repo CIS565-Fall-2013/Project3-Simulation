@@ -118,9 +118,9 @@ FEATURES
 VIDEOS
 ---
 
-[![ScreenShot](https://raw.github.com/vimanyu/Project3-Simulation/master/images/flockingVideoScreenshot.png)](http://www.youtube.com/watch?v=Gj59Ote7p5A)
+[![ScreenShot](https://raw.github.com/vimanyu/Project3-Simulation/master/Part2/resources/flockingVideoScreenshot.png)](http://www.youtube.com/watch?v=Gj59Ote7p5A)
 
-[![ScreenShot](https://raw.github.com/vimanyu/Project3-Simulation/master/images/flockingVideo2Screenshot.png)](http://www.youtube.com/watch?v=mV6yPZRVU-U)
+[![ScreenShot](https://raw.github.com/vimanyu/Project3-Simulation/master/Part2/resources/flockingVideo2Screenshot.png)](http://www.youtube.com/watch?v=mV6yPZRVU-U)
 
 ---
 PERFORMANCE ANALYSIS
