@@ -10,7 +10,8 @@ simulated using CUDA and OpenGL shaders. Part two is a flocking simulation with 
 
 PART 1: CUDA NBody Simulation
 ===
-[!Alt text](Part1/project running.jpg?raw=true)
+
+![Alt text](Part1/project running.jpg?raw=true)
 
 This part of the project creates a NBody simulation on 2-D plane with gravitational field visualized as height field.
 
@@ -30,7 +31,7 @@ Project video:https://www.youtube.com/watch?v=RwWNOOuEdHM
 
 PART 2: CUDA Flocking Simulation
 ===
-[!Alt text](Part2/project running.jpg?raw=true)
+![Alt text](Part2/project running.jpg?raw=true)
 
 This part of the project simulates flocking behavior described by Craig Reynolds http://www.red3d.com/cwr/boids/ using the combination of 3 behaviors:
 
