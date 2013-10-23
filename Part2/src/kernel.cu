@@ -303,7 +303,7 @@ __device__ glm::vec3 seek(glm::vec3 my_pos, glm::vec3 goal_pos)
 __device__ glm::vec3 arrival(glm::vec3 my_pos, glm::vec3 goal_pos)
 {
 	glm::vec3 eGlob = goal_pos - my_pos; //Global error vector
-	float arrivalGain = 0.02f; //proportional gain.
+	float arrivalGain = 0.1f; //proportional gain.
 	glm::vec3 vArrival = arrivalGain*eGlob;
 
 	if ( glm::length(vArrival) >= 0.1f){
@@ -312,7 +312,30 @@ __device__ glm::vec3 arrival(glm::vec3 my_pos, glm::vec3 goal_pos)
 	else{
 		return glm::vec3(0,0,0);
 	}
+}
 
+__device__ glm::vec3 separation(int N, glm::vec3 my_pos, glm::vec3 goal_pos, glm::vec4* their_pos)
+{
+	int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	float RNeighborhood = 800.0f;
+	glm::vec3 vSeparate(0, 0, 0);
+	for(int i = 0; i < N; i++){
+		if(i != index){
+			//di is the vector from agent i to this agent
+			//remember, we want to move AWAY from the other agents.
+			glm::vec3 theirPos3 = glm::vec3(their_pos[i]);
+			glm::vec3 di = my_pos - theirPos3;
+			//assuming weight wi is 1.
+			if( glm::length(di) < RNeighborhood && glm::length(di) >= EPSILON)
+				vSeparate = vSeparate + (di/glm::length2(di));
+			else if(glm::length(di) < EPSILON){
+				float randGain = 0.1f;
+				glm::vec3 randVec = generateRandomNumberFromThread(1337, index);
+				vSeparate = vSeparate + randGain * randVec;
+			}
+		}
+	}
+	return vSeparate;
 }
 
 //Simple Euler integration scheme
@@ -334,7 +357,8 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 		my_vel = vel[index];
 		//desired_vel = glm::vec3(2, 2, 0);
 		//desired_vel = seek(glm::vec3(my_pos), goal_pos);
-		desired_vel = arrival(glm::vec3(my_pos), goal_pos);
+		//desired_vel = arrival(glm::vec3(my_pos), goal_pos);
+		desired_vel = separation(N, glm::vec3(my_pos), goal_pos, pos);
 	}
 
 	if(index == 0){
