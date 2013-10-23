@@ -113,6 +113,19 @@ FEATURES
 
 **Flocking**: Combination of alignment, cohesion and separation. Useful to simulate flocking of birds, shoals of fish swimming, etc.
 
+---
+KEYBOARD CONTROLS
+---
+
+We can trigger different group behaviors interactively
+
+Key|Group Behavior|
+'a' | Arrival
+'d' | Departure
+'S' | Separation
+'C' | Cohesion
+'A' | Alignment
+'F' | Flocking
 
 ---
 VIDEOS
