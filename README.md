@@ -104,7 +104,7 @@ PERFORMANCE EVALUATION
 As mentioned above, an attempt was made to speed the planet simulation by prefetching each planet position into shared memory, avoiding N^2 costly global memory loads.
 However, when actually implemented the empirical evidence demonstrated the technique did not help on my machine.
 
-![Screenshot](/Renders/BlockSize_PrefetchChart.JPG "Performance Evaluation")
+![Screenshot](/Renders/BlockSize_PrefetchChart.jpg "Performance Evaluation")
 
 In fact, as the chart shows, the shared memory code actually ran slightly slower regardless of block size.
 
