@@ -45,7 +45,7 @@ Features:
 * Pyramid shaped boids generated in geometry shader pointing at direction of velocity
 * Velocity-encoded color with diffuse shading
 
-Project video:https://www.youtube.com/watch?v=RwWNOOuEdHM
+Project video:https://www.youtube.com/watch?v=eWeW96t6cE0
 
 
 
