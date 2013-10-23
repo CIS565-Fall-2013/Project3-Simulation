@@ -24,6 +24,7 @@ void cudaUpdateVBO(float * vbodptr, int width, int height);
 void setDevicePrefetch (bool prefetchEnabled);
 
 void moveCameraToNextFlock (glm::vec3 &cameraPos);
+void	setCameraUpdate (bool shouldCameraUpdate);
 glm::vec4	getCurrentCameraPosition ();
 void		setCurrentCameraPosition (const glm::vec4 &camera_position);
 

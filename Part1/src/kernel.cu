@@ -8,12 +8,17 @@
 //GLOBALS
 dim3 threadsPerBlock(blockSize);
 
+#define	CAMHEIGHT	150.0f
+#define CAMFORWARD	60.0f
+
 int numObjects;
 const float planetMass = 3e8;
 const __device__ float starMass = 5e10;
 const __device__ float GravConst = 6.67384e-11;
 __device__ bool prefetch;
+__device__ int attachedToIndex;
 const float scene_scale = 2e2; //size of the height map in simulation space
+bool camUpdate = false;
 
 #if SHARED == 1
 //	if (prefetch)
@@ -132,15 +137,31 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 
 //Simple Euler integration scheme
 __global__
-void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, glm::vec4 * dev_campos, bool cameraUpdate)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
+		bool isCameraAttached = false;
+		glm::vec4 curPos = pos [index];
+		if (cameraUpdate)
+		{
+			if (isApproximately (curPos.x, dev_campos->x) &&
+				isApproximately (curPos.y, dev_campos->y+CAMFORWARD) &&
+				isApproximately (curPos.z, dev_campos->z-CAMHEIGHT))
+				isCameraAttached = true;
+		}
+
         vel[index]   += acc[index]   * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;
+
+		if (isCameraAttached)
+		{
+			dev_campos->z = curPos.z + CAMHEIGHT;
+			dev_campos->y = curPos.y - CAMFORWARD;
+		}
     }
 }
 
@@ -431,15 +452,24 @@ void updateFCustom (int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3
 //	Update state using Verlet Integration
 //	Written by Rohith Chandran.
 __global__
-void updateS_V (int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateS_V (int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, glm::vec4 * dev_campos, bool cameraUpdate)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
+		bool isCameraAttached = false;
 		glm::vec4	curPos = pos [index];
 		glm::vec3	curVel = vel [index];
 		glm::vec4	prevPos = curPos - (dt * glm::vec4 (curVel.x, curVel.y, curVel.z, 0));
 		
+		if (cameraUpdate)
+		{
+			if (isApproximately (curPos.x, dev_campos->x) &&
+				isApproximately (curPos.y, dev_campos->y+CAMFORWARD) &&
+				isApproximately (curPos.z, dev_campos->z-CAMHEIGHT))
+				isCameraAttached = true;
+		}
+
         curPos = (2.0*curPos) - prevPos + (dt * dt * glm::vec4 (acc [index].x, acc [index].y, acc [index].z, 0));
 		prevPos = (curPos - prevPos) / (2.0*dt);
 		curVel.x = prevPos.x;
@@ -448,19 +478,45 @@ void updateS_V (int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * a
 		
 		vel[index] = curVel;
         pos[index] = curPos;
+		
+		if (isCameraAttached)
+		{
+			dev_campos->z = curPos.z + CAMHEIGHT;
+			dev_campos->y = curPos.y - CAMFORWARD;
+		}
     }
 }
 
 //	Update state using Leapfrog Integration.
 //	Written by Rohith Chandran.
 __global__
-void updateS_LF (int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateS_LF (int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, glm::vec4 * dev_campos, bool cameraUpdate)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
     {
-        pos[index] += glm::vec4 ((vel [index] * dt), 0);
+        /*bool isCameraAttached = false;*/
+		glm::vec4 curPos = pos[index];
+		/*if (cameraUpdate)
+		{
+			if (isApproximately (curPos.x, dev_campos->x) &&
+				isApproximately (curPos.y, dev_campos->y+CAMFORWARD) &&
+				isApproximately (curPos.z, dev_campos->z-CAMHEIGHT))
+				isCameraAttached = true;
+		}*/
+		
+		curPos += glm::vec4 ((vel [index] * dt), 0);
 		vel[index] += acc [index] * dt;
+
+		if (/*isCameraAttached*/cameraUpdate)
+		{
+			if (index == attachedToIndex)
+			{
+				dev_campos->z = curPos.z + CAMHEIGHT;
+				dev_campos->y = curPos.y - CAMFORWARD;
+			}
+		}
+		pos [index] = curPos;
     }
 }
 
@@ -481,8 +537,10 @@ __global__	void	moveCamera (int N, glm::vec4* campos, glm::vec4* pos)
 		if (glm::length (pos [i] - *campos) > 5.0)
 		{
 			*campos = pos [i];
-			campos->z += 2.0f;
-//			campos->y -= 0.5f;
+			campos->z += CAMHEIGHT;
+			campos->y -= CAMFORWARD;
+
+			attachedToIndex = i;
 
 			break;
 		}
@@ -530,9 +588,9 @@ void cudaNBodyUpdateWrapper(float dt, bool customSimulation)
 		updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
 
-//	updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
-//  updateS_V<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
-	updateS_LF<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+//	updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, dev_campos, camUpdate);
+//  updateS_V<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, dev_campos, camUpdate);
+	updateS_LF<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, dev_campos, camUpdate);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }
@@ -565,10 +623,16 @@ glm::vec4	getCurrentCameraPosition ()
 
 void		setCurrentCameraPosition (const glm::vec4 &camera_position)
 {
-	cudaMemcpy (dev_campos, &camera_position, sizeof (camera_position), cudaMemcpyHostToDevice);
+	glm::vec4	cPos = camera_position * scene_scale;
+	cudaMemcpy (dev_campos, &cPos, sizeof (glm::vec4), cudaMemcpyHostToDevice);
 }
 
 void	moveCameraToNextFlock (glm::vec3 &cameraPos)
 {
 	moveCamera<<<1,1>>> (numObjects, dev_campos, dev_pos);
+}
+
+void	setCameraUpdate (bool shouldCameraUpdate)
+{
+	camUpdate = shouldCameraUpdate;
 }

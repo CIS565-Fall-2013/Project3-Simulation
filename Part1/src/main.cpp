@@ -160,6 +160,7 @@ void keyboard(unsigned char key, int x, int y)
 			cameraToggle = !cameraToggle;
 			if (!cameraToggle)
 			{
+				setCameraUpdate (false);
 				cameraPosition = glm::vec3 (originalCamPosition);
 				setCurrentCameraPosition (glm::vec4 (cameraPosition, 1.0));
 				view = glm::lookAt(cameraPosition, glm::vec3 (0), glm::vec3(0,0,1));
@@ -167,6 +168,7 @@ void keyboard(unsigned char key, int x, int y)
 		case 'N':
 			if (cameraToggle)
 			{
+				setCameraUpdate (true);
 				moveCameraToNextFlock (cameraPosition);
 				glm::vec4 temp_cp = getCurrentCameraPosition ();
 				cameraPosition.x = temp_cp.x;	cameraPosition.y = temp_cp.y;	cameraPosition.z = temp_cp.z;
