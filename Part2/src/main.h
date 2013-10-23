@@ -91,7 +91,7 @@ int main(int argc, char** argv);
 //-------------------------------
 bool isPaused = false;
 bool recall = false;
-vec3 target = vec3(0,0,0);
+vec3 target = vec3(0,0,50);
 
 void runCuda();
 

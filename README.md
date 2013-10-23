@@ -23,25 +23,6 @@ Features Overview:
 
 [Video Demo](http://youtu.be/YzCPJ15O-_o)
 
----
-PERFORMANCE EVALUATION
----
-
-Here I provide a comparison between the number of planets in the simulation vs. the use of global memory and shared memory in terms of the average time per frame. With shared memory
-frames. With small number of plants in the simulation, using global memory is faster than using shared memory. However, once the number of planets starts to increase, using shared 
-memory to compute each planet's acceleration has a clear advantage.
-
-![chart1](Part1/resources/runtime_compare.png)
-
-	Number of Planets	Global Memory	Shared Memory
-	20			7.6		10.6
-	100			29.5		21.4
-	200			55.8		40.5
-	500			136.2		90.5
-	1000			268.2		179.2
-	2000			536.4		357.5
-	3000			801.3		536.1
-	5000			1340.7		895.1
 
 PART 2: CUDA Behavioral Animation
 ===
@@ -60,15 +41,33 @@ Here are some preliminary results with similar rendering style of the N-Body sim
 
 
 Flocking with each boid rendered as a triangle
-[Flocking towards target]()
+[Flocking](http://youtu.be/BO_e8MUmjeM)
+
+[Flocking towards target](http://youtu.be/WzI8o743bUk)
 
 Note regarding GLM: when working on this project, glm::normalize was a major source of many interesting bugs that consumed a lot of time for me to track down. It turns out that this function
 does not protect against division by zero. Therefore, instead of relying on this function, it is best to first figure out the length, then add a small offset to the length and do the division
 manully.
+
 ---
 PERFORMANCE EVALUATION
----
+===
 
+Here I provide a comparison between the number of planets in the simulation vs. the use of global memory and shared memory in terms of the average time per frame. With shared memory
+frames. With small number of plants in the simulation, using global memory is faster than using shared memory. However, once the number of planets starts to increase, using shared 
+memory to compute each planet's acceleration has a clear advantage.
+
+![chart1](Part1/resources/runtime_compare.png)
+
+	Number of Planets	Global Memory	Shared Memory
+	20			7.6		10.6
+	100			29.5		21.4
+	200			55.8		40.5
+	500			136.2		90.5
+	1000			268.2		179.2
+	2000			536.4		357.5
+	3000			801.3		536.1
+	5000			1340.7		895.1
 
 ---
 ACKNOWLEDGEMENTS

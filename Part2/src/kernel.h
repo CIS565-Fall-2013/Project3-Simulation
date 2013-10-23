@@ -18,7 +18,7 @@
 #define EULER 0
 #define RK2 1
 #define RK4 2
-#define FLOCK_TO_TARGET 0
+#define FLOCK_TO_TARGET 1
 
 using glm::vec3;
 using glm::vec4;

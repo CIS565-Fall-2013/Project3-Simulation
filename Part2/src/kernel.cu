@@ -504,7 +504,6 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 			float flockVelMag = length(flockVel) + 1e-10;
 			float myVelMag = length(my_vel);
 			vec3 flockDirection = flockVel / flockVelMag;
-		
 
 			// clamp acceleration
 			float accelMag = (g_velKv * (flockVelMag - myVelMag) / dt);
@@ -516,18 +515,9 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 			float newVelMag = length(vel[index]) + 1e-10;
 			vec3 newVelDirection = vel[index] / newVelMag;
 			vel[index] = fminf(newVelMag, g_maxSpeed) * newVelDirection;
-
-
-
-			// try taking initial velocity into account, but use velocity directly
-			//float finalVelMag = min(flockVelMag + myVelMag, g_maxSpeed);
-			//vel[index] = finalVelMag * flockDirection;
 		}
 		else
 		{
-			// use velocity directly
-			//vel[index] = arrival(my_pos, target);
-
 			// use arrival acceleration to get boids back
 			vel[index] = integrateAcceleration(vel[index], g_accKa * (arrival(my_pos, target)-my_vel)/dt, dt, N, my_pos, pos);
 		}
