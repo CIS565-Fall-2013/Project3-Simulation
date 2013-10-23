@@ -64,32 +64,32 @@ PERFORMANCE EVALUATION
 
 Oddly, I am getting almost exactly the same performance for the shared memory implementation as for the naive implementation:
 
-SHARED MEM (blocksize, numobjects):
+Shared memory (blocksize, numobjects):
 
-32,  10:   275fps
-32,  100:  252 fps
-32,  1000:  84 fps
+*32,  10:   275fps
+*32,  100:  252 fps
+*32,  1000:  84 fps
 
-64,  10:   274 fps
-64,  100:  261 fps
-64,  1000:  93 fps
+*64,  10:   274 fps
+*64,  100:  261 fps
+*64,  1000:  93 fps
 
-128, 10:   263 fps
-128, 100:  262 fps
-128, 1000:  92 fps
+*128, 10:   263 fps
+*128, 100:  262 fps
+*128, 1000:  92 fps
 
-256, 10:   268 fps
-256, 100:  262 fps
-256, 1000:  90 fps
+*256, 10:   268 fps
+*256, 100:  262 fps
+*256, 1000:  90 fps
 
-512, 10:   268 fps
-512, 100:  247 fps
-512, 1000:  93 fps
+*512, 10:   268 fps
+*512, 100:  247 fps
+*512, 1000:  93 fps
 
-NO SHARED (blocksize 128):
+No shared memory (blocksize 128):
 
-10:  271 fps
-100: 245 fps
-1000: 90 fps
+*10:  271 fps
+*100: 245 fps
+*1000: 90 fps
 
 I imagine this means something is wrong with my implementation, but haven't yet been able to figure out what.
