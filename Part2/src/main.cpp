@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 3000
+#define N_FOR_VIS 9999
 #define DT 0.2
 #define VISUALIZE 1
 #define RENDER_PLANE 0

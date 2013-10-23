@@ -26,7 +26,7 @@ Features Overview:
 
 PART 2: CUDA Behavioral Animation
 ===
-
+![flocking](Part2/resources/results1.png)
 For the second part of this project, I implemented several behaviors according to the formulations described by Craig Reynods found [here](http://www.red3d.com/cwr/boids/). For this portion,
 there are two different modes that are availabe. Arrival and flocking behavior towards a target movable by using 'w', 'a', 's', 'd', and untargetd flocking behavior. The individual behaviors
 utlized in this part include cohesion, separation, and alignment. 
@@ -70,8 +70,15 @@ memory to compute each planet's acceleration has a clear advantage.
 	5000			1340.7		895.1
 
 ---
-ACKNOWLEDGEMENTS
+HARDWARE INFORMATION
+===
+CPU: Intel Core i5-3230M CPU @ 2.60GHz
+RAM: 16GB
+GPU: NVIDIA GeForce GT 730m
+
 ---
+ACKNOWLEDGEMENTS
+===
 I adapted the geometry shader code from [this excellent tutorial on the subject](http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html).
 I also found [this post](http://stackoverflow.com/questions/14909796/simple-pass-through-geometry-shader-with-normal-and-color) to be extermely helpful in 
 regards to passing primitives from vertex shaders to geometry shaders and fragment shaders.

@@ -126,9 +126,16 @@ void generateCircularVelArray(int time, int N, vec3 * arr, vec4 * pos)
         arr[index].x = s*D.x;
         arr[index].y = s*D.y;
         arr[index].z = s*D.z;
+    }
+}
 
-		// LOOK: Temporarily got rid of initial velocity
-		arr[index] = vec3(0,0,0);
+__global__
+void initializeVelArray(int time, int N, vec3 *vel)
+{
+    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if(index < N)
+    {
+		vel[index] = vec3(0,0,0);
     }
 }
 
@@ -620,8 +627,8 @@ void initCuda(int N)
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
-    //generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
-    //checkCUDAErrorWithLine("Kernel failed!");
+    initializeVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel);
+    checkCUDAErrorWithLine("Kernel failed!");
 	cudaThreadSynchronize();
 }
 

@@ -14,7 +14,7 @@
 
 #define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
-#define SHARED 1
+#define SHARED 0
 #define EULER 0
 #define RK2 1
 #define RK4 2
