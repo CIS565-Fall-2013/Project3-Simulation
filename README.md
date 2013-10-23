@@ -119,7 +119,8 @@ KEYBOARD CONTROLS
 
 We can trigger different group behaviors interactively
 
-Key|Group Behavior|
+Key|Group Behavior
+---|---
 'a' | Arrival
 'd' | Departure
 'S' | Separation
