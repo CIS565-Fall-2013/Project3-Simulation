@@ -409,7 +409,7 @@ glm::vec2 sharedMemVel(int N, glm::vec4 my_pos, glm::vec4 * their_pos, Behavior 
 	int numberOfTiles =  fractionTiles -(int)fractionTiles>0?(int)fractionTiles+1:(int)fractionTiles;
 	glm::vec3 accum(0);
 	
-	__shared__ glm::vec4 sharedPos[blockSize];
+	extern __shared__ glm::vec4 sharedPos[];
 	for(int tile=0; tile<numberOfTiles; ++tile)
 	{
 		int index = tile*tileSize+threadIdx.x;
