@@ -17,6 +17,8 @@
 //GLOBALS
 //dim3 threadsPerBlock(blockSize);
 
+#define MAX_VEL 1.0f
+
 int numObjects;
 const float planetMass = 1;
 //const __device__ float starMass = 5e10;
@@ -292,6 +294,12 @@ __device__ glm::vec3 resolveCollisions(int N, glm::vec4 my_pos, glm::vec4 * thei
 	return reflectV;
 }
 
+__device__ glm::vec3 seek(glm::vec3 my_pos, glm::vec3 goal_pos)
+{
+	glm::vec3 eGlob = goal_pos - my_pos; //Global error vector
+	return MAX_VEL * glm::normalize(eGlob);
+}
+
 //Simple Euler integration scheme
 __global__
 void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
@@ -304,11 +312,13 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
     glm::vec3 accel;
 	glm::vec3 newVel;
 	glm::vec3 desired_vel;
+	glm::vec3 goal_pos = glm::vec3(pos[0]);
 
     if(index < N){
 		my_pos = pos[index];
 		my_vel = vel[index];
-		desired_vel = glm::vec3(2, 2, 0);
+		//desired_vel = glm::vec3(2, 2, 0);
+		desired_vel = seek(glm::vec3(my_pos), goal_pos);
 	}
 
 	if(index == 0){
@@ -318,11 +328,11 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
     //accel = ACC(N, my_pos, pos);
 	float mass = my_pos.w;
 	accel = (1.0f/mass)*apply_control_force(my_pos, desired_vel, my_vel);
-	newVel = resolveCollisions(N, my_pos, pos, my_vel);
+	//newVel = resolveCollisions(N, my_pos, pos, my_vel);
 
     if(index < N){
 		acc[index] = accel;
-		vel[index] = newVel;
+		vel[index] = my_vel;
 	}
 }
 
