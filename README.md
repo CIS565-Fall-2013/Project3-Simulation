@@ -63,12 +63,24 @@ Now we have a beautiful looking (if simple) gravity sim!
 PART 2: Flocking Boids
 ===
 
-To complete this part of the assignment you must implement your own simulation. This can be anything within reason, but two examples that would be well suited are:
+The following screenshots consist of 4000 "Boids" obeying simple local rules.
+![Screenshot](/Renders/Boids2.JPG "Flocking Simulation")
 
-* Flocking
-* Mass spring cloth/jello
+![Screenshot](/Renders/Boids3.JPG "Flocking Simulation")
 
-Feel free to code your own unique simulation here, just ask on the Google group if your topic is acceptable and we'll probably say yes.
+The rules current used by the flock are a combination of the following:
+1. Attraction (go towards other boids that are far away)
+2. Alignment (face the same direction as boids mid distance away)
+3. Repulsion (avoid getting too close together)
+4. Boundary Conditions (turn around if you get too far from center of frame)
+5. Ground Avoidance (pull up!!!)
+6. Speed control (Try to maintain a steady cruising speed)
+
+As a little bonus, press 'b' while running the sim.
+To adjust any of the rules, the quickest way is to alter the "WorldProps" struct in main.cpp
+
+The simulation spits out a position and velocity for each BOID. I then use a geometry shader to create each boid's geometry.
+
 
 ---
 NOTES ON GLM:
@@ -85,17 +97,6 @@ know two important points on how GLM is used in this project:
   in cudaMat4.h. A custom function for multiplying glm::vec4s and cudaMat4s is
   provided as multiplyMV() in intersections.h.
 
----
-README
----
-All students must replace the contents of this Readme.md in a clear manner with 
-the following:
-
-* A brief description of the project and the specific features you implemented.
-* At least one screenshot of your project running.
-* A 30 second or longer video of your project running.  To create the video you
-  can use http://www.microsoft.com/expression/products/Encoder4_Overview.aspx 
-* A performance evaluation (described in detail below).
 
 ---
 PERFORMANCE EVALUATION
@@ -119,51 +120,6 @@ Each student should provide no more than a one page summary of their
 optimizations along with tables and or graphs to visually explain any
 performance differences.
 
----
-THIRD PARTY CODE POLICY
----
-* Use of any third-party code must be approved by asking on our Google group.  
-  If it is approved, all students are welcome to use it.  Generally, we approve 
-  use of third-party code that is not a core part of the project.  For example, 
-  for the ray tracer, we would approve using a third-party library for loading 
-  models, but would not approve copying and pasting a CUDA function for doing 
-  refraction.
-* Third-party code must be credited in README.md.
-* Using third-party code without its approval, including using another
-  student's code, is an academic integrity violation, and will result in you
-  receiving an F for the semester.
-
----
-SELF-GRADING
----
-* On the submission date, email your grade, on a scale of 0 to 100, to Liam,
-  liamboone+cis565@gmail.com, with a one paragraph explanation.  Be concise and
-  realistic.  Recall that we reserve 30 points as a sanity check to adjust your
-  grade.  Your actual grade will be (0.7 * your grade) + (0.3 * our grade).  We
-  hope to only use this in extreme cases when your grade does not realistically
-  reflect your work - it is either too high or too low.  In most cases, we plan
-  to give you the exact grade you suggest.
-* For late assignments there will be a 50% penaly per week.
-* Projects are not weighted evenly, e.g., Project 0 doesn't count as much as
-  the path tracer.  We will determine the weighting at the end of the semester
-  based on the size of each project.
-
----
-SUBMISSION
----
-As with the previous project, you should fork this project and work inside of
-your fork. Upon completion, commit your finished project back to your fork, and
-make a pull request to the master repository.  You should include a README.md
-file in the root directory detailing the following
-
-* A brief description of the project and specific features you implemented
-* At least one screenshot of your project running.
-* A link to a video of your raytracer running.
-* Instructions for building and running your project if they differ from the
-  base code.
-* A performance writeup as detailed above.
-* A list of all third-party code used.
-* This Readme file edited as described above in the README section.
 
 ---
 ACKNOWLEDGEMENTS
