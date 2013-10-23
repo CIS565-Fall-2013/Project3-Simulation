@@ -5,6 +5,8 @@
 #include "utilities.h"
 #include "kernel.h"
 
+using namespace glm;
+
 #if SHARED == 1
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
 #else
@@ -118,8 +120,20 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
-    
-    return glm::vec3(0.0f);
+   
+
+	float g = 6.674*pow(10.0f,-11);
+	float m_us = us.w;
+	float m_them = them.w;
+	float r = sqrt((us.x-them.x)*(us.x-them.x) + (us.y-them.y)*(us.y-them.y) + (us.z-them.z)*(us.z-them.z));
+	
+	//avoid division by 0
+	if (r < 0.001f)
+		return vec3(0.0f);
+
+	float a =  (g*m_them)/(r*r);
+	
+    return a*normalize(vec3(them.x,them.y,them.z)-vec3(us.x,us.y,us.z));
 }
 
 //TODO: Core force calc kernel global memory
@@ -127,6 +141,10 @@ __device__
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	for (int a = 0; a < N; a++){
+		acc += calculateAcceleration(my_pos, their_pos[a]);
+	}
+
     return acc;
 }
 
@@ -136,6 +154,27 @@ __device__
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+
+	int numberOfBlocks = (int)ceil((float) N/blockSize);
+	int index = 0;
+
+	__shared__ vec4 position[blockSize];
+
+	for (int i = 0; i < numberOfBlocks; i++){
+		index = i * blockSize + threadIdx.x;
+		
+		if (index < N){
+			position[threadIdx.x] = their_pos[index];
+		}
+		__syncthreads();		//ensure all the threads have finished before moving on
+
+		for (int j = 0; j < blockSize && j + i*blockSize < N; j++){
+			acc += calculateAcceleration(my_pos, position[j]);
+		}
+
+
+	}
+
     return acc;
 }
 
