@@ -300,6 +300,21 @@ __device__ glm::vec3 seek(glm::vec3 my_pos, glm::vec3 goal_pos)
 	return MAX_VEL * glm::normalize(eGlob);
 }
 
+__device__ glm::vec3 arrival(glm::vec3 my_pos, glm::vec3 goal_pos)
+{
+	glm::vec3 eGlob = goal_pos - my_pos; //Global error vector
+	float arrivalGain = 0.02f; //proportional gain.
+	glm::vec3 vArrival = arrivalGain*eGlob;
+
+	if ( glm::length(vArrival) >= 0.1f){
+		return vArrival;
+	}
+	else{
+		return glm::vec3(0,0,0);
+	}
+
+}
+
 //Simple Euler integration scheme
 __global__
 void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
@@ -318,7 +333,8 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 		my_pos = pos[index];
 		my_vel = vel[index];
 		//desired_vel = glm::vec3(2, 2, 0);
-		desired_vel = seek(glm::vec3(my_pos), goal_pos);
+		//desired_vel = seek(glm::vec3(my_pos), goal_pos);
+		desired_vel = arrival(glm::vec3(my_pos), goal_pos);
 	}
 
 	if(index == 0){
