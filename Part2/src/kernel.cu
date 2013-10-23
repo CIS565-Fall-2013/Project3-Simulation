@@ -28,6 +28,7 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
+glm::vec3 * desired_vel;
 glm::vec3 * dev_acc;
 
 #define PROP_GAIN 16.0f
@@ -120,28 +121,18 @@ void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
 __device__
 glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 {
-    //    G*m_us*m_them
-    //F = -------------
-    //         r^2
-    //
-    //    G*m_us*m_them   G*m_them
-    //a = ------------- = --------
-    //      m_us*r^2        r^2
-    glm::vec3 us3(us);
-	glm::vec3 them3(them);
-	float rSquared = glm::distance2(us3, them3) /* + 1*/;
+ //   glm::vec3 us3(us);
+	//glm::vec3 them3(them);
+	//float rSquared = glm::distance2(us3, them3) /* + 1*/;
 
-	/*if(rSquared < RSQUARED_CUTOFF)
-		return glm::vec3(0, 0, 0);*/
-
-	float m_them = them.w;
-	glm::vec3 dir = them3 - us3;
-	float mag = (G*(m_them / rSquared));
-	float dirLen = glm::length(dir);
-	if( dirLen < PHYS_EPSILON )
-		return glm::vec3(0, 0, 0);
-	else
-		return mag*dir/dirLen;
+	//float m_them = them.w;
+	//glm::vec3 dir = them3 - us3;
+	//float mag = (G*(m_them / rSquared));
+	//float dirLen = glm::length(dir);
+	//if( dirLen < PHYS_EPSILON )
+	//	return glm::vec3(0, 0, 0);
+	//else
+	//	return mag*dir/dirLen;
 }
 
 __device__ 
@@ -150,7 +141,6 @@ glm::vec3 apply_control_force(glm::vec4 my_pos, glm::vec3 desired_vel, glm::vec3
 	return DERIV_GAIN * (desired_vel - curr_vel);
 }
 
-//TODO: Core force calc kernel global memory
 __device__ 
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
@@ -161,6 +151,14 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 		 acc = acc + calculateAcceleration(my_pos, their_pos[i]);
 	}
     return acc;
+}
+
+//apply control law to driving forces on agent. return the acceleration on the agent.
+__device__ 
+glm::vec3 apply_control_force(glm::vec4 my_pos, glm::vec3 desired_vel, glm::vec3 curr_vel)
+{
+	float mass = my_pos.w;
+	return (1/mass) * DERIV_GAIN * (desired_vel - curr_vel);
 }
 
 __device__ 
@@ -294,16 +292,17 @@ __device__ glm::vec3 resolveCollisions(int N, glm::vec4 my_pos, glm::vec4 * thei
 
 //Simple Euler integration scheme
 __global__
-void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, glm::vec3* desired_vel)
 {
 	
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
-    glm::vec4 my_pos;
+	    glm::vec4 my_pos;
 	glm::vec3 my_vel;
-    glm::vec3 accel;
+	glm::vec3 accel;
 	glm::vec3 newVel;
 	glm::vec3 desired_vel;
+	glm::vec3 my_desired_vel;
 
     if(index < N){
 		my_pos = pos[index];
@@ -315,9 +314,10 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 		desired_vel = glm::vec3(0, 0, 0);
 	}
 
-    //accel = ACC(N, my_pos, pos);
 	float mass = my_pos.w;
 	accel = (1.0f/mass)*apply_control_force(my_pos, desired_vel, my_vel);
+
+	my_desired_vel = desired_vel[index];
 	newVel = resolveCollisions(N, my_pos, pos, my_vel);
 
     if(index < N){
@@ -407,6 +407,8 @@ glm::vec4* initCuda(int N, int blockSize)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
+	cudaMalloc((void**)&desired_vel, N*sizeof(glm::vec3));
+    checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
 
@@ -429,7 +431,7 @@ void cudaNBodyUpdateWrapper(float dt, int blockSize)
 	float nathanTime;
 	cudaEventCreate(&start);
 	cudaEventRecord(start,0);
-    updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, desired_vel);
 	cudaEventCreate(&stop);
 	cudaEventRecord(stop,0);
 	cudaEventSynchronize(stop);
