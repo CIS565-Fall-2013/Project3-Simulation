@@ -429,6 +429,10 @@ void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 				pos[index].x += vel[index].x * dt;
 				pos[index].y += vel[index].y * dt;
 				pos[index].z += vel[index].z * dt;
+
+				ang_vel[index] += ang_acc[index]*dt;
+				rot[index] += ang_vel[index]*dt;
+
 		}else if ( INTEGRATION_TYPE == 1 ){ //Forward Euler
 				pos[index].x += vel[index].x * dt;
 				pos[index].y += vel[index].y * dt;
