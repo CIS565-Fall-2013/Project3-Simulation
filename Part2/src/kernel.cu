@@ -159,13 +159,13 @@ glm::vec3 apply_control_force(glm::vec4 my_pos, glm::vec3 desired_vel, glm::vec3
 }
 
 //the below function applies a torque to make the boids face the correct direction
-//__device__ 
-//glm::vec3 apply_control_torque(float desired_angle, float curr_angle)
-//{
-//	//Assuming inertia is 1
-//	float inertia = 1;
-//	return inertia * (-TORQUE_DERIV * 
-//}
+__device__ 
+float apply_control_torque(float desired_angle, float curr_angle, float curr_ang_vel)
+{
+	//Assuming inertia is 1
+	float inertia = 1;
+	return inertia * (-TORQUE_DERIV * curr_ang_vel - TORQUE_PROP * curr_angle + TORQUE_PROP * desired_angle);
+}
 
 //TODO: Core force calc kernel global memory
 __device__ 
