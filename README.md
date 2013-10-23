@@ -131,8 +131,11 @@ Key|Group Behavior
 ---
 VIDEOS
 ---
+**100 bodies sim:**
 
 [![ScreenShot](https://raw.github.com/vimanyu/Project3-Simulation/master/Part2/resources/flockingVideoScreenshot.png)](http://www.youtube.com/watch?v=Gj59Ote7p5A)
+
+**1000 bodies sim:**
 
 [![ScreenShot](https://raw.github.com/vimanyu/Project3-Simulation/master/Part2/resources/flockingVideo2Screenshot.png)](http://www.youtube.com/watch?v=mV6yPZRVU-U)
 
