@@ -14,8 +14,7 @@
 
 #define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
-#define SHARED 1
-#define RK4 0
+#define SHARED 0
 
 enum Behavior 
 {

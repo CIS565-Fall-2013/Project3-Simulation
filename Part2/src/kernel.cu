@@ -40,13 +40,6 @@ float* dev_angularvel;
 */
 glm::vec2 * dev_acc;
 
-//FOR RK4
-#if RK4==1
-glm::vec4* dev_temppos;
-glm::vec3* dev_tempvel;
-glm::vec3* dev_accumvel;
-glm::vec3* dev_accumaccel;
-#endif
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -534,37 +527,7 @@ void updateS(int N, float dt, glm::vec4 * state, float* angVel, glm::vec2* acc)
     }
 }
 
-__global__
-void RK4Step(int N, float rkStep, float accumMultiplier,glm::vec4* pos,glm::vec3* vel,glm::vec3* accel, glm::vec4* tempPos, glm::vec3* tempVel, glm::vec3* accumVel, glm::vec3*  accumAccel)
-{
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if( index < N )
-    {
-        glm::vec4 my_pos = tempPos[index];
-		glm::vec3 acc = accel[index];
-		accumAccel[index] += accumMultiplier*acc;
-		accumVel[index] += accumMultiplier*tempVel[index];
 
-		tempVel[index] = vel[index] + rkStep* acc;
-        tempPos[index].x = pos[index].x + tempVel[index].x * rkStep;
-		tempPos[index].y = pos[index].y + tempVel[index].y * rkStep;
-        tempPos[index].z = pos[index].z + tempVel[index].z * rkStep;		
-	}
-}
-
-__global__
-void RK4FinalUpdate(int N, float dt,glm::vec4* pos,glm::vec3* vel, glm::vec3* accumVel, glm::vec3* accumAccel)
-{
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    if( index < N )
-    {
-		float oneSixthInverse = dt/6.0f;
-        vel[index]   += oneSixthInverse*accumAccel[index];
-        pos[index].x += oneSixthInverse*accumVel[index].x;
-		pos[index].y += oneSixthInverse*accumVel[index].y;
-		pos[index].z += oneSixthInverse*accumVel[index].z;
-	}
-}
 
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
@@ -635,49 +598,17 @@ void initCuda(int N)
 	setInitialState<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_state, dev_angularvel, dev_acc, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
 
-#if RK4 == 1
-	//FOR RK4
-    cudaMalloc((void**)&dev_temppos, N*sizeof(glm::vec4));
-    checkCUDAErrorWithLine("Kernel failed!");
-    cudaMalloc((void**)&dev_tempvel, N*sizeof(glm::vec3));
-    checkCUDAErrorWithLine("Kernel failed!");
-    cudaMalloc((void**)&dev_accumaccel, N*sizeof(glm::vec3));
-    checkCUDAErrorWithLine("Kernel failed!");
-    cudaMalloc((void**)&dev_accumvel, N*sizeof(glm::vec3));
-    checkCUDAErrorWithLine("Kernel failed!");
-#endif
     cudaThreadSynchronize();
 }
 
 void cudaNBodyUpdateWrapper(float dt, Behavior mode)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-#if RK4 == 1
-	cudaMemcpy( dev_temppos, dev_state, numObjects*sizeof(glm::vec4),cudaMemcpyDeviceToDevice);
-	cudaMemcpy( dev_tempvel, dev_vel, numObjects*sizeof(glm::vec3),cudaMemcpyDeviceToDevice);
-	//RK4
-	//First step
-    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_temppos, dev_vel, dev_acc);
-	RK4Step<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt/2.0f, 1.0f, dev_state, dev_vel,dev_acc,dev_temppos,dev_tempvel,dev_accumvel,dev_accumaccel);
-	//Second step
-    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_temppos, dev_vel, dev_acc);
-	RK4Step<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt/2.0f, 2.0f, dev_state, dev_vel,dev_acc,dev_temppos,dev_tempvel,dev_accumvel,dev_accumaccel);
-	//Third step
-    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_temppos, dev_vel, dev_acc);
-	RK4Step<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, 2.0f, dev_state, dev_vel,dev_acc,dev_temppos,dev_tempvel,dev_accumvel,dev_accumaccel);
-	//Fourth step
-    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_temppos, dev_vel, dev_acc);
-	RK4Step<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, 1.0f, dev_state, dev_vel,dev_acc,dev_temppos,dev_tempvel,dev_accumvel,dev_accumaccel);
 
-	RK4FinalUpdate<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_state, dev_vel,dev_accumvel,dev_accumaccel);
-	cudaMemset(dev_accumaccel,0,numObjects*sizeof(glm::vec3));
-	cudaMemset(dev_accumvel,0,numObjects*sizeof(glm::vec3));
-#else
     updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_state, dev_angularvel,dev_acc, mode);
     checkCUDAErrorWithLine("Kernel failed!");
     updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_state, dev_angularvel, dev_acc);
 	checkCUDAErrorWithLine("Kernel failed!");
-#endif
     cudaThreadSynchronize();
 }
 
