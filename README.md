@@ -41,6 +41,20 @@ On the interaction side, I add the mouse interaction which enable the user to ma
  for each point, with different colors.
  
  So all above are generally the work I'd done with. And I'll explain them in detail below.
+ 
+---
+HOW TO USE
+---
+In the file "utilities.h", I defined SIMMODE, which is FLOCKSIM at submission. Changing it to CLOTHSIM will chage to the cloth simulation. The BASICSIM cannot be used currently, it is for N-Body stuff. But as far as it is just a 
+tutorial part, I do not even care about it.
+
+In the file "kernel.h", there are many parameters that can be chanaged. Most of the variables can be understood according to its variable name. By tweaking their value, the result of the simulation could be changed apparently.
+
+In the file "main.cpp", the number of the agents in flocking simulation can be changed easily, at the very beginning. Make sure that you change the value in the FLOCKSIM section. 
+
+In the file "main.h", the cloth_weight and cloth_height will work for the size of the cloth.
+
+
 
 ---
 CLOTH SIMULATION

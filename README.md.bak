@@ -41,6 +41,20 @@ On the interaction side, I add the mouse interaction which enable the user to ma
  for each point, with different colors.
  
  So all above are generally the work I'd done with. And I'll explain them in detail below.
+ 
+---
+HOW TO USE
+---
+In the file "utilities.h", I defined SIMMODE, which is FLOCKSIM at submission. Changing it to CLOTHSIM will chage to the cloth simulation. The BASICSIM cannot be used currently, it is for N-Body stuff. But as far as it is just a 
+tutorial part, I do not even care about it.
+
+In the file "kernel.h", there are many parameters that can be chanaged. Most of the variables can be understood according to its variable name. By tweaking their value, the result of the simulation could be changed apparently.
+
+In the file "main.cpp", the number of the agents in flocking simulation can be changed easily. 
+
+In the file "main.h", the cloth_weight and cloth_height will work for the size of the cloth.
+
+
 
 ---
 CLOTH SIMULATION
@@ -53,7 +67,9 @@ simulate the cloth, which includes 4 structural springs, 4 shear springs and 4 b
 is the lenght when it is set up. 
 
 The calculation of mass-spring system is pretty straight forward, which just follows the Hook's rule. However, I came across a serious problem that the spring would mistakenly overshoot. 
-![screeshot](http://https://github.com/heguanyu/Project3-Simulation/tree/master/screenshots/spring_exploded_explain.jpg?raw=true)
+
+![screeshot](https://github.com/heguanyu/Project3-Simulation/blob/master/screenshots/spring_exploded_explain.jpg?raw=true)
+
 So when the spring has a large enough mass to bounce it back ,it may bounce to the other side, and thus messed up the later calculation.
 
 There is not a good way to solve this problem, which is the disadvantage of the mass-spring system, even with the RK4 integration method. Therefore, I invent my own method to alleviate this problem in some extends.
