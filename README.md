@@ -55,7 +55,7 @@ PERFORMANCE EVALUATION
 ---
 For the NBody simulation part, shared memory access only shows its advantages when simulated body count is large. This could be due to my graphic card has more bandwidth than an average card, with 384-bit memory interface. So, if N is small, access to global memory is not so much of a burden.
 
-![Alt text](Part2/Performance evaluation.jpg?raw=true)
+![Alt text](Part1/Performance evaluation.jpg?raw=true)
 
 
 
