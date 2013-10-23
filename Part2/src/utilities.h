@@ -28,7 +28,7 @@
 #define RSQUARED_CUTOFF				10 //force cuts off when radius is closer than the square root of this number
 
 //for flocking
-enum BehaviorType { SEEK, ARRIVAL, SEPARATION };
+enum BehaviorType { SEEK, ARRIVAL, SEPARATION, LEADER };
 
 namespace utilityCore {
     extern float clamp(float f, float min, float max);

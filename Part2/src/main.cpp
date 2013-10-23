@@ -188,6 +188,9 @@ void keyboard(unsigned char key, int x, int y)
 		case(51): //3
 			bType = SEPARATION;
 			break;
+		case(52): //4
+			bType = LEADER;
+			break;
     }
 }
 
