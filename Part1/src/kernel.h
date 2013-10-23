@@ -12,10 +12,10 @@
     #include <cutil_math.h>
 #endif
 
-#define blockSize 128
+#define blockSize 256
 #define tilesize 16
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
-//#define SHARED
+#define SHARED
 
 
 ///BELOW ARE COEEFs AND PARAMs FOR CLOTH SIM

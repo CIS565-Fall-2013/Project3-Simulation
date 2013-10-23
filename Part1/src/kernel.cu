@@ -312,6 +312,68 @@ __device__
 	if(glm::length(result)>VELTHRESHOLD) result=glm::normalize(result)*VELTHRESHOLD;
 	return result;
 }
+
+__device__ 
+	glm::vec3 sharedFlockVel(int N, int myidx, glm::vec4 * their_pos, glm::vec3* velocities, glm::vec3 targetPos)
+{
+	glm::vec3 result(0,0,0);
+	glm::vec3 cm(0,0,0);
+	glm::vec3 avgVel(0,0,0);
+	glm::vec3 separation(0,0,0);
+	glm::vec3 myPos(their_pos[myidx]);
+	int NofNeighbour=0;
+	int blocknum=(int)ceil(float(N)/float(blockSize));
+
+	__shared__ glm::vec4 currentPos[blockSize];
+	__shared__ glm::vec3 currentVel[blockSize];
+
+	for(int i=0;i<blocknum;i++)
+	{
+		int targetIdx=threadIdx.x+i*blockDim.x;
+		if(targetIdx<N)
+		{
+			currentPos[threadIdx.x]=their_pos[targetIdx];
+			currentVel[threadIdx.x]=velocities[targetIdx];
+		}
+		__syncthreads();
+		for(int j=0;j<blockDim.x;j++)
+		{
+			if(j+i*blockDim.x<N)
+			{
+				glm::vec3 theirPos(their_pos[j+i*blockDim.x]);
+				float dist=glm::distance(myPos,theirPos);
+				if(dist<RNeighbour)
+				{
+					NofNeighbour++;
+					cm+=theirPos;		//for cohesion
+					avgVel+=velocities[j+i*blockDim.x];	//for alignment
+					if(j+i*blockDim.x!=myidx)
+					{
+						separation+=(myPos-theirPos)*(1.0f/dist/dist);
+					}
+				}
+			}
+		}
+		__syncthreads();
+	}
+
+	
+	avgVel*=1.0f/float(NofNeighbour);
+	cm*=1.0f/float(NofNeighbour);
+
+	glm::vec3 randomNoise=generateRandomNumberFromThread(myPos.x*200.0f,myidx);
+	randomNoise=randomNoise*2.0f-glm::vec3(1.0f,1.0f,1.0f);
+	result+=randomNoise*KWander;
+	result+=separation*KSeparation;
+	result+=avgVel*KAlignment;
+	result+=(cm-myPos)*KCohesion;
+
+	result+=-(myPos-targetPos)*KArrival;
+
+	if(glm::length(result)>VELTHRESHOLD) result=glm::normalize(result)*VELTHRESHOLD;
+	return result;
+}
+
 __device__ 
 	glm::vec3 clothAcc(glm::vec2 clothsize, glm::vec2 myidx, glm::vec4 * their_pos, glm::vec3* springs)
 {
