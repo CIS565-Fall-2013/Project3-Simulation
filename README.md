@@ -49,6 +49,8 @@ Part2: SPH Fluid Simulation
 
 For a simulation to build upon this N-Body interaction, I've implemented a very basic SPH simulation with forces based on pressure and viscosity. SPH fluid simulations are a standard in the industry for large scale fluid scenes in movies as well as smaller scale interactive applications. It is based on solving the Navier-Stokes equation in a Lagrangian (particle) based manner.
 
+[View Video](https://www.dropbox.com/s/7v53ouce59jqgng/sph_basic.mov)
+
 ![Screenshots!!!](Part2/resources/SPH4.png)
 
 ![Screenshots!!!](Part2/resources/SPH3.png)
@@ -56,6 +58,16 @@ For a simulation to build upon this N-Body interaction, I've implemented a very 
 ![Screenshots!!!](Part2/resources/SPH2.png)
 
 ![Screenshots!!!](Part2/resources/SPH1.png)
+
+Key Controls:
+
+* Left Key	: Restart the simulation (Might be required once since the first simulation isn't stable sometimes)
+* m 		: Stop auto-rotation
+* P			: Pause simulation
+* p			: Step simulation one timestep
+* r			: Reset camera
+
+Mouse controls are like maya once again; left click to pan, right click to zoom
 
 The equations are as follows:
 
