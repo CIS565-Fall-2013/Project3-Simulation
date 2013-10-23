@@ -18,7 +18,9 @@ Nevertheless, using this code, I was able to witness a HUGE speedup when using s
 
 SCREENSHOTS
 -----------
+Flocking:<br />
 <img src="https://raw.github.com/rohith10/Project3-Simulation/master/screenshots/flock.png" height="350" width="350"/><br />
+Gravity Simulation:<br />
 <img src="https://raw.github.com/rohith10/Project3-Simulation/master/screenshots/gravsim.png" height="350" width="350"/><br />
 
 DETAILS
