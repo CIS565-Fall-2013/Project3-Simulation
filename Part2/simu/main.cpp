@@ -38,6 +38,8 @@ int main( int argc, char* argv[] )
     glutDisplayFunc( glut_display );
     glutReshapeFunc( glut_reshape);
     glutKeyboardFunc( glut_keyboard );
+    glutMouseFunc( glut_mouse );
+    glutMotionFunc( glut_mousemotion );
     glutIdleFunc( glut_idle );
     glutMainLoop();
 

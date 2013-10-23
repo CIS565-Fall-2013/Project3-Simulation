@@ -24,6 +24,7 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
+glm::vec4 * dev_oldPos;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -79,7 +80,7 @@ void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float
 //Determine velocity from the distance from the center star. Not super physically accurate because 
 //the mass ratio is too close, but it makes for an interesting looking scene
 __global__
-void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
+void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos )
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
@@ -91,6 +92,7 @@ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
         arr[index].x = s*D.x;
         arr[index].y = s*D.y;
         arr[index].z = s*D.z;
+
     }
 }
 
@@ -190,11 +192,29 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 }
 
 __global__
-void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateS(int N, float dt, glm::vec4* pos, glm::vec4* oldPos, glm::vec3 * vel, glm::vec3 * acc)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
+    //glm::vec3 kv1, kv2, kv3, kv4;
+    //glm::vec3 k1, k2, k3, k4;
+
+    glm::vec3 temp;
     if( index < N )
     {
+        //temp = glm::vec3( pos[index] );
+        //kv1 = acc[index] ;
+        //kv2 = acc[index] + kv1*0.5f*dt;
+        //kv3 = acc[index] + kv2*0.5f*dt;
+        //kv4 = acc[index] + kv3*dt ;
+        //k1 = vel[index];
+        //k2 = vel[index] + 0.5f*dt*acc[index];
+        //k3 = vel[index] + 0.5f*dt*acc[index];
+        //k4 = vel[index] + dt*acc[index];
+        //pos[index].x = pos[index].x + dt*( k1.x + 2.0f*k2.x + 2.0f*k3.x +k4.x )/6.0f;
+        //pos[index].y = pos[index].y + dt*( k1.y + 2.0f*k2.y + 2.0f*k3.y +k4.y )/6.0f;
+        //pos[index].z = pos[index].z + dt*( k1.z + 2.0f*k2.z + 2.0f*k3.z +k4.z )/6.0f;
+       
+        //vel[index] = vel[index] + dt*( kv1 + 2.0f*kv2 + 2.0f*kv3 +kv4 )/6.0f;
         vel[index]   += acc[index]   * dt;
         pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
@@ -260,7 +280,8 @@ void initCuda(int N)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
-
+    cudaMalloc((void**)&dev_oldPos, N*sizeof(glm::vec4));
+    checkCUDAErrorWithLine("Kernel failed!");
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
@@ -281,7 +302,7 @@ void cudaNBodyUpdateWrapper(float dt)
     timer.Start();
     updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
-    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos,dev_oldPos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaDeviceSynchronize();
     timer.Stop();
