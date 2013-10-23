@@ -20,9 +20,17 @@ const __device__ float starMass = 5e10;
 const __device__ int integrateMode = (int)EULER;
 const float scene_scale = 2e2; //size of the height map in simulation space
 
+// bounds
+const __device__ float min_x = -100.0f;
+const __device__ float max_x = 100.0f;
+const __device__ float min_y = -100.0f;
+const __device__ float max_y = 100.0f;
+const __device__ float min_z = 0.0f; // note Z is up
+const __device__ float max_z = 100.0f;
+
 // constants for testing with acceleration
 const __device__ float g_accKa = 0.15f;
-const __device__ float g_velKv = 0.05f;
+const __device__ float g_velKv = 0.5f;
 const __device__ float g_maxSpeed = 1.0f;
 const __device__ float g_kSepNeighborhood = 10.0f;
 const __device__ float g_kCohNeighborhood = 30.0f;
@@ -30,9 +38,9 @@ const __device__ float g_kAlgnNieghborhood = 10.0f;
 const __device__ float g_kAlignment = 1.0f;
 const __device__ float g_kSeparation = 0.5f;
 const __device__ float g_kCohesion = 0.5f;
-const __device__ float cseparation = 0.5f; // 0.5
-const __device__ float ccohesion = 1.0f;
-const __device__ float calignment = 0.7f; 
+const __device__ float cseparation = 0.5f; 
+const __device__ float ccohesion = 1.3f;
+const __device__ float calignment = 1.7f; 
 
 // works with setting velocity directly
 //const __device__ float g_accKa = 0.05f;
@@ -377,7 +385,7 @@ vec3 naiveAlignment(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 t
 	}
 }
 
-// calculate flocking velocity
+// calculate flocking velocity towrads a specified target
 __device__
 vec3 flockToTarget(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 target)
 {
@@ -386,6 +394,88 @@ vec3 flockToTarget(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel, vec3 ta
 						   calignment * naiveAlignment(N, my_pos, boids_pos, boids_vel, target);
 
 	return desiredVelocity;
+}
+
+__device__
+vec3 flock(int N, vec4 my_pos, vec4* boids_pos, vec3* boids_vel)
+{
+	vec3 desiredVelocity = vec3(0,0,0);
+	vec3 separateDirection = vec3(0,0,0);
+	vec3 alignmentDirection = vec3(0,0,0);
+	vec3 cohesionDirection = vec3(0,0,0);
+	vec3 com = vec3(0,0,0);
+	
+	int numAlignedBoids = 0;
+	int numCohesiveBoids = 0;
+
+	for (int i = 0 ; i < N ; ++i)
+	{
+		if (my_pos == boids_pos[i])
+			continue;
+
+		// separation calculation
+		vec3 toBoidI = vec3(my_pos) - vec3(boids_pos[i]);
+		float toBoidILen = length(toBoidI);
+		if (toBoidILen < g_kSepNeighborhood && toBoidILen > 0)
+		{
+			separateDirection += (g_kSeparation * toBoidI) / (toBoidILen * toBoidILen + (float)1e-12);
+		}
+
+		// alignment: summing up velocities
+		if (toBoidILen < g_kAlgnNieghborhood && toBoidILen > 0)
+		{
+			alignmentDirection += boids_vel[i];
+			numAlignedBoids++;
+		}
+
+		if (toBoidILen < g_kCohNeighborhood && toBoidILen > 0)
+		{
+			com += vec3(boids_pos[i]);
+			numCohesiveBoids++;
+		}
+
+	}
+
+	if (numAlignedBoids > 0)
+	{
+		// alignment: compute average velocity
+		alignmentDirection = alignmentDirection / (float)numAlignedBoids;
+
+		float len = length(alignmentDirection) + 1e-6;
+		alignmentDirection = g_kAlignment * alignmentDirection / len;
+	}
+
+	if (numCohesiveBoids > 0)
+	{
+		com = com / (float)numCohesiveBoids;
+		cohesionDirection = com - vec3(my_pos.x, my_pos.y, my_pos.z);
+	}
+
+	desiredVelocity = cseparation * separateDirection +
+					  ccohesion * cohesionDirection+
+					  calignment * alignmentDirection;
+
+	return desiredVelocity;
+}
+
+// wrap boids around if they are about to go off the border
+__device__
+void wrapBoid(vec3 &pos)
+{
+	if (pos.x < min_x)
+		pos.x = max_x;
+	else if (pos.x > max_x)
+		pos.x = min_x;
+
+	if (pos.y < min_y)
+		pos.y = max_y;
+	else if (pos.y > max_y)
+		pos.y = min_y;
+
+	if (pos.z < min_z)
+		pos.z = max_z;
+	else if (pos.z > max_z)
+		pos.z = min_z;
 }
 
 
@@ -403,7 +493,13 @@ void updateVelocity(int N, float dt, vec4 * pos, vec3 * vel, vec3 target, bool r
 		if (!recall)
 		{
 			// compute flocking behavior
-			vec3 flockVel = flockToTarget(N, my_pos, pos, vel, target);
+			vec3 flockVel;
+
+#if FLOCK_TO_TARGET == 1
+			flockVel = flockToTarget(N, my_pos, pos, vel, target);
+#else
+			flockVel = flock(N, my_pos, pos, vel);
+#endif
 			float flockVelMag = length(flockVel) + 1e-10;
 			float myVelMag = length(my_vel);
 			vec3 flockDirection = flockVel / flockVelMag;
@@ -433,6 +529,7 @@ void updatePosition(int N, float dt, vec4 *pos, vec3 *vel)
 	if (index < N )
 	{
 		vec3 nextPosition = integrateVelocity(vec3(pos[index]), vel[index], dt);
+		wrapBoid(nextPosition);
 
 		pos[index].x = nextPosition.x;
 		pos[index].y = nextPosition.y;

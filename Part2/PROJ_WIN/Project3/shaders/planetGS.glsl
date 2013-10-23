@@ -37,11 +37,7 @@ void main()
 	for (int i = 0 ; i < gl_in.length() ; ++i) // gl_in.length() is 1
 	{
 		orientation = vertices[i].velocity;
-
-		if (orientation != vec3(0,0,0))
-			frag.color = vertices[i].color;
-		else
-			frag.color = vec3(0,0,0);
+		frag.color = vertices[i].color;
 	}
 
     vec3 Position = gl_in[0].gl_Position.xyz;
@@ -49,8 +45,8 @@ void main()
 
     ToCam = normalize(u_cameraPos - Position);
     Up = vec3(0.0, 0.0, 1.0); // note that z axis is the up vector here
-    Right = cross(ToCam, Up);
-    Up = cross(Right, ToCam);
+    Right = cross(orientation, Up);
+    Up = cross(Right, orientation);
 
 	//vec3 Pos = Position + scale*Right - scale*Up;
 	//gl_Position = u_projMatrix * vec4(Pos, 1.0);
