@@ -32,6 +32,7 @@ glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
 float* dev_rot; //rotation of each boid
+float* dev_angular_vel; //angular velocity of each boid
 
 #define PROP_GAIN 16.0f
 #define DERIV_GAIN 8.0f
@@ -492,14 +493,25 @@ glm::vec4* initCuda(int N, int blockSize)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
+
+
 	cudaMalloc((void**)&dev_rot, N*sizeof(float));
 	float* initialRotations = new float[N];
 	for(int i = 0; i < N; i++){
 		initialRotations[i] = 0.0f;
 	}
-    checkCUDAErrorWithLine("Kernel failed!");
+	checkCUDAErrorWithLine("Kernel failed!");
 	cudaMemcpy(dev_rot, initialRotations, N*sizeof(float), cudaMemcpyHostToDevice);
 	delete initialRotations;
+
+	cudaMalloc((void**)&dev_angular_vel, N*sizeof(float));
+	float* initialAngVel = new float[N];
+	for(int i = 0; i < N; i++){
+		initialAngVel[i] = 0.0f;
+	}
+    checkCUDAErrorWithLine("Kernel failed!");
+	cudaMemcpy(dev_angular_vel, initialAngVel, N*sizeof(float), cudaMemcpyHostToDevice);
+	delete initialAngVel;
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
