@@ -318,6 +318,7 @@ __device__ glm::vec3 separation(int N, glm::vec3 my_pos, glm::vec3 goal_pos, glm
 {
 	int index = threadIdx.x + (blockIdx.x * blockDim.x);
 	float RNeighborhood = 800.0f;
+	float vGain = 1.0f;
 	glm::vec3 vSeparate(0, 0, 0);
 	for(int i = 0; i < N; i++){
 		if(i != index){
@@ -326,8 +327,9 @@ __device__ glm::vec3 separation(int N, glm::vec3 my_pos, glm::vec3 goal_pos, glm
 			glm::vec3 theirPos3 = glm::vec3(their_pos[i]);
 			glm::vec3 di = my_pos - theirPos3;
 			//assuming weight wi is 1.
+			float softening_term = 1; //used to prevent singularity when particles are too close together
 			if( glm::length(di) < RNeighborhood && glm::length(di) >= EPSILON)
-				vSeparate = vSeparate + (di/glm::length2(di));
+				vSeparate = vSeparate + (di/(glm::length2(di) + softening_term));
 			else if(glm::length(di) < EPSILON){
 				float randGain = 0.01f;
 				glm::vec3 randVec = generateRandomNumberFromThread(1337, index);
@@ -335,7 +337,7 @@ __device__ glm::vec3 separation(int N, glm::vec3 my_pos, glm::vec3 goal_pos, glm
 			}
 		}
 	}
-	return vSeparate;
+	return vGain * vSeparate;
 }
 
 //Simple Euler integration scheme
