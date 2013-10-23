@@ -48,8 +48,42 @@ is surprising ( I'm still investigating this ).
 Note: I removed the ACC calculation for the grid for the test, allowing me
 to observe the absolute number of particles that can be handled. 
 
+BlockSize: 64
 no shared memory:
+- 1024 | 38.46
+- 2048 | 33.53
+- 4096 | 20.37
+- 8192 | 7.98
+- 16384 | 2.30
+- 24576 | 1.06
 
+shared memory:
+- 1024 | 39.68
+- 2048 | 33.80
+- 4096 | 21.32
+- 8192 | 8.64
+- 16384 | 2.57
+- 24576 | 1.19
+
+BlockSize: 256
+shared memory:
+- 1024 | 39.96
+- 2048 | 33.90
+- 4096 | 21.05
+- 8192 | 8.56
+- 16384 | 2.53
+- 24576 | 1.17
+
+no shared memory:
+- 1024 | 39.96
+- 2048 | 34.25
+- 4096 | 21.26
+- 8192 | 9.06
+- 16384 | 2.72
+- 24576 | 1.26
+
+BlockSize: 512
+no shared memory:
 particles | framerate
 
 - 64 | 38.31 
@@ -66,18 +100,34 @@ particles | framerate
 shared memory:
 particles | framerate
 - 1024 | 38.77
-- 2048 | 3280
+- 2048 | 32.80
 - 4096 | 21.48
 - 8192 | 8.90
 - 16384 | 2.67
 - 24576 | 1.124
 
+BlockSize: 1024
 
-The framerate does not start dropping considerably until the 
-number of particles exceeds the blocksize. There is a small performance 
-improvement when using shared memory but I had expected to see a larger gain. 
-Hopefully I will get nvvp up and running so that I can evaluate this more 
-closely. 
+no shared memory:
+- 1024 | 37.51
+- 2048 | 33.40
+- 4096 | 21.19
+- 8192 | 8.23
+- 16384 | 2.50
+- 24576 | 1.16
+
+shared memory:
+- 1024 | 38.58
+- 2048 | 33.30
+- 4096 | 21.13
+- 8192 | 8.73
+- 16384 | 2.58
+- 24576 | 1.19
+
+
+Generally blocksize does not have a large effect on framerate.
+There appears to be a few percent improvement when using shared memory
+over the naive implementation.
 
 ```
 GPU Info:
