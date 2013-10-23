@@ -31,10 +31,13 @@ const float scene_scale = 2e2; //size of the height map in simulation space
 glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
-int* dev_rot; //rotation of each boid
+float* dev_rot; //rotation of each boid
 
 #define PROP_GAIN 16.0f
 #define DERIV_GAIN 8.0f
+
+#define TORQUE_PROP 16.0f
+#define TORQUE_DERIV 8.0f
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -147,11 +150,21 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 		return mag*dir/dirLen;
 }
 
+//the below function applies a force to push the boids in to the right place.
 __device__ 
 glm::vec3 apply_control_force(glm::vec4 my_pos, glm::vec3 desired_vel, glm::vec3 curr_vel)
 {
 	return DERIV_GAIN * (desired_vel - curr_vel);
 }
+
+//the below function applies a torque to make the boids face the correct direction
+//__device__ 
+//glm::vec3 apply_control_torque(float desired_angle, float curr_angle)
+//{
+//	//Assuming inertia is 1
+//	float inertia = 1;
+//	return inertia * (-TORQUE_DERIV * 
+//}
 
 //TODO: Core force calc kernel global memory
 __device__ 
@@ -418,7 +431,7 @@ void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
 __global__
-void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale, int* rotation)
+void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale, float* rotation)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -431,7 +444,7 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
         vbo[4*index+1] = pos[index].y*c_scale_h;
         vbo[4*index+2] = 0;
         //vbo[4*index+3] = ((float)index)/N * TWO_PI;
-		vbo[4*index+3] = ((float)rotation[index])/N * TWO_PI;
+		vbo[4*index+3] = (rotation[index])/N * TWO_PI;
     }
 }
 
@@ -479,13 +492,13 @@ glm::vec4* initCuda(int N, int blockSize)
     checkCUDAErrorWithLine("Kernel failed!");
     cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3));
     checkCUDAErrorWithLine("Kernel failed!");
-	cudaMalloc((void**)&dev_rot, N*sizeof(int));
-	int* initialRotations = new int[N];
+	cudaMalloc((void**)&dev_rot, N*sizeof(float));
+	float* initialRotations = new float[N];
 	for(int i = 0; i < N; i++){
-		initialRotations[i] = i;
+		initialRotations[i] = 0.0f;
 	}
     checkCUDAErrorWithLine("Kernel failed!");
-	cudaMemcpy(dev_rot, initialRotations, N*sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_rot, initialRotations, N*sizeof(float), cudaMemcpyHostToDevice);
 	delete initialRotations;
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
