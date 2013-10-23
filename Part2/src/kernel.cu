@@ -405,7 +405,7 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 
 	float desired_angle;
 	if(glm::length(desired_vel) > EPSILON){
-		desired_angle = atan2(desired_vel.y, desired_vel.x);
+		desired_angle = atan2(desired_vel.y,desired_vel.x);
 	} else { //keep the same heading as before
 		desired_angle = my_rot;
 	}
@@ -465,7 +465,7 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
         vbo[4*index+1] = pos[index].y*c_scale_h;
         vbo[4*index+2] = 0;
         //vbo[4*index+3] = ((float)index)/N * TWO_PI;
-		vbo[4*index+3] = (rotation[index])/N * TWO_PI;
+		vbo[4*index+3] = rotation[index];
     }
 }
 
