@@ -76,7 +76,7 @@ With visualization on:
 </tr>
 </table>
 
-5000 objects were not simulated in global memory since the framerate was close to 0.
+5000 objects were not simulated in global memory since the framerate was close to 0.<br />
 <br />
 With visualization off:
 
