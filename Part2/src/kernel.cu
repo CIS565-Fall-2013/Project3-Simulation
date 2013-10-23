@@ -36,12 +36,12 @@ const __device__ float g_maxSpeed = 2.0f;
 const __device__ float g_kSepNeighborhood = 10.0f;
 const __device__ float g_kCohNeighborhood = 30.0f;
 const __device__ float g_kAlgnNieghborhood = 10.0f;
-const __device__ float g_kAlignment = 1.0f;
-const __device__ float g_kSeparation = 1.0f;
+const __device__ float g_kAlignment = 10.0f;
+const __device__ float g_kSeparation = 10.0f;
 const __device__ float g_kCohesion = 1.0f;
-const __device__ float cseparation = 1.5f; 
+const __device__ float cseparation = 2.5f; 
 const __device__ float ccohesion = 1.0f;
-const __device__ float calignment = 0.5f; 
+const __device__ float calignment = 1.5f; 
 
 // works with setting velocity directly
 //const __device__ float g_accKa = 0.05f;

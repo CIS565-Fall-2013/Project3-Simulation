@@ -37,7 +37,8 @@ void main()
 	for (int i = 0 ; i < gl_in.length() ; ++i) // gl_in.length() is 1
 	{
 		orientation = vertices[i].velocity;
-		frag.color = vertices[i].color;
+		//frag.color = vertices[i].color;
+		frag.color = orientation + vec3(0.1,0.1,0.1);
 	}
 
     vec3 Position = gl_in[0].gl_Position.xyz;
