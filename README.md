@@ -8,6 +8,7 @@ INTRODUCTION:
 This project is divided into two parts. Part one creates a 3D visualization of an N-Body system 
 simulated using CUDA and OpenGL shaders. Part two is a flocking simulation with pyramid boids colored using velocities.
 
+-------------
 PART 1: CUDA NBody Simulation
 ===
 
@@ -28,7 +29,7 @@ Besides, Runge Kutta integration is also implemented to make simulation more sta
 
 Project video:https://www.youtube.com/watch?v=RwWNOOuEdHM
 
-
+-------------
 PART 2: CUDA Flocking Simulation
 ===
 ![Alt text](Part2/project running.jpg?raw=true)
@@ -52,24 +53,11 @@ Project video:https://www.youtube.com/watch?v=eWeW96t6cE0
 ---
 PERFORMANCE EVALUATION
 ---
-The performance evaluation is where you will investigate how to make your CUDA
-programs more efficient using the skills you've learned in class. You must
-perform at least one experiment on your code to investigate the positive or
-negative effects on performance. 
+For the NBody simulation part, shared memory access only shows its advantages when simulated body count is large. This could be due to my graphic card has more bandwidth than an average card, with 384-bit memory interface. So, if N is small, access to global memory is not so much of a burden.
 
-For this Project, one of these experiments should be a comparison between the 
-global and shared memory versions of the acceleration calculation function at
-varying block sizes.
+![Alt text](Part2/Performance evaluation.jpg?raw=true)
 
-A good metric to track would be number of frames per second, 
-or number of objects displayable at 60fps.
 
-We encourage you to get creative with your tweaks. Consider places in your code
-that could be considered bottlenecks and try to improve them. 
-
-Each student should provide no more than a one page summary of their
-optimizations along with tables and or graphs to visually explain any
-performance differences.
 
 ---
 ACKNOWLEDGEMENTS
