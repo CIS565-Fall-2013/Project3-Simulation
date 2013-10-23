@@ -134,6 +134,7 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
 	int i;
+    float tmp_i;
 	for (i=0; i<N; ++i) {
 		if (glm::distance(my_pos, their_pos[i]) > 10.0) {
 			acc += calculateAcceleration(my_pos, their_pos[i]);
