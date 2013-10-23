@@ -47,7 +47,7 @@ Here we can see the velocity verlet integration.
 Part2: SPH Fluid Simulation
 ---
 
-For a simulation to build upon this N-Body interaction, I've implemented a very basic SPH simulation with forces based on pressure and viscosity. SPH fluid simulations are a standard in the industry for large scale fluid scenes in movies as well as smaller scale interactive applications. It is based on solving the Navier-Stokes equation in a Lagrangian (particle) based manner.
+For a simulation to build upon this N-Body interaction, I've implemented a very basic SPH simulation with forces based on pressure and viscosity. SPH fluid simulations are a standard in the industry for large scale fluid scenes in movies as well as smaller scale interactive applications. It is based on solving the Navier-Stokes equation in a Lagrangian (particle) based manner. (SPH in four days woohoo!)
 
 [View Video](https://www.dropbox.com/s/7v53ouce59jqgng/sph_basic.mov)
 

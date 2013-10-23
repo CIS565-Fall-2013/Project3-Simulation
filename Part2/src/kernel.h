@@ -18,7 +18,7 @@
 
 #define scene_scale 1.1f
 
-#define STIFFNESS 60.0f
+#define STIFFNESS 100.0f
 #define REF_DENSITY 1000.0f
 #define VISCOSITY 60.0f
 #define SIMULATIONSCALE 1.0f
