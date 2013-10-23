@@ -33,18 +33,25 @@ Project video:https://www.youtube.com/watch?v=RwWNOOuEdHM
 PART 2: CUDA Flocking Simulation
 ===
 ![Alt text](Part2/project running.jpg?raw=true)
+![Alt text](Part2/project running1.jpg?raw=true)
+![Alt text](Part2/project running2.jpg?raw=true)
+![Alt text](Part2/project running3.jpg?raw=true)
+![Alt text](Part2/project running4.jpg?raw=true)
 
-This part of the project simulates flocking behavior described by Craig Reynolds http://www.red3d.com/cwr/boids/ using the combination of 3 behaviors:
+This part of the project simulates flocking behavior described by Craig Reynolds http://www.red3d.com/cwr/boids/ using the combination of 4 behaviors:
 
 * Alignment: the boid tries to maintain a velocity close the average velocity of its neighbors
 * Cohesion: the boid steers itself to the center of mass of its neighbors
 * Separation: the boid maintains a proper distance with its neighbor to avoid crowding
+* Seek: the boid tends to move towards a target that can be moved by mouse motion
+
 
 Features:
 
 * 3d flocking simulation with tens of thousands of boids on GPU
 * Pyramid shaped boids generated in geometry shader pointing at direction of velocity
 * Velocity-encoded color with diffuse shading
+* Mouse-controlled flock
 
 Project video:https://www.youtube.com/watch?v=eWeW96t6cE0
 
