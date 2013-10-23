@@ -30,6 +30,9 @@ glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
 
+#define PROP_GAIN 16.0f
+#define DERIV_GAIN 8.0f
+
 void checkCUDAError(const char *msg, int line = -1)
 {
     cudaError_t err = cudaGetLastError();
@@ -139,6 +142,12 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
 		return glm::vec3(0, 0, 0);
 	else
 		return mag*dir/dirLen;
+}
+
+__device__ 
+glm::vec3 apply_control_force(glm::vec4 my_pos, glm::vec3 desired_vel, glm::vec3 curr_vel)
+{
+	return DERIV_GAIN * (desired_vel - curr_vel);
 }
 
 //TODO: Core force calc kernel global memory
@@ -294,13 +303,21 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 	glm::vec3 my_vel;
     glm::vec3 accel;
 	glm::vec3 newVel;
+	glm::vec3 desired_vel;
 
     if(index < N){
 		my_pos = pos[index];
 		my_vel = vel[index];
+		desired_vel = glm::vec3(2, 2, 0);
 	}
 
-    accel = ACC(N, my_pos, pos);
+	if(index == 0){
+		desired_vel = glm::vec3(0, 0, 0);
+	}
+
+    //accel = ACC(N, my_pos, pos);
+	float mass = my_pos.w;
+	accel = (1.0f/mass)*apply_control_force(my_pos, desired_vel, my_vel);
 	newVel = resolveCollisions(N, my_pos, pos, my_vel);
 
     if(index < N){
