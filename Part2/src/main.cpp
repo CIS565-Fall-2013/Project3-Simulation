@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 9600
+#define N_FOR_VIS 12000
 #define N_FOR_PREDATOR 10
 #define DT 0.3
 #define VISUALIZE 1
@@ -185,6 +185,10 @@ void mouse(int button, int state, int x, int y)
 	{
 		glutMotionFunc(mouseLeft);
 	}
+	else if(button == GLUT_MIDDLE_BUTTON)
+	{
+		glutMotionFunc(mouseMiddle);
+	}
 	else if(button == GLUT_RIGHT_BUTTON)
 	{
 		glutMotionFunc(mouseRight);
@@ -205,8 +209,8 @@ void mouseLeft(int x, int y)
     dx = (float)(x - mouse_old_x);
     dy = (float)(y - mouse_old_y);
 
-	head += dy * 0.2f;
-    pitch += dx * 0.2f;
+	rotY += dy * 0.2f;
+    rotX += dx * 0.2f;
 
 	mouse_old_x = x;
     mouse_old_y = y;
@@ -219,10 +223,10 @@ void mouseMiddle(int x, int y)
     dy = (float)(y - mouse_old_y);
 
 	glm::vec3 vdir(lookat - cameraPosition);
-    glm::vec3 u(glm::normalize(glm::cross(vdir, glm::vec3(0,0,1))));
-    glm::vec3 v(glm::normalize(glm::cross(u, vdir)));
+    glm::vec3 right(glm::normalize(glm::cross(vdir, glm::vec3(0,1,0))));
+    glm::vec3 up(glm::normalize(glm::cross(right, vdir)));
 
-    lookat += 0.01f * (dy * v - dx * u);
+    lookat += 0.01f * (dy * up - dx * right);
 
 	mouse_old_x = x;
     mouse_old_y = y;
@@ -231,30 +235,31 @@ void mouseMiddle(int x, int y)
 
 void mouseRight(int x, int y)
 {
-	float dx, dy;
-    dx = (float)(x - mouse_old_x);
+	float dy; 
     dy = (float)(y - mouse_old_y);
 
-	eye_distance -= dy * 0.01f;
-
+	eye_distance -= dy * 0.03f;
+	
 	mouse_old_x = x;
     mouse_old_y = y;
 }
 
 void camera()
 {
-	float r_head = glm::radians(head), r_pitch = glm::radians(pitch);
-    cameraPosition.x = lookat.x + eye_distance * glm::cos(r_head) * glm::cos(r_pitch);
-    cameraPosition.y = lookat.y + eye_distance * glm::sin(r_head);
-    cameraPosition.z = lookat.z + eye_distance * glm::cos(r_head) * glm::sin(r_pitch);
+	float rRotX = (rotX/180) * PI;
+	float rRotY = (rotY/180) * PI;
+	
+    cameraPosition.x = lookat.x + eye_distance * glm::cos(rRotY) * glm::cos(rRotX);
+    cameraPosition.y = lookat.y + eye_distance * glm::sin(rRotY);
+    cameraPosition.z = lookat.z + eye_distance * glm::cos(rRotY) * glm::sin(rRotX);
 
     glMatrixMode(GL_MODELVIEW);
-    glm::vec3 up = glm::vec3(0.0f, (glm::cos(r_head) > 0.0f) ? 1.0f : -1.0f, 0.0f);
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
     modelview = glm::lookAt(cameraPosition, lookat, up);
     glLoadMatrixf(&modelview[0][0]);
     
     glMatrixMode(GL_PROJECTION);
-    projection = glm::perspective(60.0f, static_cast<float>(field_width) / static_cast<float>(field_height), 0.1f, 100.0f);
+    projection = glm::perspective(fovy, static_cast<float>(field_width) / static_cast<float>(field_height), zNear, zFar);
     glLoadMatrixf(&projection[0][0]);
 
 	GLint location;

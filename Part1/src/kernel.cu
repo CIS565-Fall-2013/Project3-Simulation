@@ -133,11 +133,13 @@ __device__
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
 	glm::vec3 acc;// = glm::vec3(0.0f);
+	
 	for(int i = 0; i < N; i++)
 	{
 		acc += calculateAcceleration(my_pos, their_pos[i]);		
 	}
 	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	
 	return acc;
 }
 
@@ -147,28 +149,27 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-	glm::vec3 acc;
+	glm::vec3 acc;		
 	__shared__ glm::vec4 shPos[blockSize]; 
-
 	for (int i = 0, title = 0; i < N; i += blockSize, title++)
-    {		
+	{		
 		int index = title * blockSize + threadIdx.x;
 		if(index < N){
 			shPos[threadIdx.x] = their_pos[index];
 		}
-		__syncthreads();
-		
-		for(int j = 0; j < blockDim.x; j++)
-		{
+		__syncthreads();		
+				
+		for(int j = 0; j < blockSize; ++j){
 			if(title * blockDim.x + j < N)
 				acc += calculateAcceleration(my_pos, shPos[j]);
 			else
 				break;
-		}		
+		}			
 		__syncthreads();
 	}
 
 	acc += calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));	
+	
     return acc;
 }
 
@@ -186,21 +187,8 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 
     if(index < N) acc[index] = accel;
 }
- 
 
-__global__
-void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
-{
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    glm::vec4 my_pos;
-    glm::vec3 accel;
 
-    if(index < N) my_pos = pos[index];
-
-    accel = ACC(N, my_pos, pos);
-
-    if(index < N) acc[index] = accel;
-}
 
 __global__
 void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
@@ -251,9 +239,7 @@ void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, floa
 	glm::vec3 color(0.05, 0.15, 0.3);
     glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
 
-    glm::vec3 color(0.05, 0.15, 0.3);
-    glm::vec3 acc = ACC(N, glm::vec4((x-w2)/c_scale_w,(y-h2)/c_scale_h,0,1), pos);
-
+   
     if(x<width && y<height)
     {	   
         float mag = sqrt(sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z));

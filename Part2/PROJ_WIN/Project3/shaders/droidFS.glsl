@@ -36,7 +36,7 @@ void main() {
 		tmp = dot(normalize(ReflectionVector),normalize(ViewDirection));
 
     
-    out_Color = 0.7*2*specularLight * pow(tmp, 5) + 0.6*2*diffuseColor * diffuseTerm*specularLight  + 0.9*ambientLight*diffuseColor; 
+    out_Color = 0.1*2*specularLight * pow(tmp, 5) + 0.6*2*diffuseColor * diffuseTerm*specularLight  + 0.8*ambientLight*diffuseColor; 
 
 	//out_Color = fs_color;
 }

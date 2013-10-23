@@ -22,7 +22,7 @@ void main()
 
 	vec3 N = Right*-coord.x + Up*coord.y + ToCam*sqrt(1-r*r);
     vec3 L = normalize(-WorldCoord);
-    float light = 0.2 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
-    vec3 color = vec3(0.9, 0.1, 0.6);
+    float light = 1.3 + 0.9*clamp(dot(N,L),0.0, 1.0)*exp(-dist);
+    vec3 color = vec3(0.8, 0.8, 0.3);
 	FragColor = vec4(color*light,1.0);
 } 

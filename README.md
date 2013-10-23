@@ -1,3 +1,47 @@
+## Part 1 ##
+
+**Description:**
+
+For part 1, I implemented the calculating of acceleration, naive and shared memory methods.
+
+
+**Performance Evaluation:**
+
+Compare the shared memory method with the naive method， I found out that these two methods don't have too much different in term of speed, even I set a great number of planets. I believe the reason for this is that the number values pass from global memory to shared memory is limited by the block size. Therefore, although I used shared memory, I still have to exchange the shared memory several time to calculate all the acceleration. Here is the digram for the evaluation.
+
+
+![Alt text](sharedNaive.png "")
+
+
+Another interesting found out is that when I changed the compute capability form 2.0 to 1.0, the fps of the program has a huge increase. But the height field texture has some blinking effect after I used 1.0 with shared memory. For the part 2, I use compute capability 1.0. 
+
+**Screen Shot:**
+![Alt text](ScreenShot/7.png "")
+
+## Part 2 ##
+
+**Description:**
+
+In part 2, I implemented the flocking simulation and added predators behavior. For the flocking behavior, the basic idea is that combine alignment, separation and cohesion together to create the flocking behavior. User can change different parameters for each behavior in the kernel.h file. I define ALIGNMENT, SEPARATION and COHESION. Changing this parameter will have a little bit different behavior of flocking. In addition, I also defined a neighborhood value in the kernel.h file. This value is for how big the radius the object can detect others. Also, the RANGE value here is for the boundary of the box for objects to move around. In this project, I only implemented the naive flocking method. User can change the number of agents using the N_FOR_VIS in main.cpp file and change the number of predators using N_FOR_PREDATOR.
+
+
+The flocking agent I implemented as a pyramid, so the user could easily figure out the direction the agent is heading to. I also added a interactive camera which is adjusted form my previous CIS563 project. The predator flies around in the scene and shows as a yellow sphere. Whenever the predator get close to the agent, the agent will flee away from it. Adding this little behavior, it makes the scene more dynamic and vivid. 
+
+**Screen Shot:**
+
+![Alt text](ScreenShot/5.png "12500 agents 10 predator")
+
+![Alt text](ScreenShot/4.png "12500 agents 10 predator")
+
+![Alt text](ScreenShot/2.png "5000 agents")
+
+**Video:**
+
+[http://www.youtube.com/watch?v=qfx1AQ81Lxk&feature=youtu.be](http://www.youtube.com/watch?v=qfx1AQ81Lxk&feature=youtu.be)
+
+
+With 12000 agents, runs in real time.
+
 
 CIS565: Project 3: CUDA Simulation and GLSL Visualization
 ===
@@ -67,7 +111,7 @@ In this project, you are given code for:
 
 You will need to implement the following features:
  *  Calculating forces between all interacting bodies
- *  The same, but with shared memory (In main.cpp there is a compile flag #define VISUALIZE that can be set to 0 in order to only run the simulation portion of the code and not the costly visualizer)
+ *  The same, but with shared memory
  *  Vertex shader code to render a height field
  *  Fragment shader code to light that height field
  *  Geometry shader code to create screen facing billboards from rendered points

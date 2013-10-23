@@ -16,11 +16,11 @@
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 0
 
-#define RNEIGHBOR 10
+#define RNEIGHBOR 12
 #define ALIGNMENT 0.7
-#define SEPARATION 1.2
-#define COHESION 0.2
-#define RANGE 200
+#define SEPARATION 2.4
+#define COHESION 0.1
+#define RANGE 300
 
 
 void checkCUDAError(const char *msg, int line);

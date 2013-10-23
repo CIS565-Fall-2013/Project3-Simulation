@@ -66,18 +66,18 @@ const unsigned int PREDATOR = 1;
 const int field_width  = 800;
 const int field_height = 800;
 
-float fovy = 60.0f;
+float fovy = 45.0f;
 float zNear = 0.10;
-float zFar = 5.0;
+float zFar = 100.0;
 
 glm::mat4 projection;
 glm::mat4 modelview;
 glm::mat4 view;
 glm::vec3 cameraPosition(1.35,1.75,0);
-glm::vec3 lightPosition(1.35,1.75,3);
-glm::vec3 lightColor(1,1,1);
+glm::vec3 lightPosition(0.35,2.75,3);
+glm::vec3 lightColor(0.9,0.9,1);
 int mouse_old_x, mouse_old_y;
-float head = 45.0f, pitch = 45.0f;
+float rotY = 45.0f, rotX = 45.0f;
 float eye_distance = 2.0f;
 glm::vec3 lookat(0.0f, 0.0f, 0.0f);
 //-------------------------------

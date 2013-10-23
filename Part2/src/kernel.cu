@@ -189,7 +189,7 @@ void updateDroid(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec4 * 
 
 		if(!isPredator){
 			if(my_pos.x > range || my_pos.y > range || my_pos.z > range || my_pos.x < -range || my_pos.y < -range || my_pos.z < -range){
-				scale = 5;
+				scale = 10;
 				dir = glm::normalize(glm::vec3(0,0,0) - glm::vec3(my_pos));
 			}
 			else{
@@ -228,7 +228,7 @@ void updatePredator(int P, float dt, glm::vec4 * pos, glm::vec3 * vel, int time,
 		{			
 			dir = glm::normalize(vel[index]);
 		}
-		vel[index] = scale * dir * 6.0f;
+		vel[index] = scale * dir * 10.0f;
 		pos[index].x += vel[index].x * dt;
         pos[index].y += vel[index].y * dt;
         pos[index].z += vel[index].z * dt;
