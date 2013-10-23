@@ -101,24 +101,16 @@ know two important points on how GLM is used in this project:
 ---
 PERFORMANCE EVALUATION
 ---
-The performance evaluation is where you will investigate how to make your CUDA
-programs more efficient using the skills you've learned in class. You must
-perform at least one experiment on your code to investigate the positive or
-negative effects on performance. 
+As mentioned above, an attempt was made to speed the planet simulation by prefetching each planet position into shared memory, avoiding N^2 costly global memory loads.
+However, when actually implemented the empirical evidence demonstrated the technique did not help on my machine.
 
-For this Project, one of these experiments should be a comparison between the 
-global and shared memory versions of the acceleration calculation function at
-varying block sizes.
+![Screenshot](/Renders/BlockSize_PrefetchChart.JPG "Performance Evaluation")
 
-A good metric to track would be number of frames per second, 
-or number of objects displayable at 60fps.
+In fact, as the chart shows, the shared memory code actually ran slightly slower regardless of block size.
 
-We encourage you to get creative with your tweaks. Consider places in your code
-that could be considered bottlenecks and try to improve them. 
-
-Each student should provide no more than a one page summary of their
-optimizations along with tables and or graphs to visually explain any
-performance differences.
+I was puzzled by this so I ran some further profiling analysis. What I discovered was when running the code without prefetching, there was a huge spike in L2 cache bandwith usage. Once I implemented shared memory, this spike disappeared. 
+This leads me to suspect that instead of truly making N^2 global loads per tile, the unoptimized code is making N global loads and N^2 L2 cache loads. 
+For such small amounts of data, the cache is aparently able to maintain the entire position array for the entire run, rivaling shared memory performance.
 
 
 ---
