@@ -329,7 +329,7 @@ __device__ glm::vec3 separation(int N, glm::vec3 my_pos, glm::vec3 goal_pos, glm
 			if( glm::length(di) < RNeighborhood && glm::length(di) >= EPSILON)
 				vSeparate = vSeparate + (di/glm::length2(di));
 			else if(glm::length(di) < EPSILON){
-				float randGain = 0.1f;
+				float randGain = 0.01f;
 				glm::vec3 randVec = generateRandomNumberFromThread(1337, index);
 				vSeparate = vSeparate + randGain * randVec;
 			}
@@ -340,7 +340,7 @@ __device__ glm::vec3 separation(int N, glm::vec3 my_pos, glm::vec3 goal_pos, glm
 
 //Simple Euler integration scheme
 __global__
-void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, BehaviorType bType)
 {
 	
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -355,10 +355,13 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
     if(index < N){
 		my_pos = pos[index];
 		my_vel = vel[index];
-		//desired_vel = glm::vec3(2, 2, 0);
-		//desired_vel = seek(glm::vec3(my_pos), goal_pos);
-		//desired_vel = arrival(glm::vec3(my_pos), goal_pos);
-		desired_vel = separation(N, glm::vec3(my_pos), goal_pos, pos);
+		if(bType == SEEK){
+			desired_vel = seek(glm::vec3(my_pos), goal_pos);
+		} else if(bType == ARRIVAL){
+			desired_vel = arrival(glm::vec3(my_pos), goal_pos);
+		} else if(bType == SEPARATION){
+			desired_vel = separation(N, glm::vec3(my_pos), goal_pos, pos);
+		}
 	}
 
 	if(index == 0){
@@ -471,7 +474,7 @@ glm::vec4* initCuda(int N, int blockSize)
 	//atexit(cleanupCuda);
 }
 
-void cudaNBodyUpdateWrapper(float dt, int blockSize)
+void cudaNBodyUpdateWrapper(float dt, int blockSize, BehaviorType bType)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
 
@@ -479,7 +482,7 @@ void cudaNBodyUpdateWrapper(float dt, int blockSize)
 	float nathanTime;
 	cudaEventCreate(&start);
 	cudaEventRecord(start,0);
-    updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, bType);
 	cudaEventCreate(&stop);
 	cudaEventRecord(stop,0);
 	cudaEventSynchronize(stop);

@@ -27,6 +27,9 @@
 #define PHYS_EPSILON				0.0001
 #define RSQUARED_CUTOFF				10 //force cuts off when radius is closer than the square root of this number
 
+//for flocking
+enum BehaviorType { SEEK, ARRIVAL, SEPARATION };
+
 namespace utilityCore {
     extern float clamp(float f, float min, float max);
     extern bool replaceString(std::string& str, const std::string& from, const std::string& to);

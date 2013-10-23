@@ -5,6 +5,7 @@
 #include <thrust/random.h>
 #include <cuda.h>
 #include <cmath>
+#include "utilities.h"
 
 #if CUDA_VERSION >= 5000
     #include <helper_math.h>
@@ -27,7 +28,7 @@
 #define INTEGRATION_TYPE 0
 
 void checkCUDAError(const char *msg, int line);
-void cudaNBodyUpdateWrapper(float dt, int blockSize);
+void cudaNBodyUpdateWrapper(float dt, int blockSize, BehaviorType bType);
 glm::vec4* initCuda(int N, int blockSize);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height, int blockSize);
 void cudaUpdateVBO(float * vbodptr, int width, int height, int blockSize);

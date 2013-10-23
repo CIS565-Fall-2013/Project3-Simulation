@@ -78,7 +78,7 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT, blockSize);
+    cudaNBodyUpdateWrapper(DT, blockSize, bType);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height, blockSize);
     cudaUpdateVBO(dptrvert, field_width, field_height, blockSize);
@@ -179,6 +179,15 @@ void keyboard(unsigned char key, int x, int y)
        case(100)://D
          setPosition(glm::vec3(-1,0,0));
 		 break;
+	   case(49): //1
+		   bType = ARRIVAL;
+		   break;
+		case(50): //2
+		   bType = SEEK;
+		   break;
+		case(51): //3
+			bType = SEPARATION;
+			break;
     }
 }
 
