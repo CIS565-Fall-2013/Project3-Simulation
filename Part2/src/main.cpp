@@ -4,14 +4,14 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
+#define N_FOR_VIS 100
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
 
-Behavior mode = Arrival;
+Behavior mode = Flocking;
 
 int main(int argc, char** argv)
 {

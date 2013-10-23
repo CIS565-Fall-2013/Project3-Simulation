@@ -1,11 +1,13 @@
 #ifndef BOID_H
 #define BOID_H
 
+
+//FOR FLOCKING DEMO
 const __device__ float Mass = 1.0;
 const __device__ float Inertia = 1.0;
-const __device__ float MaxVelocity = 1.0;
-const __device__ float MaxForce = 4.0;
-const __device__ float MaxTorque = 2.0;
+const __device__ float MaxVelocity = 5.0;
+const __device__ float MaxForce = 0.1;
+const __device__ float MaxTorque = 0.1;
 const __device__ float MaxAngVel = 2.0;
 const __device__ float Kv0 = 1.0;
 const __device__ float Kp1 = 1.0;
@@ -16,6 +18,7 @@ const __device__ float RNeighborhoodSq = 10000.0;
 const __device__ float KSeparate = 20.0;
 const __device__ float KAlign = 5.0;
 const __device__ float KCohesion = 0.01;
+
 
 const __device__ float M_PI = 3.14159265358979323846f;		// per CRC handbook, 14th. ed.
 const __device__ float M_PI_2 = 1.570796326794897f;				// PI/2
