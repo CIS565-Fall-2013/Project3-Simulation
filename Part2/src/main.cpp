@@ -10,6 +10,8 @@
 #define DT 0.2
 #define VISUALIZE 1
 glm::vec4 * dev_pos_ptr;
+
+BehaviorType bType = ARRIVAL;
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------

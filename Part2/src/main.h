@@ -101,4 +101,7 @@ void deletePBO(GLuint* pbo);
 void deleteTexture(GLuint* tex);
 void shut_down(int return_code);
 
+//for flocking
+enum BehaviorType { SEEK, ARRIVAL, SEPARATION };
+
 #endif
