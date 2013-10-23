@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 400
+#define N_FOR_VIS 250
 #define DT 0.2
 #define VISUALIZE 1
 
@@ -22,15 +22,15 @@ WorldProps worldProps = {
 	0.6, //Initial maximum BOID velocity
 	1.0, //Ground avoidance height
 	0.08, //Ground Avoidance Force
-	0.03, //Boundary stiffness
+	0.05, //Boundary stiffness
 	0.1, //Min Speed
 	0.0, //Do a barrel roll!
-	glm::cos(glm::radians(140.0f)), //Cosine of View Angle 
-	glm::vec3(3.5,20,0.001),//AttractionZone (minDist, maxDist, force);
-	glm::vec3(2.5,3.5,0.0001),//AlignmentZone (minDist, maxDist, force);
-	glm::vec3(0,2.5,0.001),//RepulsionZone (minDist, maxDist, force);
+	glm::cos(glm::radians(120.0f)), //Cosine of View Angle 
+	glm::vec3(2.5,10.0,0.06/N_FOR_VIS),//AttractionZone (minDist, maxDist, force);
+	glm::vec3(2.0,4.0,0.05/N_FOR_VIS),//AlignmentZone (minDist, maxDist, force);
+	glm::vec3(0,3.0,0.05/N_FOR_VIS),//RepulsionZone (minDist, maxDist, force);
 	0.5, //Target speed
-	0.1, //Speed Control Force
+	0.0, //Speed Control Force
 	0.5, //Max force magnitude
 	1.0, //Max Speed
 };

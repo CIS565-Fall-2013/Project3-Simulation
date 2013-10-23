@@ -85,7 +85,7 @@ __device__ glm::vec4 ruleStayInBounds(const WorldProps world, const BoidProps me
 {
 	//Normalize
 	glm::vec4 forceIntensity(0);
-	
+
 	//X Direction
 	if(me.pos.x < -world.WorldBounds.x)
 		forceIntensity.x = world.WallStiffness*(world.WorldBounds.x-me.pos.x);
@@ -98,7 +98,7 @@ __device__ glm::vec4 ruleStayInBounds(const WorldProps world, const BoidProps me
 	else if(me.pos.y > world.WorldBounds.y)
 		forceIntensity.y = world.WallStiffness*(world.WorldBounds.y-me.pos.y);
 
-	
+
 	//Z Direction
 	if(me.pos.z < 0)//Wall at Z == 0, not -WorldBounds.z
 		forceIntensity.z = world.WallStiffness*(world.WorldBounds.z-me.pos.z);
@@ -106,7 +106,7 @@ __device__ glm::vec4 ruleStayInBounds(const WorldProps world, const BoidProps me
 		forceIntensity.z = world.WallStiffness*(world.WorldBounds.z-me.pos.z);
 
 	return forceIntensity;
-	
+
 }
 
 __device__ glm::vec4 ruleAvoidGround(const WorldProps world, const BoidProps me)
@@ -118,7 +118,7 @@ __device__ glm::vec4 ruleAvoidGround(const WorldProps world, const BoidProps me)
 		forceIntensity = 0;
 
 	return glm::vec4(0,0,forceIntensity*world.GroundAvoidanceForce,0);
-	
+
 }
 
 __device__ glm::vec4 ruleDoABarrelRoll(const WorldProps world, const BoidProps me)
@@ -149,12 +149,12 @@ __device__
 __device__ glm::vec4 ruleAttraction(const WorldProps world, const BoidProps me, const BoidProps them, const float radius, const glm::vec3 towardsThem)
 {
 	//Constant force in zone
-	return glm::vec4(towardsThem*world.AttractionZone.z, 0.0f);
+	return glm::vec4(towardsThem*(world.AttractionZone.z/**(radius-world.AttractionZone.x)*/), 0.0f);
 }
 
 __device__ glm::vec4 ruleAlignment(const WorldProps world, const BoidProps me, const BoidProps them, const float radius, const glm::vec3 towardsThem)
 {
-	
+
 	return glm::vec4(world.AlignmentZone.z*(them.heading-me.heading), 0.0f);
 }
 
@@ -162,7 +162,8 @@ __device__ glm::vec4 ruleAlignment(const WorldProps world, const BoidProps me, c
 __device__ glm::vec4 ruleRepulsion(const WorldProps world, const BoidProps me, const BoidProps them, const float radius, const glm::vec3 towardsThem)
 {
 	//Constant force in zone
-	return glm::vec4(-towardsThem*world.RepulsionZone.z, 0.0f);
+	float intensity = (radius-world.RepulsionZone.y)*world.RepulsionZone.z;
+	return glm::vec4(towardsThem*intensity, 0.0f);
 }
 
 __device__ 
@@ -172,23 +173,23 @@ __device__
 
 	glm::vec3 dist = them.pos - me.pos;
 
-	float radius = glm::length(dist);
-	glm::vec3 towardsThem = dist/radius;
-	float distDot = glm::dot(towardsThem,me.heading); 
-
+	float radius = glm::sqrt(dist.x*dist.x+dist.y*dist.y+dist.z*dist.z);
+	float distDot = glm::dot(dist,me.heading)/radius; 
+	
 	if(distDot > world.ViewAngleCos)
 	{
-		//Only apply these rules if we can see them
-		
+	//	//Only apply these rules if we can see them
+		dist /= radius;
+
 		//Check ranges
 		if(/*min*/world.AttractionZone.x < radius && /*max*/radius < world.AttractionZone.y);
-			netForce += ruleAttraction(world, me, them, radius, towardsThem);
+			netForce += ruleAttraction(world, me, them, radius, dist);
 			
 		if(/*min*/world.AlignmentZone.x < radius && /*max*/radius < world.AlignmentZone.y);
-			netForce += ruleAlignment(world, me, them, radius, towardsThem);
+			netForce += ruleAlignment(world, me, them, radius, dist);
 			
 		if(/*min*/world.RepulsionZone.x < radius && /*max*/radius < world.RepulsionZone.y);
-			netForce += ruleRepulsion(world, me, them, radius, towardsThem);
+			netForce += ruleRepulsion(world, me, them, radius, dist);
 	}
 	return netForce;
 }
@@ -198,41 +199,30 @@ __device__
 	glm::vec4 computeNetForce(const int N, const WorldProps world, const int myIndex, const BoidProps me, const BoidProps* boids)
 {
 	extern __shared__ BoidProps shBoids[]; 
-	glm::vec4 netForce = glm::vec4(0,0,0,0);//Use 4th field for roll torque
+	glm::vec4 netForce = applyIndividualRules(world, me);//Use 4th field for roll torque
 
-	//Compute for each tile
-	int numTiles = N/blockDim.x;
-	if(N % blockDim.x != 0)
-		numTiles++;//Add a tile for the extras
+	int i, tile;
 
-	//For each full tile
-	for(int tile = 0; tile < numTiles; ++tile){
+	for (i = 0, tile = 0; i < N; i += blockDim.x, tile++) {  
+		//Load tile into shared memory
+		int idx = tile * blockDim.x + threadIdx.x;  
+		if(idx < N)//Don't load from out of range
+			shBoids[threadIdx.x] = boids[idx];  
 
-		int tileOffset = tile*blockDim.x;
-		//Load into shared memory using coallesed acces
-		int loadIndex = threadIdx.x + tileOffset;
-		if(loadIndex < N)
-			shBoids[threadIdx.x] = boids[loadIndex];
+		__syncthreads();  
 
-		//Wait for load to finish
-		__syncthreads();
+		int NumBoidsInTile = N-i;
+		if(NumBoidsInTile > blockDim.x)
+			NumBoidsInTile = blockDim.x;
 
-		//Perform update for entire tile using shared memory
-		//No bank conflicts because this is broadcast
-		for(int i = 0; i < blockDim.x; ++i)
-		{
-			int idx = tileOffset+i;
-			if(idx < N && idx != myIndex)//Don't process 
-				netForce += applyPairwiseRules(world, me, shBoids[i]);
-			else
-				break;
-		}
+		for (int j = 0; j < NumBoidsInTile; j++) {  
+			//Add contribution
+			if(myIndex != j + i)//Skip myself in the array
+				netForce += applyPairwiseRules(world, me, shBoids[j]);  
+		}  
+		__syncthreads();  
+	}  
 
-		__syncthreads();
-
-	}
-
-	netForce += applyIndividualRules(world, me);
 	return netForce;
 }
 
@@ -281,7 +271,7 @@ __global__
 			mag = world.MinSpeed;
 		}
 		boids[index].speed = mag;
-		
+
 		//Change roll 
 		boids[index].rollAngle += netF.w*dt;
 
@@ -307,7 +297,7 @@ __global__
 		vbo[boidVBO_PositionOffset + boidVBOStride*index + 3] =  1.0f;
 
 		//TODO: Allow Roll
-		
+
 		glm::vec3 Forward =  me.heading;
 
 		glm::vec3 Right = glm::cross(Forward, glm::vec3(0,0,1));
