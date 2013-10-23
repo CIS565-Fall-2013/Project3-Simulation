@@ -53,7 +53,9 @@ simulate the cloth, which includes 4 structural springs, 4 shear springs and 4 b
 is the lenght when it is set up. 
 
 The calculation of mass-spring system is pretty straight forward, which just follows the Hook's rule. However, I came across a serious problem that the spring would mistakenly overshoot. 
-![screeshot](http://https://github.com/heguanyu/Project3-Simulation/tree/master/screenshots/spring_exploded_explain.jpg?raw=true)
+
+![screeshot](https://github.com/heguanyu/Project3-Simulation/blob/master/screenshots/spring_exploded_explain.jpg?raw=true)
+
 So when the spring has a large enough mass to bounce it back ,it may bounce to the other side, and thus messed up the later calculation.
 
 There is not a good way to solve this problem, which is the disadvantage of the mass-spring system, even with the RK4 integration method. Therefore, I invent my own method to alleviate this problem in some extends.
@@ -66,8 +68,8 @@ problem, I just divide one calculation step into several substeps, which where t
  as separate knots. When the knots are crowded enough, it stlil looks like a cloth, just the normal is a little bit weird. 
  
  Below are the runtime screenshots.
-![screeshot](http://https://github.com/heguanyu/Project3-Simulation/tree/master/screenshots/cloth.bmp?raw=true)
-![screeshot](http://https://github.com/heguanyu/Project3-Simulation/tree/master/screenshots/cloth2.bmp?raw=true)
+![screeshot](https://github.com/heguanyu/Project3-Simulation/blob/master/screenshots/cloth.bmp?raw=true)
+![screeshot](https://github.com/heguanyu/Project3-Simulation/blob/master/screenshots/cloth2.bmp?raw=true)
 
 
 ---
@@ -81,8 +83,8 @@ So, my flocking behavior consists of 4 sub-behaviors. The cohesion, separation, 
   better than the first one. 
 
 Below are the runtime screenshots
-![screeshot](http://https://github.com/heguanyu/Project3-Simulation/tree/master/screenshots/flocking1.bmp?raw=true)
-![screeshot](http://https://github.com/heguanyu/Project3-Simulation/tree/master/screenshots/flocking2.bmp?raw=true)
+![screeshot](https://github.com/heguanyu/Project3-Simulation/blob/master/screenshots/flocking1.bmp?raw=true)
+![screeshot](https://github.com/heguanyu/Project3-Simulation/blob/master/screenshots/flocking2.bmp?raw=true)
 
 ---
 SHARED MEMORY WALKTHROUGH
@@ -106,9 +108,12 @@ In the shared memory method, we have to align all the threads, which means that 
  However, in the N-Body case, it is faster than the naive calculation, where N body method do not check if a planet is too far away or not. Therefore, the threadds are always aligned, and shared memory method is thus faster.\
  
  The chart below shows  how much faster the naive method is upon the shared method.
-![screeshot](http://https://github.com/heguanyu/Project3-Simulation/tree/master/performance_eval/flocking_comp_512.bmp?raw=true) 
+ 
+![screeshot](https://github.com/heguanyu/Project3-Simulation/blob/master/performance_eval/flocking_comp_512.bmp?raw=true) 
+
  The chart below shows that the blocksize has very slight influence on the fps.
- ![screeshot](http://https://github.com/heguanyu/Project3-Simulation/tree/master/performance_eval/flocking_comp_blocknum.bmp?raw=true) 
+ 
+ ![screeshot](https://github.com/heguanyu/Project3-Simulation/blob/master/performance_eval/flocking_comp_blocknum.bmp?raw=true) 
  
  
 ---
