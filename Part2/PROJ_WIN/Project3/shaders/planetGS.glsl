@@ -21,9 +21,11 @@ void main()
     WorldCoord = Position;
 
     ToCam = normalize(u_cameraPos - Position);
-    Up = vec3(0.0, 0.0, 1.0);
+  /*  Up = vec3(0.0, 0.0, 1.0);
     Right = cross(ToCam, Up);
-    Up = cross(Right, ToCam);
+    Up = cross(Right, ToCam);*/
+	Right = vec3(1.0, 0.0, 0.0);
+	Up = vec3(0.0,1.0,0.0);
 
 	vec3 Pos = Position + scale*Right - scale*Up;
     gl_Position = u_projMatrix * vec4(Pos, 1.0);
@@ -40,10 +42,10 @@ void main()
     TexCoord = vec2(1.0, 0.0);
     EmitVertex();
 
-    Pos = Position - scale*Right + scale*Up;
-    gl_Position = u_projMatrix * vec4(Pos, 1.0);
-    TexCoord = vec2(1.0, 1.0);
-    EmitVertex();
+    //Pos = Position - scale*Right + scale*Up;
+    //gl_Position = u_projMatrix * vec4(Pos, 1.0);
+    //TexCoord = vec2(1.0, 1.0);
+    //EmitVertex();
 
     EndPrimitive();
 }

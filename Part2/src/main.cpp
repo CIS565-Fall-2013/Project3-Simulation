@@ -11,7 +11,7 @@
 #define VISUALIZE 1
 glm::vec4 * dev_pos_ptr;
 
-BehaviorType bType = ARRIVAL;
+BehaviorType bType = LEADER;
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------

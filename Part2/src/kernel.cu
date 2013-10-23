@@ -344,7 +344,7 @@ __device__ glm::vec3 separation(int N, glm::vec3 my_pos, glm::vec3 goal_pos, glm
 
 __device__ glm::vec3 leader_follow(int N, glm::vec3 my_pos, glm::vec3 goal_pos, glm::vec4* their_pos)
 {
-	float cSep = 1;
+	float cSep = 1.5;
 	float cArrive = 1;
 	return cSep*separation(N, my_pos, goal_pos, their_pos) + cArrive*arrival(my_pos, goal_pos);
 }
@@ -362,6 +362,7 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 	glm::vec3 newVel;
 	glm::vec3 desired_vel;
 	glm::vec3 goal_pos = glm::vec3(pos[0]);
+	glm::vec3 leader_vel = vel[0];
 
     if(index < N){
 		my_pos = pos[index];
@@ -373,7 +374,7 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 		} else if(bType == SEPARATION){
 			desired_vel = separation(N, glm::vec3(my_pos), goal_pos, pos);
 		} else if(bType == LEADER){
-			desired_vel = leader_follow(N, glm::vec3(my_pos), goal_pos, pos);
+			desired_vel = leader_follow(N, glm::vec3(my_pos), goal_pos - 150.0f*leader_vel, pos);
 		}
 	}
 
@@ -389,6 +390,7 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
     if(index < N){
 		acc[index] = accel;
 		vel[index] = my_vel;
+		//vel[index] = newVel;
 	}
 }
 
