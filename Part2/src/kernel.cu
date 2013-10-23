@@ -33,7 +33,7 @@ glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
 float* dev_rot; //rotation of each boid
 float* dev_angular_vel; //angular velocity of each boid
-float* dev_torques; //torque on each boid.
+float* dev_ang_accel; //torque on each boid.
 
 #define PROP_GAIN 16.0f
 #define DERIV_GAIN 8.0f
@@ -164,8 +164,7 @@ __device__
 float apply_control_torque(float desired_angle, float curr_angle, float curr_ang_vel)
 {
 	//Assuming inertia is 1
-	float inertia = 1;
-	return inertia * (-TORQUE_DERIV * curr_ang_vel - TORQUE_PROP * curr_angle + TORQUE_PROP * desired_angle);
+	return (-TORQUE_DERIV * curr_ang_vel - TORQUE_PROP * curr_angle + TORQUE_PROP * desired_angle);
 }
 
 //TODO: Core force calc kernel global memory
@@ -367,7 +366,7 @@ __device__ glm::vec3 leader_follow(int N, glm::vec3 my_pos, glm::vec3 goal_pos, 
 
 //Simple Euler integration scheme
 __global__
-void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, float* rots, float* ang_vels, BehaviorType bType)
+void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, float* rots, float* ang_vels, float* ang_acc, BehaviorType bType)
 {
 	
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -379,9 +378,10 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 	glm::vec3 desired_vel;
 	glm::vec3 goal_pos = glm::vec3(pos[0]);
 	glm::vec3 leader_vel = vel[0];
-	float angular_accel;
+
 	float my_rot;
 	float my_ang_vel; //angular velocity
+	float desired_angle = 0;
 
     if(index < N){
 		my_pos = pos[index];
@@ -405,18 +405,21 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc,
 
     //accel = ACC(N, my_pos, pos);
 	float mass = my_pos.w;
+	float inertia = 1;
 	accel = (1.0f/mass)*apply_control_force(my_pos, desired_vel, my_vel);
+	float curr_ang_acc = (1.0f/inertia)*apply_control_torque(desired_angle, my_rot, my_ang_vel);
 	//newVel = resolveCollisions(N, my_pos, pos, my_vel);
 
     if(index < N){
 		acc[index] = accel;
 		vel[index] = my_vel;
+		ang_acc[index] = curr_ang_acc;
 		//vel[index] = newVel;
 	}
 }
 
 __global__
-void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, float* rot, float* ang_vel, float* ang_acc)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
     if( index < N )
@@ -519,13 +522,13 @@ glm::vec4* initCuda(int N, int blockSize)
 	cudaMemcpy(dev_angular_vel, initialAngVel, N*sizeof(float), cudaMemcpyHostToDevice);
 	delete initialAngVel;
 
-	cudaMalloc((void**)&dev_torques, N*sizeof(float));
+	cudaMalloc((void**)&dev_ang_accel, N*sizeof(float));
 	float* initialTorque = new float[N];
 	for(int i = 0; i < N; i++){
 		initialTorque[i] = 0.0f;
 	}
     checkCUDAErrorWithLine("Kernel failed!");
-	cudaMemcpy(dev_torques, initialTorque, N*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_ang_accel, initialTorque, N*sizeof(float), cudaMemcpyHostToDevice);
 	delete initialTorque;
 
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
@@ -547,7 +550,7 @@ void cudaNBodyUpdateWrapper(float dt, int blockSize, BehaviorType bType)
 	float nathanTime;
 	cudaEventCreate(&start);
 	cudaEventRecord(start,0);
-    updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, dev_rot, dev_angular_vel,  bType);
+    updateF<<<fullBlocksPerGrid, blockSize, TILE_SIZE*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, dev_rot, dev_angular_vel, dev_ang_accel, bType);
 	cudaEventCreate(&stop);
 	cudaEventRecord(stop,0);
 	cudaEventSynchronize(stop);
@@ -563,7 +566,7 @@ void cudaNBodyUpdateWrapper(float dt, int blockSize, BehaviorType bType)
 
     checkCUDAErrorWithLine("Kernel failed!");
 
-    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, dev_rot, dev_angular_vel, dev_ang_accel);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }
