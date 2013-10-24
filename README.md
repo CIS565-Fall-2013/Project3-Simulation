@@ -43,8 +43,6 @@ Flocking with each boid rendered as a triangle:
 
 [Flocking Video Demo 2](https://vimeo.com/77625974)
 
-[Flocking towards target Video Demo](http://youtu.be/WzI8o743bUk) at the center of the screen. The target can be adjusted w/ wasd.
-
 Note regarding GLM: when working on this project, glm::normalize was a major source of many interesting bugs that consumed a lot of time for me to track down. It turns out that this function
 does not protect against division by zero. Therefore, instead of relying on this function, it is best to first figure out the length, then add a small offset to the length and do the division
 manully.
