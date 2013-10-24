@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 10
+#define N_FOR_VIS 500
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -20,6 +20,7 @@ int main(int argc, char** argv)
     cudaGLSetGLDevice( compat_getMaxGflopsDeviceId() );
     initPBO(&pbo);
     cudaGLRegisterBufferObject( planetVBO );
+	cudaGLRegisterBufferObject (planetVelBO);
 
     
 #if VISUALIZE == 1 
@@ -60,18 +61,21 @@ void runCuda()
 
     float4 *dptr=NULL;
     float *dptrvert=NULL;
-    cudaGLMapBufferObject((void**)&dptr, pbo);
+	float *dptrvel = NULL;		//pointer to body's velocity
+    //cudaGLMapBufferObject((void**)&dptr, pbo);
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
+	cudaGLMapBufferObject((void**)&dptrvel, planetVelBO);
 
     // execute the kernel
     cudaNBodyUpdateWrapper(DT);
 #if VISUALIZE == 1
-    //cudaUpdatePBO(dptr, field_width, field_height);
+    cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
 #endif
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
-    cudaGLUnmapBufferObject(pbo);
+	cudaGLUnmapBufferObject(planetVelBO);
+    //cudaGLUnmapBufferObject(pbo);
 }
 
 int timebase = 0;
@@ -296,7 +300,7 @@ void initVAO(void)
 void initShaders(GLuint * program)
 {
     GLint location;
- /*   program[0] = glslUtility::createProgram("shaders/heightVS.glsl", "shaders/heightFS.glsl", attributeLocations, 2);
+    program[0] = glslUtility::createProgram("shaders/heightVS.glsl", "shaders/heightFS.glsl", attributeLocations, 2);
     glUseProgram(program[0]);
     
     if ((location = glGetUniformLocation(program[0], "u_image")) != -1)
@@ -310,7 +314,7 @@ void initShaders(GLuint * program)
     if ((location = glGetUniformLocation(program[0], "u_height")) != -1)
     {
         glUniform1i(location, 0);
-    }*/
+    }
     
     program[1] = glslUtility::createProgram("shaders/planetVS.glsl", "shaders/planetGS.glsl", "shaders/planetFS.glsl", attributeLocations, 1);
     glUseProgram(program[1]);

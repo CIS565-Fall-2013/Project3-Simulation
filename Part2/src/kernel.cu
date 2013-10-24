@@ -15,8 +15,6 @@
 dim3 threadsPerBlock(blockSize);
 
 int numObjects;
-const float planetMass = 3e8;
-const __device__ float starMass = 5e10;
 
 const float scene_scale = 2e2; //size of the height map in simulation space
 
@@ -24,7 +22,11 @@ glm::vec4 * dev_pos;
 glm::vec3 * dev_vel;
 glm::vec3 * dev_acc;
 
+boid* nBoids;
 int iteration = 1;
+const __device__ float WALL = 100.0f;			//wall boundary, imaginary cube
+const __device__ float NEIGHBOR_RAD = 10.0f;	//radius of neighborhood
+const __device__ float MAX_VEL = 3.0f;
 
 void checkCUDAError(const char *msg, int line = -1)
 {
@@ -64,49 +66,27 @@ glm::vec3 generateRandomNumberFromThread(float time, int index)
 //Generate randomized starting positions for the planets in the XY plane
 //Also initialized the masses
 __global__
-void generateRandomPosArray(int time, int N, glm::vec4 * arr, float scale, float mass)
+void generateRandomPosArray(int time, int N, boid* arr, float scale)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index)-0.5f);
-        arr[index].x = rand.x;
-        arr[index].y = rand.y;
-        arr[index].z = rand.z;
-        
-		arr[index].w = mass;
-    }
-}
-
-//Determine velocity from the distance from the center star. Not super physically accurate because 
-//the mass ratio is too close, but it makes for an interesting looking scene
-__global__
-void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
-{
-    int index = (blockIdx.x * blockDim.x) + threadIdx.x;
-    if(index < N)
-    {
-        glm::vec3 R = glm::vec3(pos[index].x, pos[index].y, pos[index].z);
-        float r = glm::length(R) + EPSILON;
-        float s = sqrt(G*starMass/r);
-        glm::vec3 D = glm::normalize(glm::cross(R/r,glm::vec3(0,0,1)));
-        arr[index].x = s*D.x;
-        arr[index].y = s*D.y;
-        arr[index].z = s*D.z;
+        glm::vec3 rand = 10.0f*(generateRandomNumberFromThread(time, index)-0.5f);
+		arr[index].pos = rand;
+		//arr[index].pos.z = 0;
     }
 }
 
 //Generate randomized starting velocities in the XY plane
 __global__
-void generateRandomVelArray(int time, int N, glm::vec3 * arr, float scale)
+void generateRandomVelArray(int time, int N, boid* arr, float scale)
 {
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 rand = scale*(generateRandomNumberFromThread(time, index) - 0.5f);
-        arr[index].x = rand.x;
-        arr[index].y = rand.y;
-        arr[index].z = rand.z;
+        glm::vec3 rand = (generateRandomNumberFromThread(time, index) - 0.5f);
+		arr[index].vel = rand;
+		//arr[index].vel.z = 0;
     }
 }
 
@@ -117,7 +97,7 @@ __device__ glm::vec3 getRandomPointOnSphere(float randomSeed, int time){
 	thrust::uniform_real_distribution<float> u01(-1, 1);
     thrust::uniform_real_distribution<float> u02(0, 2*PI);
 
-    glm::vec3 point (0.5f, 0.5f, 0.5f);
+    glm::vec3 point (0);
         
     float z = (float)u01(rng);
     float theta = (float)u02(rng);
@@ -129,90 +109,191 @@ __device__ glm::vec3 getRandomPointOnSphere(float randomSeed, int time){
 	return point;
 }
 
-
 __device__
-glm::vec3 wander(glm::vec3 vel, glm::vec4 pos, int index, float dt, int time){
+glm::vec3 wander(glm::vec3 vel, glm::vec3 pos, int index, float dt, int time){
 	
 	//find random displacement on sphere
 	glm::vec3 vWander = getRandomPointOnSphere(index, time);
 	
-	//translate to new center
-	glm::vec3 myPos(pos.x, pos.y, pos.z);
-	glm::vec3 center = myPos + vel;
-	vWander += center;
-
-	vel = VRADIUS*glm::normalize(vWander);
-	
+	vel = vWander;
 	return vel;
 }
 
 __device__
-glm::vec3 alignment(int N, glm::vec4 myPos, glm::vec3 myVel, glm::vec3* vel, glm::vec4* pos){
+glm::vec3 separation(int N, glm::vec3 myPos, boid* boids, int time){
+	
+	int index = blockDim.x * blockIdx.x + threadIdx.x;
+	int numTiles = ceil((float)N/blockSize);
+	
+	//array storing position and velocities, pos goes from 0 to blockSize-1, vel from blockSize - 2*blockSize-1
+	__shared__ glm::vec3 posTile[blockSize];	
+	
+	glm::vec3 vSeparation(0);
+	int numNeigbors = 0;
+
+	for(int i = 0; i < numTiles; ++i){
+		//load positions to shared memory
+		posTile[threadIdx.x] = boids[i*blockSize +threadIdx.x].pos;
+		__syncthreads();
+
+		//find weighted average of velocities in neighborhood
+		for( int j = 0; j < blockSize && (blockSize*i+j)<N; ++j){
+			//check if in neigborhood
+			glm::vec3 dist = myPos - posTile[j];
+			float distLen = glm::length(dist);
+			if(distLen < NEIGHBOR_RAD){
+				if(distLen > EPSILON)
+					vSeparation += dist*1.0f/(glm::dot(dist, dist));
+				else{
+					vSeparation += generateRandomNumberFromThread(time, index);
+					vSeparation -=glm::vec3(0.5);
+				}
+				++numNeigbors;
+			}
+		}
+		__syncthreads();
+	}
+
+	return vSeparation*(1.0f/numNeigbors);
+}
+
+__device__
+glm::vec3 cohesion(int N, glm::vec3 myPos, boid* boids){
 
 	int numTiles = ceil((float)N/blockSize);
-	__shared__ glm::vec4 posTile[blockSize];
-	__shared__ glm::vec3 velTile[blockSize];
+	__shared__ glm::vec3 posTile[blockSize];
+	int numNeighbors = 0;
+	glm::vec3 cM (0);
+
+	for(int i = 0; i < numTiles; ++i){
+
+		//read into shared mem
+		posTile[threadIdx.x] = boids[threadIdx.x+i*blockSize].pos;
+		__syncthreads();
+
+		for(int j = 0; j<blockSize && i*blockSize+j<N; ++j){
+			float dist = glm::length(myPos - posTile[j]);
+			//find center of mass
+			if(dist < NEIGHBOR_RAD){
+				cM += posTile[j];
+				numNeighbors ++;
+			}
+		}
+		__syncthreads();
+	}
+
+	cM *= 1.0f/numNeighbors;
+	
+	return cM-myPos;
+}
+
+__device__
+glm::vec3 alignment(int N, glm::vec3 myPos, glm::vec3 myVel, boid* boids){
+	
+	int numTiles = ceil((float)N/blockSize);
+	
+	//array storing position and velocities, pos goes from 0 to blockSize-1, vel from blockSize - 2*blockSize-1
+	__shared__ glm::vec3 posVelTile[2*blockSize];	
 
 	glm::vec3 vAlign(0);
 	int numNeigbors = 0;
 
 	for(int i = 0; i < numTiles; ++i){
-	
-		//load positions and velocities to shared memory
-		posTile[threadIdx.x] = pos[i*blockSize + threadIdx.x];
-		velTile[threadIdx.x] = vel[i*blockSize + threadIdx.x];
+		//load positions and velocitieds to shared memory
+		posVelTile[threadIdx.x] = boids[i*blockSize +threadIdx.x].pos;
+		posVelTile[blockSize+threadIdx.x] = boids[i*blockSize +threadIdx.x].vel;
 		__syncthreads();
 
 		//find weighted average of velocities in neighborhood
-		for( int j = 0; j < blockSize; ++j){
-			if(blockSize*i+j < N){
-				//check if in neigborhood
-				float dist = glm::length(posTile[threadIdx.x] - myPos);
-				if(dist < NEIGHBOR_RAD){
-					vAlign += velTile[threadIdx.x];
-					++numNeigbors;
-				}
+		for( int j = 0; j < blockSize && (blockSize*i+j)<N; ++j){
+			//check if in neigborhood
+			float dist = glm::length(posVelTile[j] - myPos);
+			if(dist < NEIGHBOR_RAD){
+				vAlign += posVelTile[j+blockSize];
+				++numNeigbors;
 			}
 		}
 		__syncthreads();
-
 	}
 
-	return glm::normalize(vAlign*(1.0f/numNeigbors));
+	//find and return average velocity
+	return vAlign*(1.0f/numNeigbors);
+}
 
+__device__
+glm::vec3 avoidance(glm::vec3 myPos, glm::vec3 myVel){
+
+	glm::vec3 avoid(0);
+
+	//check whether colliding with wall on next few timesteps
+	glm::vec3 futurePos = myPos + myVel;
+	glm::vec3 reflectNormal(0);
+	
+	//find normal to reflect around
+	if(futurePos.x > WALL)
+		reflectNormal.x = -1.0f;
+	else if(futurePos.x < -WALL)
+		reflectNormal.x = 1.0f;
+	else if(futurePos.y > WALL)
+		reflectNormal.y = -1.0f;
+	else if(futurePos.y < -WALL)
+		reflectNormal.y = 1.0f;
+	else if(futurePos.z > WALL)
+		reflectNormal.z = -1.0f;
+	else if (futurePos.z < -WALL)
+		reflectNormal.z = 1.0f;
+
+	if(glm::dot(reflectNormal, reflectNormal) > EPSILON)
+		//avoid = -myVel;
+		avoid = glm::reflect(myVel, reflectNormal);
+
+	return avoid;
 }
 
 //updates velocity
 __global__
-void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc, int time)
+void updateF(int N, float dt, boid* boids, int time)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
-    glm::vec4 my_pos;
+    glm::vec3 my_pos;
     glm::vec3 my_vel;
 
 	if(index < N){
 
-		my_pos = pos[index];
-		my_vel = vel[index];
-		//vel[index] += wander(vel[index], my_pos, index, dt, time);
-		vel[index] = alignment(N, my_pos, my_vel, vel, pos); 
+		my_pos = boids[index].pos;
+		my_vel = boids[index].vel;
+		
+		my_vel += 0.1f*alignment(N, my_pos, my_vel, boids);
+		my_vel += 5.0f*separation(N, my_pos, boids, time);
+		my_vel += 0.1f*cohesion(N, my_pos, boids);
+
+		my_vel += 1.0f*wander(my_vel, my_pos, index, dt, time);
+
+		my_vel += avoidance(my_pos, my_vel);
+
+		//clamp vel and update
+		my_vel= glm::clamp(my_vel, -glm::vec3(MAX_VEL), glm::vec3(MAX_VEL));
+		//my_vel.z = 0.0f;
+		boids[index].vel = my_vel;
 	}
 }
 
 //does euler integration to find new position
 __global__
-void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
+void updateS(int N, float dt, boid* boids)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
+	glm::vec3 pos;
+	glm::vec3 vel;
     if( index < N )
     {
-        pos[index].x += vel[index].x * dt;
-        pos[index].y += vel[index].y * dt;
-        pos[index].z += vel[index].z * dt;
+		pos = boids[index].pos;
+		vel = boids[index].vel;
+        pos.x += vel.x * dt;
+        pos.y += vel.y * dt;
+        pos.z += vel.z * dt;
 
-		//pos[index].x += 0.01;
-  //      pos[index].y += 0.01;
-  //      pos[index].z += 0.01;
+		boids[index].pos = pos;
 
     }
 }
@@ -220,7 +301,7 @@ void updateS(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
 __global__
-void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float s_scale)
+	void sendToVBO(int N, boid* boids, float * vbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -230,9 +311,10 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 
     if(index<N)
     {
-        vbo[4*index+0] = pos[index].x*c_scale_w;
-        vbo[4*index+1] = pos[index].y*c_scale_h;
-		vbo[4*index+2] = pos[index].z*c_scale_b;
+		glm::vec3 pos = boids[index].pos;
+        vbo[4*index+0] = pos.x*c_scale_w;
+        vbo[4*index+1] = pos.y*c_scale_h;
+		vbo[4*index+2] = pos.z*c_scale_b;
         vbo[4*index+3] = 1;
     }
 }
@@ -242,7 +324,7 @@ void sendToVBO(int N, glm::vec4 * pos, float * vbo, int width, int height, float
 __global__
 void sendToPBO(int N, glm::vec4 * pos, float4 * pbo, int width, int height, float s_scale)
 {
-    int index = threadIdx.x + (blockIdx.x * blockDim.x);
+   // int index = threadIdx.x + (blockIdx.x * blockDim.x);
 }
 
 /*************************************
@@ -255,40 +337,41 @@ void initCuda(int N)
     numObjects = N;
     dim3 fullBlocksPerGrid((int)ceil(float(N)/float(blockSize)));
 
-    cudaMalloc((void**)&dev_pos, N*sizeof(glm::vec4));
-    checkCUDAErrorWithLine("Kernel failed!");
-    cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
-    checkCUDAErrorWithLine("Kernel failed!");
-    cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3)); 
-    checkCUDAErrorWithLine("Kernel failed!");
+    //cudaMalloc((void**)&dev_pos, N*sizeof(glm::vec4));
+    //checkCUDAErrorWithLine("Kernel failed!");
+    //cudaMalloc((void**)&dev_vel, N*sizeof(glm::vec3));
+    //checkCUDAErrorWithLine("Kernel failed!");
+    //cudaMalloc((void**)&dev_acc, N*sizeof(glm::vec3)); 
+    //checkCUDAErrorWithLine("Kernel failed!");
 
-    generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
-    checkCUDAErrorWithLine("Kernel failed!");
-    
-	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, scene_scale);
+	cudaMalloc((void**)&nBoids, N*sizeof(boid));
 	checkCUDAErrorWithLine("Kernel failed!");
 
-	//generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
-    //checkCUDAErrorWithLine("Kernel failed!");
+	generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, nBoids, scene_scale);
+    checkCUDAErrorWithLine("Kernel failed!");
+
+	generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, nBoids, scene_scale);
+	checkCUDAErrorWithLine("Kernel failed!");
+
     cudaThreadSynchronize();
 }
 
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-    updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc, iteration);
+	updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(boid)>>>(numObjects, dt, nBoids, iteration);
     checkCUDAErrorWithLine("Kernel failed!");
-    updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+	updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, nBoids);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }
 
 void cudaUpdateVBO(float * vbodptr, int width, int height)
 {
-	iteration ++;
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-	sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, dev_pos, vbodptr, width, height, scene_scale);
+	sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, nBoids, vbodptr, width, height, scene_scale);
     cudaThreadSynchronize();
+	iteration ++;
 }
 
 void cudaUpdatePBO(float4 * pbodptr, int width, int height)

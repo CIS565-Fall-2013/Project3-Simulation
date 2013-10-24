@@ -15,8 +15,7 @@
 #define blockSize 128
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 #define SHARED 0
-#define VRADIUS 0.5f		//radius of sphere to wander in
-#define NEIGHBOR_RAD 1.0f	//radius of neighborhood
+
 
 void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);
@@ -24,5 +23,9 @@ void initCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
 void cudaUpdateVBO(float * vbodptr, int width, int height);
 
+struct boid{
+	glm::vec3 vel;
+	glm::vec3 pos;
+};
 
 #endif
