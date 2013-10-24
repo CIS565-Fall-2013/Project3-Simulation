@@ -35,7 +35,8 @@ iteration and then load that into shared during the current iteration) and two o
 Leapfrog (a Symplectic Euler integrator was provided by default). 
 
 In addition to the above, I was also required to do my own simulation. I implemented dynamic flocking, where planets 
-dynamically drop in and out of flocks. Such flocks are created on the fly as planets move around. 
+dynamically drop in and out of flocks. Such flocks are created on the fly as planets move around. This dynamic flocking 
+runs when the command line parameter is set to 'true'.
 
 
 PERFORMANCE EVALUATION
