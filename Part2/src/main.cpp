@@ -22,7 +22,6 @@ int main(int argc, char** argv)
     cudaGLRegisterBufferObject( planetVBO );
 	cudaGLRegisterBufferObject (planetVelBO);
 
-    
 #if VISUALIZE == 1 
     initCuda(N_FOR_VIS);
 #else
@@ -70,7 +69,8 @@ void runCuda()
     cudaNBodyUpdateWrapper(DT);
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
-    cudaUpdateVBO(dptrvert, field_width, field_height);
+
+    cudaUpdateVBO(dptrvert, dptrvel, field_width, field_height);
 #endif
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
@@ -130,7 +130,11 @@ void display()
     glEnableVertexAttribArray(positionLocation);
 
     glBindBuffer(GL_ARRAY_BUFFER, planetVBO);
-    glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0); 
+    glVertexAttribPointer((GLuint)positionLocation, 4, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glDisableVertexAttribArray(velocityLocation);
+		glBindBuffer(GL_ARRAY_BUFFER, planetVelBO);
+		glVertexAttribPointer((GLuint)velocityLocation, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
    
@@ -140,6 +144,8 @@ void display()
     glPointSize(1.0f);
 
     glDisableVertexAttribArray(positionLocation);
+		
+		glDisableVertexAttribArray(velocityLocation);
 
 #endif
     glutPostRedisplay();
@@ -227,6 +233,7 @@ void initVAO(void)
     GLfloat *bodies    = new GLfloat[4*(N_FOR_VIS+1)];
     GLuint *indices    = new GLuint[6*num_faces];
     GLuint *bindices   = new GLuint[N_FOR_VIS+1];
+	GLfloat *velocities = new GLfloat[4*(N_FOR_VIS+1)];
 
     //glm::vec4 ul(-1.0,-1.0,1.0,1.0);
     //glm::vec4 lr(1.0,1.0,0.0,0.0);
@@ -264,6 +271,11 @@ void initVAO(void)
         bodies[4*i+2] = 0.0f;
         bodies[4*i+3] = 1.0f;
         bindices[i] = i;
+
+		velocities[4*i+0] = 0.0f;
+		velocities[4*i+1] = 0.0f;
+		velocities[4*i+2] = 0.0f;
+		velocities[4*i+3] = 1.0f;
     }
 
     //glGenBuffers(1, &planeVBO);
@@ -271,6 +283,7 @@ void initVAO(void)
     //glGenBuffers(1, &planeIBO);
     glGenBuffers(1, &planetVBO);
     glGenBuffers(1, &planetIBO);
+	glGenBuffers(1, &planetVelBO);
     
     //glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
     //glBufferData(GL_ARRAY_BUFFER, 2*num_verts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
@@ -287,6 +300,9 @@ void initVAO(void)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, planetIBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (N_FOR_VIS+1)*sizeof(GLuint), bindices, GL_STATIC_DRAW);
 
+	glBindBuffer(GL_ARRAY_BUFFER, planetVelBO);
+	glBufferData(GL_ARRAY_BUFFER, 4*(N_FOR_VIS+1)*sizeof(GLuint), velocities, GL_STATIC_DRAW);
+	
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
@@ -295,6 +311,7 @@ void initVAO(void)
     delete[] bodies;
     delete[] indices;
     delete[] bindices;
+	delete[] velocities;
 }
 
 void initShaders(GLuint * program)

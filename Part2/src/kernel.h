@@ -21,7 +21,7 @@ void checkCUDAError(const char *msg, int line);
 void cudaNBodyUpdateWrapper(float dt);
 void initCuda(int N);
 void cudaUpdatePBO(float4 * pbodptr, int width, int height);
-void cudaUpdateVBO(float * vbodptr, int width, int height);
+void cudaUpdateVBO(float * vbodptr, float* velboptr, int width, int height);
 
 struct boid{
 	glm::vec3 vel;

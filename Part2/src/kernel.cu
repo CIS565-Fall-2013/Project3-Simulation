@@ -301,7 +301,7 @@ void updateS(int N, float dt, boid* boids)
 //Update the vertex buffer object
 //(The VBO is where OpenGL looks for the positions for the planets)
 __global__
-	void sendToVBO(int N, boid* boids, float * vbo, int width, int height, float s_scale)
+	void sendToVBO(int N, boid* boids, float * vbo, float* velbo, int width, int height, float s_scale)
 {
     int index = threadIdx.x + (blockIdx.x * blockDim.x);
 
@@ -316,6 +316,12 @@ __global__
         vbo[4*index+1] = pos.y*c_scale_h;
 		vbo[4*index+2] = pos.z*c_scale_b;
         vbo[4*index+3] = 1;
+
+		glm::vec3 vel = boids[index].vel;
+		velbo[4*index+0] = vel.x;
+		velbo[4*index+1] = vel.y;
+		velbo[4*index+2] = vel.z;
+		velbo[4*index+3] = 1;
     }
 }
 
@@ -366,10 +372,10 @@ void cudaNBodyUpdateWrapper(float dt)
     cudaThreadSynchronize();
 }
 
-void cudaUpdateVBO(float * vbodptr, int width, int height)
+void cudaUpdateVBO(float * vbodptr, float* velboptr, int width, int height)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
-	sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, nBoids, vbodptr, width, height, scene_scale);
+	sendToVBO<<<fullBlocksPerGrid, blockSize>>>(numObjects, nBoids, vbodptr, velboptr, width, height, scene_scale);
     cudaThreadSynchronize();
 	iteration ++;
 }
