@@ -28,10 +28,18 @@ Each boid is affected by the following:
 * Cohesion -- boid steers to move to the center of mass of all boids in its neighborhood
 * Alignmnet -- boid heads toward the average direction of its neighbors
 * Separation -- boid steers to avoid being too close to its neighbors
-* Avoidance -- boid tries to avoid a boundary. In my implementation, I created a 80*80*80
-	cube to constrain the boids
+* Avoidance -- boid tries to avoid a boundary. In my implementation, I created an imaginary 
+	cube to constrain the boids.
 * Wander -- adds a random velocity (constrained to a unit sphere) to each boid to create
 	interesting movement
+
+Here are some results:
+![alt text](./Images/1000Boids.jpg "1000 Boids")
+
+![alt text](./Images/5000Boids.jpg "5000 Boids")
+
+![alt text](./Images/7000Boids.jpg "7000 Boids")
+
 
 ---
 README
