@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
+#define N_FOR_VIS 50
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 #if VISUALIZE == 1 
     initCuda(N_FOR_VIS);
 #else
-    initCuda(2*128);
+    initCuda(128*128);
 #endif
 
     projection = glm::perspective(fovy, float(width)/float(height), zNear, zFar);

@@ -118,8 +118,15 @@ glm::vec3 calculateAcceleration(glm::vec4 us, glm::vec4 them)
     //    G*m_us*m_them   G*m_them
     //a = ------------- = --------
     //      m_us*r^2        r^2
+
+	glm::vec3 acc(0.0f);
+
+	glm::vec3 dist = glm::vec3(them.x-us.x, them.y-us.y, them.z-us.z);
+	if (glm::length(dist) > 0.0001) {
+		acc = ((float)G * them.w / pow(glm::length(dist), 2)) * glm::normalize(dist);
+	}
     
-    return glm::vec3(0.0f);
+    return acc;
 }
 
 //TODO: Core force calc kernel global memory
@@ -127,6 +134,11 @@ __device__
 glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
     glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	
+	for (int i=0; i<N; ++i) {
+		acc += calculateAcceleration(my_pos, their_pos[i]);
+	}
+
     return acc;
 }
 
@@ -135,7 +147,24 @@ glm::vec3 naiveAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 __device__ 
 glm::vec3 sharedMemAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos)
 {
-    glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	glm::vec3 acc = calculateAcceleration(my_pos, glm::vec4(0,0,0,starMass));
+	__shared__ glm::vec4 tile_pos[blockSize];
+
+	for (int i=0; i<(N+blockSize-1)/blockSize; ++i) {
+		int index = i*blockSize+threadIdx.x;
+		if (index < N) {
+			tile_pos[threadIdx.x] = their_pos[index];
+		}
+		__syncthreads();
+
+		for (int j=0; j<blockSize; ++j) {
+			if (index < N) {
+				acc += calculateAcceleration(my_pos, tile_pos[j]);
+			}
+		}
+		__syncthreads();
+	}
+	
     return acc;
 }
 
@@ -148,7 +177,6 @@ void updateF(int N, float dt, glm::vec4 * pos, glm::vec3 * vel, glm::vec3 * acc)
     glm::vec3 accel;
 
     if(index < N) my_pos = pos[index];
-
     accel = ACC(N, my_pos, pos);
 
     if(index < N) acc[index] = accel;
@@ -231,6 +259,7 @@ void initCuda(int N)
     generateRandomPosArray<<<fullBlocksPerGrid, blockSize>>>(1, numObjects, dev_pos, scene_scale, planetMass);
     checkCUDAErrorWithLine("Kernel failed!");
     generateCircularVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, dev_pos);
+	//generateRandomVelArray<<<fullBlocksPerGrid, blockSize>>>(2, numObjects, dev_vel, scene_scale);
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }

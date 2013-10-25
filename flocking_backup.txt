@@ -1,0 +1,38 @@
+//for flocking
+const __device__ float neighborhoodR = 50;
+const __device__ float neighborhoodFOV = PI/3; //in radians
+const __device__ float kAlign = 0.3;
+const __device__ float kCohesion = 0.5;
+const __device__ float kSeparation = 0.4;
+const __device__ float separationR = 20;
+
+__device__ glm::vec3 flockingAcc(int N, glm::vec4 my_pos, glm::vec4 * their_pos, glm::vec3 my_vel, glm::vec3 * their_vel)
+{
+	glm::vec3 alignV(0.0f);
+	glm::vec3 center(0.0f);
+	glm::vec3 sepV(0.0f);
+	int count = 0;
+	glm::vec3 vel(0.0f);
+
+	for (int i=0; i<N; ++i) {
+		glm::vec3 dist = -glm::vec3(their_pos[i].x-my_pos.x, their_pos[i].y-my_pos.y, their_pos[i].z-my_pos.z);
+		float theta = acos(glm::dot(glm::normalize(dist), glm::normalize(my_vel)));
+		if (glm::length(dist) <= neighborhoodR && theta <= neighborhoodFOV) {
+			alignV += their_vel[i];
+			center += glm::vec3(their_pos[i].x, their_pos[i].y, their_pos[i].z);
+			if (glm::length(dist) <= separationR) {
+				sepV += glm::normalize(dist);
+			}
+			++count;
+		}
+	}
+
+	if (count > 0) {
+		vel +=  kAlign * alignV / (float)count;
+		center = center / (float)count;
+		vel +=  kCohesion * (center - glm::vec3(my_pos.x, my_pos.y, my_pos.z));
+		vel += kSeparation * sepV / (float)count;
+	}
+
+	return vel;
+}
