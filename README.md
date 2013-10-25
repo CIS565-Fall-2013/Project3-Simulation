@@ -15,9 +15,12 @@ Each planet is represented as a sphere lit by the star at position (0,0,0).
 
 
 Basic features include:
-*Force calculation between all bodies using global and shared memory
-*Height field rendering
-*Fragment shader rendering of spherical planets
+
+* Force calculation between all bodies using global and shared memory
+
+* Height field rendering
+
+* Fragment shader rendering of spherical planets
 
 PART 2: Flocking Simulation
 ===
