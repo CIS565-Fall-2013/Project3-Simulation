@@ -11,7 +11,7 @@ is calculated using the law of universal gravitation.
 
 Each planet is represented as a sphere lit by the star at position (0,0,0).
 
-[!alt text](./Images/planets.jpg "Planets")
+![alt text](./Images/planets.jpg "Planets")
 
 
 Basic features include:
