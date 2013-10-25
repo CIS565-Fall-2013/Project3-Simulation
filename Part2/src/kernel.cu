@@ -24,8 +24,8 @@ glm::vec3 * dev_acc;
 
 boid* nBoids;
 int iteration = 1;
-const __device__ float WALL = 100.0f;			//wall boundary, imaginary cube
-const __device__ float NEIGHBOR_RAD = 10.0f;	//radius of neighborhood
+const __device__ float WALL = 40.0f;			//wall boundary, imaginary cube
+const __device__ float NEIGHBOR_RAD = 8.0f;	//radius of neighborhood
 const __device__ float MAX_VEL = 3.0f;
 
 void checkCUDAError(const char *msg, int line = -1)
@@ -115,8 +115,11 @@ glm::vec3 wander(glm::vec3 vel, glm::vec3 pos, int index, float dt, int time){
 	//find random displacement on sphere
 	glm::vec3 vWander = getRandomPointOnSphere(index, time);
 	
-	vel = vWander;
-	return vel;
+	//constrain in semicircle
+	if(glm::dot(vWander, vel) < 0.0f)
+		vWander *= -1.0f;
+
+	return vWander;
 }
 
 __device__
@@ -226,7 +229,7 @@ glm::vec3 avoidance(glm::vec3 myPos, glm::vec3 myVel){
 	glm::vec3 avoid(0);
 
 	//check whether colliding with wall on next few timesteps
-	glm::vec3 futurePos = myPos + myVel;
+	glm::vec3 futurePos = myPos + 10.0f*myVel;
 	glm::vec3 reflectNormal(0);
 	
 	//find normal to reflect around
@@ -244,10 +247,20 @@ glm::vec3 avoidance(glm::vec3 myPos, glm::vec3 myVel){
 		reflectNormal.z = 1.0f;
 
 	if(glm::dot(reflectNormal, reflectNormal) > EPSILON)
-		//avoid = -myVel;
 		avoid = glm::reflect(myVel, reflectNormal);
 
 	return avoid;
+}
+
+__device__
+glm::vec3 pullBack(glm::vec3 myPos, glm::vec3 myVel){
+	
+	if(myPos.x > WALL && myVel.x >0 ||myPos.x < -WALL && myVel.x <0 ||
+		myPos.y > WALL && myVel.y >0 ||myPos.y < -WALL && myVel.y <0 ||
+		myPos.z > WALL && myVel.z >0 ||myPos.z < -WALL && myVel.z <0 )
+		return -myVel;
+
+	return glm::vec3(0);
 }
 
 //updates velocity
@@ -263,14 +276,15 @@ void updateF(int N, float dt, boid* boids, int time)
 		my_pos = boids[index].pos;
 		my_vel = boids[index].vel;
 		
-		my_vel += 0.1f*alignment(N, my_pos, my_vel, boids);
-		my_vel += 5.0f*separation(N, my_pos, boids, time);
+		my_vel += 0.3f*alignment(N, my_pos, my_vel, boids);
+		my_vel += 10.0f*separation(N, my_pos, boids, time);
 		my_vel += 0.1f*cohesion(N, my_pos, boids);
 
-		my_vel += 1.0f*wander(my_vel, my_pos, index, dt, time);
+		my_vel += 0.5f*wander(my_vel, my_pos, index, dt, time);
 
-		my_vel += avoidance(my_pos, my_vel);
-
+		my_vel += 0.5f*avoidance(my_pos, my_vel);
+		my_vel += 0.5f*pullBack(my_pos, my_vel);
+		
 		//clamp vel and update
 		my_vel= glm::clamp(my_vel, -glm::vec3(MAX_VEL), glm::vec3(MAX_VEL));
 		//my_vel.z = 0.0f;
@@ -321,7 +335,8 @@ __global__
 		velbo[4*index+0] = vel.x;
 		velbo[4*index+1] = vel.y;
 		velbo[4*index+2] = vel.z;
-		velbo[4*index+3] = 1;
+		velbo[4*index+3] = 0;
+
     }
 }
 
