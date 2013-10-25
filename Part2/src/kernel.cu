@@ -24,7 +24,7 @@ glm::vec3 * dev_acc;
 
 boid* nBoids;
 int iteration = 1;
-const __device__ float WALL = 40.0f;			//wall boundary, imaginary cube
+const __device__ float WALL = 30.0f;			//wall boundary, imaginary cube
 const __device__ float NEIGHBOR_RAD = 8.0f;	//radius of neighborhood
 const __device__ float MAX_VEL = 3.0f;
 
@@ -71,7 +71,7 @@ void generateRandomPosArray(int time, int N, boid* arr, float scale)
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-        glm::vec3 rand = 10.0f*(generateRandomNumberFromThread(time, index)-0.5f);
+        glm::vec3 rand = 20.0f*(generateRandomNumberFromThread(time, index)-0.5f);
 		arr[index].pos = rand;
 		//arr[index].pos.z = 0;
     }
