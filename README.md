@@ -40,18 +40,7 @@ Here are some results:
 
 ![alt text](./Images/7000Boids.jpg "7000 Boids")
 
-
----
-README
----
-All students must replace the contents of this Readme.md in a clear manner with 
-the following:
-
-* A brief description of the project and the specific features you implemented.
-* At least one screenshot of your project running.
-* A 30 second or longer video of your project running.  To create the video you
-  can use http://www.microsoft.com/expression/products/Encoder4_Overview.aspx 
-* A performance evaluation (described in detail below).
+[Here](https://vimeo.com/77762701) is a video of the simulation. There are 5000 boids in the scene
 
 ---
 PERFORMANCE EVALUATION
