@@ -17,14 +17,21 @@ Each planet is represented as a sphere lit by the star at position (0,0,0).
 Basic features include:
 
 * Force calculation between all bodies using global and shared memory
-
 * Height field rendering
-
 * Fragment shader rendering of spherical planets
 
 PART 2: Flocking Simulation
 ===
+For part two, I implemented a flocking simulation using the methods described [here](http://www.red3d.com/cwr/boids/).
+Each boid is affected by the following:
 
+* Cohesion -- boid steers to move to the center of mass of all boids in its neighborhood
+* Alignmnet -- boid heads toward the average direction of its neighbors
+* Separation -- boid steers to avoid being too close to its neighbors
+* Avoidance -- boid tries to avoid a boundary. In my implementation, I created a 80*80*80
+	cube to constrain the boids
+* Wander -- adds a random velocity (constrained to a unit sphere) to each boid to create
+	interesting movement
 
 ---
 README
@@ -59,23 +66,3 @@ that could be considered bottlenecks and try to improve them.
 Each student should provide no more than a one page summary of their
 optimizations along with tables and or graphs to visually explain any
 performance differences.
-
----
-Resources
----
-*Referred to the CIS462/562 behavior animation notes
-
----
-SELF-GRADING
----
-* On the submission date, email your grade, on a scale of 0 to 100, to Liam,
-  liamboone+cis565@gmail.com, with a one paragraph explanation.  Be concise and
-  realistic.  Recall that we reserve 30 points as a sanity check to adjust your
-  grade.  Your actual grade will be (0.7 * your grade) + (0.3 * our grade).  We
-  hope to only use this in extreme cases when your grade does not realistically
-  reflect your work - it is either too high or too low.  In most cases, we plan
-  to give you the exact grade you suggest.
-* For late assignments there will be a 50% penaly per week.
-* Projects are not weighted evenly, e.g., Project 0 doesn't count as much as
-  the path tracer.  We will determine the weighting at the end of the semester
-  based on the size of each project.
