@@ -32,9 +32,9 @@ float* inv_mass;
 int* triangles;
 Edge* edges;
 
-int solver_iterations = 100;
+int solver_iterations = 10;
 float fp_stiff = 1;
-float st_stiff = 0.99;
+float st_stiff = 0.5;
 float b_stiff = 0.05;
 float col_stiff = 1;
 

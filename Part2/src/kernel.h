@@ -13,7 +13,7 @@
     #include <cutil_math.h>
 #endif
 
-#define blockSize 8
+#define blockSize 256
 #define checkCUDAErrorWithLine(msg) checkCUDAError(msg, __LINE__)
 
 void checkCUDAError(const char *msg, int line);
