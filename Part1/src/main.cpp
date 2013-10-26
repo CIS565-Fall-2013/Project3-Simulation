@@ -3,8 +3,9 @@
  * main.cpp */
 
 #include "main.h"
+#include <ctime>
 
-#define N_FOR_VIS 25
+#define N_FOR_VIS 8000
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -64,7 +65,11 @@ void runCuda()
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
     // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+	std::clock_t start = clock();
+    cudaNBodyUpdateWrapper(DT);	
+	std::clock_t finish = clock();
+	double elapsed_time = double(start-finish) / CLOCKS_PER_SEC;
+	std::cout<<elapsed_time<<std::endl;
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);

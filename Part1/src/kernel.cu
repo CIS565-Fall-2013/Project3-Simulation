@@ -4,6 +4,7 @@
 #include "glm/glm.hpp"
 #include "utilities.h"
 #include "kernel.h"
+#include <ctime>
 
 using namespace glm;
 
@@ -277,9 +278,11 @@ void initCuda(int N)
 void cudaNBodyUpdateWrapper(float dt)
 {
     dim3 fullBlocksPerGrid((int)ceil(float(numObjects)/float(blockSize)));
+
     updateF<<<fullBlocksPerGrid, blockSize, blockSize*sizeof(glm::vec4)>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
     checkCUDAErrorWithLine("Kernel failed!");
     updateS<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos, dev_vel, dev_acc);
+
     checkCUDAErrorWithLine("Kernel failed!");
     cudaThreadSynchronize();
 }
