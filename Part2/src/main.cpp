@@ -71,17 +71,22 @@ void display()
 {
     static float fps = 0;
     frame++;
-    int time=glutGet(GLUT_ELAPSED_TIME);
-
+	
+	int time=glutGet(GLUT_ELAPSED_TIME);
     if (time - timebase > 1000) {
         fps = frame*1000.0f/(time-timebase);
         timebase = time;
         frame = 0;
     }
-    runCuda();
+
+	//timebase=glutGet(GLUT_ELAPSED_TIME);
+ //   runCuda();
+	//int time=glutGet(GLUT_ELAPSED_TIME);
+	//int timePerFrame = time - timebase;
 
     char title[100];
     sprintf( title, "GPU Cloth Sim [%0.2f fps]", fps );
+	//sprintf( title, "GPU Cloth Sim [%4d ms]", timePerFrame );
     glutSetWindowTitle(title);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
