@@ -14,7 +14,7 @@ PART 1: CUDA NBody Simulation
 Performance Analysis
 ---
 
-![alt tag](https://raw.github.com/YingtingXiao/Project3-Simulation/master/performace/nbody.PNG)
+![alt tag](https://raw.github.com/YingtingXiao/Project3-Simulation/master/performance/nbody.PNG)
 
 The data is collected with N = 10000 and no visualization. We can see the time per frame decreases as block size increases, and stays approximately the same when block size >= 128. When block size <= 64, shared memory performance is slightly better than naive computation performance. However, when block size > 64, non-shared memory computation outperforms shared memory computation. I think this is because there isn't a lot of access to global/shared memory in calculateAcceleration, and __syncthreads in sharedMemAcc takes extra time.
 
@@ -44,6 +44,6 @@ I ported my pbd framework in CIS563 into CUDA. There are three types of internal
 Performance Analysis
 ---
 
-![alt tag](https://raw.github.com/YingtingXiao/Project3-Simulation/master/performace/cloth.PNG)
+![alt tag](https://raw.github.com/YingtingXiao/Project3-Simulation/master/performance/cloth.PNG)
 
 The data is collected with 101 subdivisions in both x and z direction on the cloth, i.e. 101*101 vertices. The time used by runCuda is roughly linearly correlated to the number of solver iterations (number of iterations for resolving stretch and bend constraints). This indicates that resolving stretch and bend constraints is the bottleneck of this simulation.
