@@ -86,12 +86,14 @@ void generateCircularVelArray(int time, int N, glm::vec3 * arr, glm::vec4 * pos)
     int index = (blockIdx.x * blockDim.x) + threadIdx.x;
     if(index < N)
     {
-       thrust::default_random_engine rng(hash((time + index) * N * index));
-       thrust::uniform_real_distribution<float> u01(.1, 10);
-       thrust::uniform_real_distribution<float> u02(-PI, PI);
+       thrust::default_random_engine rng(hash(index*(time + index)*N ));
+       thrust::uniform_real_distribution<float> u01(.2, 10);
+       //thrust::uniform_real_distribution<float> u02(-PI, PI);
+	   thrust::uniform_real_distribution<float> u03(-PI, PI);
 
-		float theta = (float)u02(rng);
-		float phi = (float)u02(rng);
+
+		float theta = (float)u03(rng);
+		float phi = (float)u03(rng);
 
         arr[index] = (float)u01(rng)*glm::vec3(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
 		/*
