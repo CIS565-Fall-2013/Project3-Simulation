@@ -25,9 +25,9 @@ This part of the project is rather straightforward. Here are a few screen shots.
 
 For this part of the project, I implemented a simple flocking simulation. I added in alignment, separation, cohesion, and a spherical boundary avoidance force that kept the particles within the frame of the window. Here are a few screenshots:
 
-<center>![flocking sim](https://raw.github.com/josephto/Project3-Simulation/master/Part2/flocking1.png "screen shot")
+<center>![flocking sim](https://raw.github.com/josephto/Project3-Simulation/master/Part2/Flocking1.png "screen shot")
 
-<center>![flocking sim](https://raw.github.com/josephto/Project3-Simulation/master/Part2/flocking2.png "screen shot")
+<center>![flocking sim](https://raw.github.com/josephto/Project3-Simulation/master/Part2/Flocking2.png "screen shot")
 
 Here's a video of my flocking simulation in action. I apologize for the poor quality: http://www.youtube.com/watch?v=Ypkwl0yjSD8
 
