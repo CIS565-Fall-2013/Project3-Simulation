@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-#define N_FOR_VIS 25
+#define N_FOR_VIS 50
 #define DT 0.2
 #define VISUALIZE 1
 //-------------------------------
@@ -58,13 +58,20 @@ void runCuda()
     // Map OpenGL buffer object for writing from CUDA on a single GPU
     // No data is moved (Win & Linux). When mapped to CUDA, OpenGL should not use this buffer
 
+	//time cuda call
+	float time;
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start,0);
+
     float4 *dptr=NULL;
     float *dptrvert=NULL;
     cudaGLMapBufferObject((void**)&dptr, pbo);
     cudaGLMapBufferObject((void**)&dptrvert, planetVBO);
 
-    // execute the kernel
-    cudaNBodyUpdateWrapper(DT);
+	cudaNBodyUpdateWrapper(DT);
+
 #if VISUALIZE == 1
     cudaUpdatePBO(dptr, field_width, field_height);
     cudaUpdateVBO(dptrvert, field_width, field_height);
@@ -72,6 +79,13 @@ void runCuda()
     // unmap buffer object
     cudaGLUnmapBufferObject(planetVBO);
     cudaGLUnmapBufferObject(pbo);
+
+	//end time record
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&time, start, stop);
+
+	cout<<time<<" has passed"<<endl;
 }
 
 int timebase = 0;

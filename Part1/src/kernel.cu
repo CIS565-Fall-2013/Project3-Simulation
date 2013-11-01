@@ -5,7 +5,7 @@
 #include "utilities.h"
 #include "kernel.h"
 
-#if SHARED == 0
+#if SHARED == 1
     #define ACC(x,y,z) sharedMemAcc(x,y,z)
 #else
     #define ACC(x,y,z) naiveAcc(x,y,z)
