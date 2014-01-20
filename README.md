@@ -1,4 +1,4 @@
-CIS565: Project 3: CUDA Simulation and GLSL Visualization
+CUDA Simulation and GLSL Visualization
 ===
 Fall 2013
 ---
