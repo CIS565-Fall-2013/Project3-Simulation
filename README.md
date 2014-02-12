@@ -25,7 +25,7 @@ Features Overview:
 PART 2: CUDA Behavioral Animation
 ===
 ![flocking](Part2/resources/result1.png)
-For the second part of this project, I implemented several behaviors according to the formulations described by Craig Reynods found [here](http://www.red3d.com/cwr/boids/). For this portion,
+For the second part of this project, I implemented several behaviors according to the formulations described by Craig Reynolds found [here](http://www.red3d.com/cwr/boids/). For this portion,
 there are two different modes that are availabe. Arrival and flocking behavior towards a target movable by using 'w', 'a', 's', 'd', and untargetd flocking behavior. The individual behaviors
 utlized in this part include cohesion, separation, and alignment. 
 
